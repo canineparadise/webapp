@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
-  UserIcon,
+  EnvelopeIcon,
   LockClosedIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -12,16 +12,15 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
-import Image from 'next/image'
+import { supabase } from '@/lib/supabase'
 
 export default function StaffLogin() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
-    role: 'staff', // staff or admin
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,21 +28,44 @@ export default function StaffLogin() {
     setLoading(true)
 
     try {
-      // Simulate login - in production, this would connect to your auth service
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      })
 
-      // Mock authentication logic
-      if (formData.username === 'admin' && formData.password === 'admin123') {
-        toast.success('Welcome Admin!')
-        router.push('/staff/admin-dashboard')
-      } else if (formData.username === 'staff' && formData.password === 'staff123') {
-        toast.success('Welcome Staff Member!')
-        router.push('/staff/dashboard')
-      } else {
-        toast.error('Invalid credentials')
+      if (error) throw error
+
+      // Get user profile to check role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, first_name')
+        .eq('id', data.user.id)
+        .single()
+
+      // Only allow staff and admin
+      if (profile?.role !== 'staff' && profile?.role !== 'admin') {
+        await supabase.auth.signOut()
+        toast.error('Access denied. Staff/Admin only.')
+        return
       }
-    } catch (error) {
-      toast.error('Login failed. Please try again.')
+
+      toast.success(`Welcome back${profile?.first_name ? ', ' + profile.first_name : ''}!`)
+
+      // Redirect based on role
+      if (profile?.role === 'admin') {
+        router.push('/staff/admin-dashboard')
+      } else {
+        router.push('/staff/dashboard')
+      }
+
+    } catch (error: any) {
+      console.error('Login error:', error)
+      if (error.message?.includes('Invalid login credentials')) {
+        toast.error('Invalid email or password')
+      } else {
+        toast.error(error.message || 'Failed to sign in')
+      }
     } finally {
       setLoading(false)
     }
@@ -87,55 +109,22 @@ export default function StaffLogin() {
           {/* Login Form */}
           <div className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Role Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Login As
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, role: 'staff' })}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      formData.role === 'staff'
-                        ? 'border-canine-gold bg-canine-gold/10 text-canine-navy'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <UsersIcon className="h-6 w-6 mx-auto mb-1" />
-                    <span className="text-sm font-medium">Staff</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, role: 'admin' })}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      formData.role === 'admin'
-                        ? 'border-canine-gold bg-canine-gold/10 text-canine-navy'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <ShieldCheckIcon className="h-6 w-6 mx-auto mb-1" />
-                    <span className="text-sm font-medium">Admin</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Username */}
+              {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Username
+                  Email Address
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <UserIcon className="h-5 w-5 text-gray-400" />
+                    <EnvelopeIcon className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
-                    type="text"
+                    type="email"
                     required
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent transition-all"
-                    placeholder="Enter your username"
+                    placeholder="you@example.com"
                   />
                 </div>
               </div>
