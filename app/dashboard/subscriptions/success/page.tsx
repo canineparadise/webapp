@@ -6,6 +6,8 @@ import { motion } from 'framer-motion'
 import { CheckCircleIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 function SuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
