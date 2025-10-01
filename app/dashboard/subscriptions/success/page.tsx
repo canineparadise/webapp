@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CheckCircleIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 
-export default function SubscriptionSuccess() {
+function SuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [countdown, setCountdown] = useState(5)
@@ -77,5 +77,17 @@ export default function SubscriptionSuccess() {
         </div>
       </motion.div>
     </div>
+  )
+}
+
+export default function SubscriptionSuccess() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-canine-gold"></div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   )
 }
