@@ -14,6 +14,8 @@ import {
   CalendarDaysIcon,
   XCircleIcon,
   ExclamationTriangleIcon,
+  SunIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline'
 import { loadStripe } from '@stripe/stripe-js'
 
@@ -29,6 +31,7 @@ export default function SubscriptionsPage() {
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [sessionType, setSessionType] = useState<'full_day' | 'half_day'>('full_day')
 
   useEffect(() => {
     init()
@@ -229,6 +232,36 @@ export default function SubscriptionsPage() {
             </p>
           </div>
 
+          {/* Session Type Toggle */}
+          <div className="mb-8 bg-white rounded-xl border-2 border-gray-200 p-2 inline-flex gap-2">
+            <button
+              onClick={() => setSessionType('full_day')}
+              className={`
+                px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2
+                ${sessionType === 'full_day'
+                  ? 'bg-canine-gold text-white shadow-md'
+                  : 'text-gray-600 hover:text-canine-navy'
+                }
+              `}
+            >
+              <SunIcon className="h-5 w-5" />
+              Full Day (7 AM - 7 PM)
+            </button>
+            <button
+              onClick={() => setSessionType('half_day')}
+              className={`
+                px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2
+                ${sessionType === 'half_day'
+                  ? 'bg-canine-gold text-white shadow-md'
+                  : 'text-gray-600 hover:text-canine-navy'
+                }
+              `}
+            >
+              <ClockIcon className="h-5 w-5" />
+              Half Day (10 AM - 2 PM)
+            </button>
+          </div>
+
           {/* Current Subscription */}
           {currentSubscription && (
             <motion.div
@@ -301,7 +334,29 @@ export default function SubscriptionsPage() {
             <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6">
               {tiers.map((tier, index) => {
                 const isCurrentTier = currentSubscription?.tier_id === tier.id
-                const isBestValue = tier.price_per_day <= 36
+
+                // Calculate pricing based on session type
+                const fullDayPricing = {
+                  '4_days': { perDay: 40, monthly: 160 },
+                  '8_days': { perDay: 38, monthly: 304 },
+                  '12_days': { perDay: 37, monthly: 444 },
+                  '16_days': { perDay: 36, monthly: 576 },
+                  '20_days': { perDay: 35, monthly: 700 }
+                } as Record<string, { perDay: number; monthly: number }>
+
+                const halfDayPricing = {
+                  '4_days': { perDay: 30, monthly: 120 },
+                  '8_days': { perDay: 28.50, monthly: 228 },
+                  '12_days': { perDay: 27.75, monthly: 333 },
+                  '16_days': { perDay: 27, monthly: 432 },
+                  '20_days': { perDay: 25, monthly: 500 }
+                } as Record<string, { perDay: number; monthly: number }>
+
+                const pricing = sessionType === 'full_day'
+                  ? (fullDayPricing[tier.tier_name] || { perDay: tier.price_per_day, monthly: tier.monthly_price })
+                  : (halfDayPricing[tier.tier_name] || { perDay: tier.price_per_day * 0.75, monthly: tier.monthly_price * 0.75 })
+
+                const isBestValue = pricing.perDay <= (sessionType === 'full_day' ? 36 : 27)
 
                 return (
                   <motion.div
@@ -342,24 +397,32 @@ export default function SubscriptionsPage() {
                         {tier.name.split(' - ')[0]}
                       </h3>
                       <div className="text-3xl font-bold text-canine-gold mb-2">
-                        £{parseFloat(tier.monthly_price).toFixed(0)}
+                        £{pricing.monthly.toFixed(0)}
                       </div>
                       <p className="text-sm text-gray-600 mb-4">per month</p>
 
                       <div className="bg-canine-cream rounded-lg p-3 mb-4">
                         <div className="text-2xl font-bold text-canine-navy">{tier.days_included}</div>
-                        <div className="text-xs text-gray-600">days per month</div>
+                        <div className="text-xs text-gray-600">
+                          {sessionType === 'full_day' ? 'full days' : 'half days'} per month
+                        </div>
                       </div>
 
                       <div className="text-sm text-gray-600 mb-4">
-                        <div className="font-semibold text-canine-navy">£{parseFloat(tier.price_per_day).toFixed(2)}/day</div>
-                        <div className="text-xs mt-1">{tier.description}</div>
+                        <div className="font-semibold text-canine-navy">£{pricing.perDay.toFixed(2)}/day</div>
+                        <div className="text-xs mt-1">
+                          {sessionType === 'full_day' ? '7 AM - 7 PM' : '10 AM - 2 PM'}
+                        </div>
                       </div>
 
                       <ul className="text-xs text-left space-y-2 mb-6">
                         <li className="flex items-start gap-2">
                           <CheckCircleIcon className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span>Full day care (7 AM - 7 PM)</span>
+                          <span>
+                            {sessionType === 'full_day'
+                              ? 'Full day care (7 AM - 7 PM)'
+                              : 'Half day care (10 AM - 2 PM)'}
+                          </span>
                         </li>
                         <li className="flex items-start gap-2">
                           <CheckCircleIcon className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -376,7 +439,7 @@ export default function SubscriptionsPage() {
                       </ul>
 
                       <button
-                        onClick={() => handlePurchaseSubscription(tier.id, tier.monthly_price, tier.days_included)}
+                        onClick={() => handlePurchaseSubscription(tier.id, pricing.monthly, tier.days_included)}
                         disabled={purchasing || isCurrentTier}
                         className={`
                           w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2
