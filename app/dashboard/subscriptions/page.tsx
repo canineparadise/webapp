@@ -50,7 +50,7 @@ export default function SubscriptionsPage() {
 
       // Get user profile with approval status
       const { data: profileData } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()

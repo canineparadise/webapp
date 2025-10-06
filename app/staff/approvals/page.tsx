@@ -43,7 +43,7 @@ export default function UserApprovalsPage() {
 
       // Get user details and verify staff/admin role
       const { data: userData } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
