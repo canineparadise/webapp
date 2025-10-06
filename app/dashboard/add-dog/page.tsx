@@ -1323,7 +1323,7 @@ export default function AddDogPage() {
                         </p>
                         <ul className="text-sm text-green-700 mt-2 space-y-1">
                           <li>• Sign legal agreements and waivers</li>
-                          <li>• Schedule an assessment day (Fridays only)</li>
+                          <li>• Schedule an assessment day</li>
                         </ul>
                       </div>
                     </div>
