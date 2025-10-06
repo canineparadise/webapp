@@ -32,6 +32,7 @@ export default function SubscriptionsPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [sessionType, setSessionType] = useState<'full_day' | 'half_day'>('full_day')
+  const [userProfile, setUserProfile] = useState<any>(null)
 
   useEffect(() => {
     init()
@@ -46,6 +47,15 @@ export default function SubscriptionsPage() {
         return
       }
       setUser(user)
+
+      // Get user profile with approval status
+      const { data: profileData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      setUserProfile(profileData)
 
       // Get subscription tiers
       const { data: tiersData } = await supabase
@@ -232,7 +242,84 @@ export default function SubscriptionsPage() {
             </p>
           </div>
 
-          {/* Session Type Toggle */}
+          {/* Pending Approval Message */}
+          {userProfile?.approval_status === 'pending' && !currentSubscription && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mb-8 bg-amber-50 border-2 border-amber-400 rounded-xl p-8 text-center"
+            >
+              <ClockIcon className="h-16 w-16 text-amber-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-amber-900 mb-3">
+                Approval Pending
+              </h2>
+              <p className="text-amber-800 mb-4 max-w-2xl mx-auto">
+                Thank you for registering with Canine Paradise! Before you can subscribe to our daycare services, you need to:
+              </p>
+              <ol className="text-left text-amber-900 space-y-2 max-w-xl mx-auto mb-6">
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">1.</span>
+                  <span>Add your dog's details and photos in your dashboard</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">2.</span>
+                  <span>Book an assessment day with us</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">3.</span>
+                  <span>Attend the assessment day so we can meet your pup</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">4.</span>
+                  <span>Wait for our team to approve your application</span>
+                </li>
+              </ol>
+              <p className="text-sm text-amber-700">
+                Once approved, you'll be able to subscribe to our monthly daycare packages!
+              </p>
+              <div className="mt-6">
+                <Link
+                  href="/dashboard"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-canine-gold text-white rounded-lg font-semibold hover:bg-canine-light-gold transition-colors"
+                >
+                  <ArrowLeftIcon className="h-5 w-5" />
+                  Go to Dashboard
+                </Link>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Rejected Message */}
+          {userProfile?.approval_status === 'rejected' && !currentSubscription && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mb-8 bg-red-50 border-2 border-red-400 rounded-xl p-8 text-center"
+            >
+              <XCircleIcon className="h-16 w-16 text-red-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-red-900 mb-3">
+                Application Not Approved
+              </h2>
+              <p className="text-red-800 mb-4 max-w-2xl mx-auto">
+                Unfortunately, we're unable to offer daycare services at this time.
+              </p>
+              {userProfile?.approval_notes && (
+                <div className="bg-white border border-red-200 rounded-lg p-4 max-w-xl mx-auto mb-6">
+                  <p className="text-sm text-gray-700">
+                    <strong>Note from our team:</strong> {userProfile.approval_notes}
+                  </p>
+                </div>
+              )}
+              <p className="text-sm text-red-700">
+                If you have questions, please contact us at wecare@canineparadise.com
+              </p>
+            </motion.div>
+          )}
+
+          {/* Show subscription options only if approved OR already has subscription */}
+          {(userProfile?.approval_status === 'approved' || currentSubscription) && (
+            <>
+              {/* Session Type Toggle */}
           <div className="mb-8 bg-white rounded-xl border-2 border-gray-200 p-2 inline-flex gap-2">
             <button
               onClick={() => setSessionType('full_day')}
@@ -511,6 +598,8 @@ export default function SubscriptionsPage() {
               </li>
             </ul>
           </div>
+            </>
+          )}
         </motion.div>
       </div>
 
