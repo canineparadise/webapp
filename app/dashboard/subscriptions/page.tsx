@@ -86,6 +86,12 @@ export default function SubscriptionsPage() {
   }
 
   const handlePurchaseSubscription = async (tierId: string, price: number, days: number) => {
+    // Check approval status first
+    if (userProfile?.approval_status !== 'approved') {
+      toast.error('You must be approved after your assessment day before you can subscribe')
+      return
+    }
+
     setPurchasing(true)
     setSelectedTier(tierId)
 
