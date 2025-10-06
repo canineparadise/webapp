@@ -140,7 +140,7 @@ export default function Dashboard() {
     dog.has_vaccination_docs || docsUploaded.some(doc => doc.dog_id === dog.id && doc.type === 'vaccination')
   )
   const hasScheduledAssessment = !!assessmentSchedule?.confirmed_date
-  const isApproved = dogs.some(dog => dog.is_approved)
+  const isApproved = profile?.approval_status === 'approved'
 
   // Onboarding steps (vaccination upload removed - now part of add dog form)
   const steps = [
@@ -178,7 +178,7 @@ export default function Dashboard() {
     "Tip: Bring your dog's favorite toy for their first day!",
     "Fun fact: Playing with other dogs helps with socialization!",
     "Remember: Always update us if your dog's behavior changes",
-    "Pro tip: Book early for Friday assessments - they fill up fast!"
+    "Pro tip: Book your assessment day early - slots fill up fast!"
   ]
   const currentTip = tips[Math.floor(Date.now() / 10000) % tips.length]
 

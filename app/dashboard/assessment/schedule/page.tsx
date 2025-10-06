@@ -263,7 +263,7 @@ export default function ScheduleAssessment() {
                       Schedule Your Assessment 🎯
                     </h1>
                     <p className="text-white/90 text-lg mt-1">
-                      First step to paradise - book your exclusive Friday slot
+                      First step to paradise - book your exclusive assessment slot
                     </p>
                   </div>
                 </div>
@@ -279,7 +279,7 @@ export default function ScheduleAssessment() {
                   <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
                     <div className="flex items-center gap-2 text-white">
                       <ClockIcon className="h-5 w-5" />
-                      <span className="font-semibold">Fridays Only</span>
+                      <span className="font-semibold">9:00 AM Start</span>
                     </div>
                   </div>
                 </div>
@@ -307,7 +307,7 @@ export default function ScheduleAssessment() {
                   </li>
                   <li className="flex items-start">
                     <span className="text-blue-500 mr-2 font-bold">•</span>
-                    <span><strong>When:</strong> Fridays only at 9:00 AM</span>
+                    <span><strong>When:</strong> 9:00 AM start time</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-blue-500 mr-2 font-bold">•</span>
@@ -519,7 +519,7 @@ export default function ScheduleAssessment() {
                           You're reserving the entire day!
                         </p>
                         <p className="text-sm text-amber-800 mt-1">
-                          All {dogs.length} of your dog(s) will be assessed together on this exclusive Friday slot.
+                          All {dogs.length} of your dog(s) will be assessed together on this exclusive assessment day.
                         </p>
                       </div>
                     </div>

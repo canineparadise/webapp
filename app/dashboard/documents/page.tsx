@@ -55,14 +55,21 @@ export default function DocumentsPage() {
 
       setDogs(dogsData || [])
 
-      // Get all documents
+      // Get all documents for user's dogs
+      const dogIds = dogsData?.map(d => d.id) || []
       const { data: docsData } = await supabase
         .from('documents')
-        .select('*, dogs!inner(name, owner_id)')
-        .eq('dogs.owner_id', user.id)
+        .select('*')
+        .in('dog_id', dogIds)
         .order('created_at', { ascending: false })
 
-      setDocuments(docsData || [])
+      // Add dog names to documents
+      const docsWithDogNames = (docsData || []).map(doc => ({
+        ...doc,
+        dogs: { name: dogsData?.find(d => d.id === doc.dog_id)?.name || 'Unknown' }
+      }))
+
+      setDocuments(docsWithDogNames)
     } catch (error) {
       console.error('Error:', error)
     } finally {
