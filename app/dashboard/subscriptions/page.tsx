@@ -542,7 +542,7 @@ export default function SubscriptionsPage() {
 
                       <button
                         onClick={() => handlePurchaseSubscription(tier.id, pricing.monthly, tier.days_included)}
-                        disabled={purchasing || isCurrentTier}
+                        disabled={purchasing || isCurrentTier || userProfile?.approval_status !== 'approved'}
                         className={`
                           w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2
                           ${isCurrentTier
