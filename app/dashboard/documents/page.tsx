@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { uploadVaccinationCertificate, uploadMedicalRecord, deleteFile, formatFileSize } from '@/lib/storage'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -70,28 +71,26 @@ export default function DocumentsPage() {
   }
 
   const handleUpload = async () => {
-    if (!uploadFile || !selectedDog) {
+    if (!uploadFile || !selectedDog || !user) {
       toast.error('Please select a dog and choose a file')
       return
     }
 
     setUploading(true)
     try {
-      // Upload to Supabase Storage
-      const fileExt = uploadFile.name.split('.').pop()
-      const fileName = `${selectedDog}_${docType}_${Date.now()}.${fileExt}`
-      const filePath = `documents/${fileName}`
+      let uploadResult
 
-      const { error: uploadError } = await supabase.storage
-        .from('dog-documents')
-        .upload(filePath, uploadFile)
+      // Upload to appropriate bucket based on document type
+      if (docType === 'vaccination') {
+        uploadResult = await uploadVaccinationCertificate(user.id, uploadFile, selectedDog)
+      } else {
+        uploadResult = await uploadMedicalRecord(user.id, uploadFile, selectedDog, docType)
+      }
 
-      if (uploadError) throw uploadError
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('dog-documents')
-        .getPublicUrl(filePath)
+      if (!uploadResult.success) {
+        toast.error(uploadResult.error || 'Failed to upload document')
+        return
+      }
 
       // Save to database
       const { error: dbError } = await supabase
@@ -99,9 +98,10 @@ export default function DocumentsPage() {
         .insert({
           dog_id: selectedDog,
           type: docType,
-          file_url: urlData.publicUrl,
+          file_url: uploadResult.url || '',
           file_name: uploadFile.name,
-          uploaded_by: user.id
+          uploaded_by: user.id,
+          uploaded_at: new Date().toISOString()
         })
 
       if (dbError) throw dbError
@@ -119,17 +119,26 @@ export default function DocumentsPage() {
     }
   }
 
-  const handleDelete = async (docId: string, fileUrl: string) => {
+  const handleDelete = async (docId: string, fileUrl: string, docType: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return
 
     try {
-      // Extract file path from URL
-      const filePath = fileUrl.split('/').slice(-2).join('/')
+      // Determine which bucket based on document type
+      const bucket = docType === 'vaccination' ? 'vaccination-docs' : 'medical-records'
+
+      // Extract file path from URL (get the part after the bucket name)
+      const urlParts = fileUrl.split('/')
+      const bucketIndex = urlParts.findIndex(part => part === bucket)
+      const filePath = bucketIndex !== -1
+        ? urlParts.slice(bucketIndex + 1).join('/')
+        : urlParts.slice(-2).join('/')
 
       // Delete from storage
-      await supabase.storage
-        .from('dog-documents')
-        .remove([filePath])
+      const deleteResult = await deleteFile(bucket, filePath)
+      if (!deleteResult.success) {
+        console.error('Storage delete failed:', deleteResult.error)
+        // Continue anyway to delete database record
+      }
 
       // Delete from database
       const { error } = await supabase
@@ -323,7 +332,7 @@ export default function DocumentsPage() {
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            onClick={() => handleDelete(doc.id, doc.file_url)}
+                            onClick={() => handleDelete(doc.id, doc.file_url, doc.type)}
                             className="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg transition-colors"
                           >
                             <TrashIcon className="h-4 w-4" />

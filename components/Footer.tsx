@@ -107,23 +107,12 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-gray-700 mt-8 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-gray-400 text-sm text-center md:text-left">
-              © 2010 Canine Paradise. All rights reserved. |
-              <Link href="/privacy" className="hover:text-white ml-2">Privacy Policy</Link> |
-              <Link href="/terms" className="hover:text-white ml-2">Terms & Conditions</Link>
-            </p>
-            <Link
-              href="/staff"
-              className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors flex items-center"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-              Staff Portal
-            </Link>
-          </div>
+        <div className="border-t border-gray-700 mt-8 pt-8 text-center">
+          <p className="text-gray-400 text-sm">
+            © 2010 Canine Paradise. All rights reserved. |
+            <Link href="/privacy" className="hover:text-white ml-2">Privacy Policy</Link> |
+            <Link href="/terms" className="hover:text-white ml-2">Terms & Conditions</Link>
+          </p>
         </div>
       </div>
     </footer>

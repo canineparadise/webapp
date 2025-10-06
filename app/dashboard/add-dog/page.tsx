@@ -18,6 +18,7 @@ import {
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid'
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
+import { uploadDogPhoto, uploadVaccinationCertificate } from '@/lib/storage'
 import Link from 'next/link'
 
 export default function AddDogPage() {
@@ -156,20 +157,14 @@ export default function AddDogPage() {
 
     try {
       setUploading(true)
-      const fileExt = photoFile.name.split('.').pop()
-      const fileName = `${user.id}/${dogId}.${fileExt}`
+      const result = await uploadDogPhoto(user.id, photoFile, dogId)
 
-      const { error: uploadError } = await supabase.storage
-        .from('dog-photos')
-        .upload(fileName, photoFile, { upsert: true })
+      if (!result.success) {
+        toast.error(result.error || 'Failed to upload photo')
+        return null
+      }
 
-      if (uploadError) throw uploadError
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('dog-photos')
-        .getPublicUrl(fileName)
-
-      return publicUrl
+      return result.url || null
     } catch (error) {
       console.error('Error uploading photo:', error)
       toast.error('Failed to upload photo')
@@ -184,30 +179,30 @@ export default function AddDogPage() {
 
     try {
       setUploading(true)
-      const fileExt = vaccinationFile.name.split('.').pop()
-      const fileName = `${user.id}/vaccinations/${dogId}_${Date.now()}.${fileExt}`
+      const result = await uploadVaccinationCertificate(user.id, vaccinationFile, dogId)
 
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, vaccinationFile)
+      if (!result.success) {
+        toast.error(result.error || 'Failed to upload vaccination document')
+        return null
+      }
 
-      if (uploadError) throw uploadError
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName)
-
-      // Also save to documents table
-      await supabase
+      // Save to documents table
+      const { error: docError } = await supabase
         .from('documents')
         .insert({
           dog_id: dogId,
           type: 'vaccination',
-          file_url: publicUrl,
-          file_name: vaccinationFile.name
+          file_url: result.url || '',
+          file_name: vaccinationFile.name,
+          uploaded_at: new Date().toISOString()
         })
 
-      return publicUrl
+      if (docError) {
+        console.error('Error saving document record:', docError)
+        toast.error('Document uploaded but failed to save record')
+      }
+
+      return result.url || null
     } catch (error) {
       console.error('Error uploading vaccination document:', error)
       toast.error('Failed to upload vaccination document')
