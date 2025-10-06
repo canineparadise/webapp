@@ -38,6 +38,14 @@ export async function POST(req: NextRequest) {
         days,
         type: 'subscription',
       },
+      custom_text: {
+        submit: {
+          message: 'Your subscription will start immediately after payment.',
+        },
+      },
+      phone_number_collection: {
+        enabled: true,
+      },
     })
 
     return NextResponse.json({ sessionId: session.id })

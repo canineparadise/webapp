@@ -36,6 +36,14 @@ export async function POST(req: NextRequest) {
         pricePerDay,
         type: 'extra_days',
       },
+      custom_text: {
+        submit: {
+          message: 'Days will be added to your subscription immediately after payment.',
+        },
+      },
+      phone_number_collection: {
+        enabled: true,
+      },
     })
 
     return NextResponse.json({ sessionId: session.id })
