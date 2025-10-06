@@ -1278,7 +1278,7 @@ export default function Dashboard() {
                               </div>
                               <p className="text-xs text-gray-600 mt-1">7:00 AM - 7:00 PM</p>
                               <p className="text-sm font-semibold text-canine-gold mt-2">
-                                £{subscription?.tier ? ({'4_days': 40, '8_days': 38, '12_days': 37, '16_days': 36, '20_days': 35}[subscription.tier] || 40) : 40}/day
+                                £{subscription?.tier ? ({'4_days': 40, '8_days': 38, '12_days': 37, '16_days': 36, '20_days': 35} as Record<string, number>)[subscription.tier] || 40 : 40}/day
                               </p>
                             </div>
                           </label>
@@ -1304,7 +1304,7 @@ export default function Dashboard() {
                               </div>
                               <p className="text-xs text-gray-600 mt-1">10:00 AM - 2:00 PM</p>
                               <p className="text-sm font-semibold text-canine-gold mt-2">
-                                £{subscription?.tier ? ({'4_days': 30, '8_days': 28.50, '12_days': 27.75, '16_days': 27, '20_days': 25}[subscription.tier] || 30) : 30}/day
+                                £{subscription?.tier ? ({'4_days': 30, '8_days': 28.50, '12_days': 27.75, '16_days': 27, '20_days': 25} as Record<string, number>)[subscription.tier] || 30 : 30}/day
                               </p>
                             </div>
                           </label>
