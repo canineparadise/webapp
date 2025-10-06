@@ -113,7 +113,7 @@ SELECT
   COUNT(DISTINCT b.id) as num_bookings,
   MAX(b.booking_date) as latest_booking_date
 FROM profiles p
-LEFT JOIN dogs d ON d.user_id = p.id
+LEFT JOIN dogs d ON d.owner_id = p.id
 LEFT JOIN bookings b ON b.user_id = p.id
 WHERE p.role = 'user'
 GROUP BY p.id, p.email, p.full_name, p.phone, p.created_at, p.approval_status
