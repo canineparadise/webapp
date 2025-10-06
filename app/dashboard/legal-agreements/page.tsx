@@ -36,6 +36,7 @@ export default function LegalAgreementsPage() {
     collection_procedure_agreed: false,
     data_protection_consent: false,
     notice_period_accepted: false,
+    recurring_billing_accepted: false,
   })
 
   useEffect(() => {
@@ -99,7 +100,8 @@ export default function LegalAgreementsPage() {
     agreements.property_damage_waiver &&
     agreements.collection_procedure_agreed &&
     agreements.data_protection_consent &&
-    agreements.notice_period_accepted
+    agreements.notice_period_accepted &&
+    agreements.recurring_billing_accepted
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -135,6 +137,8 @@ export default function LegalAgreementsPage() {
         data_protection_consent_at: agreements.data_protection_consent ? now : null,
         notice_period_accepted: agreements.notice_period_accepted,
         notice_period_accepted_at: agreements.notice_period_accepted ? now : null,
+        recurring_billing_accepted: agreements.recurring_billing_accepted,
+        recurring_billing_accepted_at: agreements.recurring_billing_accepted ? now : null,
         digital_signature: signature,
         ip_address: null, // Could capture this if needed
         signed_at: now,
@@ -282,7 +286,7 @@ export default function LegalAgreementsPage() {
                 </ul>
 
                 <p><strong>3. Assessment Requirements</strong></p>
-                <p>All dogs must complete a FREE assessment day (Fridays only). This ensures your dog is comfortable in our environment and can safely socialize with other dogs.</p>
+                <p>All dogs must complete a FREE assessment day. This ensures your dog is comfortable in our environment and can safely socialize with other dogs.</p>
 
                 <p><strong>4. Pricing & Payment</strong></p>
                 <p className="font-semibold mb-2">Monthly Package Options (Minimum 4 days/month required):</p>
@@ -312,10 +316,25 @@ export default function LegalAgreementsPage() {
                   <li>Payment is due at time of booking</li>
                 </ul>
 
-                <p><strong>5. Cancellation Policy</strong></p>
+                <p><strong>5. Recurring Monthly Billing</strong></p>
+                <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-4 my-3">
+                  <p className="font-bold text-blue-900 mb-2">💳 AUTOMATIC MONTHLY PAYMENTS</p>
+                  <ul className="list-disc pl-6 text-sm space-y-1">
+                    <li><strong>By subscribing, you authorize automatic recurring monthly charges</strong> to your payment method.</li>
+                    <li>Your card will be charged <strong>automatically on the same day each month</strong> at the rate of your selected subscription package.</li>
+                    <li>Payments will continue monthly until you cancel your subscription.</li>
+                    <li>You only need to subscribe once - no action required for subsequent months.</li>
+                    <li>Your days will automatically renew each month on your billing date.</li>
+                    <li>Unused days do NOT roll over to the next month.</li>
+                    <li><strong>To stop recurring payments, you must cancel your subscription</strong> with the required one-month notice (see Cancellation Policy below).</li>
+                    <li>You will receive email confirmation of each monthly charge.</li>
+                  </ul>
+                </div>
+
+                <p><strong>6. Cancellation Policy</strong></p>
                 <p>24-hour notice required for individual day cancellations. Monthly package days cannot be carried over to the following month.</p>
 
-                <p><strong>6. Subscription Cancellation - One Month Notice Period</strong></p>
+                <p><strong>7. Subscription Cancellation - One Month Notice Period</strong></p>
                 <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-4 my-3">
                   <p className="font-bold text-amber-900 mb-2">⚠️ IMPORTANT: Notice Period Requirement</p>
                   <ul className="list-disc pl-6 text-sm space-y-1">
@@ -328,7 +347,7 @@ export default function LegalAgreementsPage() {
                   </ul>
                 </div>
 
-                <p><strong>7. Owner Responsibilities</strong></p>
+                <p><strong>8. Owner Responsibilities</strong></p>
                 <ul className="list-disc pl-6">
                   <li>Provide accurate and complete information about your dog</li>
                   <li>Inform us of any behavioral or health changes</li>
@@ -643,6 +662,18 @@ export default function LegalAgreementsPage() {
                 />
                 <span className="text-gray-800 font-semibold">
                   I have read and fully understand the one month notice period requirement. I agree that if I wish to cancel my subscription, I must provide 30 days notice or I will be charged for an additional month.
+                </span>
+              </label>
+
+              <label className="flex items-start cursor-pointer bg-white border-2 border-blue-400 rounded-lg p-4 hover:bg-blue-50 transition-colors mt-4">
+                <input
+                  type="checkbox"
+                  checked={agreements.recurring_billing_accepted}
+                  onChange={() => handleToggleAgreement('recurring_billing_accepted')}
+                  className="mt-1 mr-3 h-5 w-5 text-blue-600 focus:ring-blue-600 rounded"
+                />
+                <span className="text-gray-800 font-semibold">
+                  I understand and authorize automatic recurring monthly charges to my payment method. I agree that my subscription will continue and my card will be charged automatically each month until I cancel with proper notice as outlined above.
                 </span>
               </label>
             </div>
