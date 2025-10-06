@@ -104,7 +104,6 @@ export default function SignUp() {
   const benefits = [
     "Easy online booking system",
     "Monthly subscription packages",
-    "Access to exclusive events",
   ];
 
   if (emailSent) {
@@ -485,7 +484,7 @@ export default function SignUp() {
                 <li>1. Create your account</li>
                 <li>2. Verify your email</li>
                 <li>3. Add your dog's details</li>
-                <li>4. Book an assessment day (Fridays)</li>
+                <li>4. Book an assessment day</li>
                 <li>5. Choose your subscription plan</li>
               </ol>
             </div>
