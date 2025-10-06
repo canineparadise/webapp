@@ -1317,8 +1317,8 @@ export default function Dashboard() {
                             <span className="font-bold text-canine-navy">
                               £{(
                                 (sessionType === 'full_day'
-                                  ? (subscription?.tier ? ({'4_days': 40, '8_days': 38, '12_days': 37, '16_days': 36, '20_days': 35}[subscription.tier] || 40) : 40)
-                                  : (subscription?.tier ? ({'4_days': 30, '8_days': 28.50, '12_days': 27.75, '16_days': 27, '20_days': 25}[subscription.tier] || 30) : 30)
+                                  ? (subscription?.tier ? ({'4_days': 40, '8_days': 38, '12_days': 37, '16_days': 36, '20_days': 35} as Record<string, number>)[subscription.tier] || 40 : 40)
+                                  : (subscription?.tier ? ({'4_days': 30, '8_days': 28.50, '12_days': 27.75, '16_days': 27, '20_days': 25} as Record<string, number>)[subscription.tier] || 30 : 30)
                                 ) * selectedDogs.length
                               ).toFixed(2)} per day
                             </span>
