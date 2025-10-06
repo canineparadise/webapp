@@ -55,6 +55,7 @@ export default function Dashboard() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [bookedDates, setBookedDates] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [sessionType, setSessionType] = useState<'full_day' | 'half_day'>('full_day')
 
   useEffect(() => {
     fetchDashboardData()
@@ -264,16 +265,35 @@ export default function Dashboard() {
 
     setSubmitting(true)
     try {
-      // Calculate pricing based on number of dogs
-      const dailyRate = 40.00
+      // Calculate pricing based on session type and subscription tier
+      const tier = subscription.tier
+      const isFullDay = sessionType === 'full_day'
+
+      // Pricing based on tier (will need to fetch from pricing_config in production)
+      const pricingMap: any = {
+        '4_days': { full_day: 40, half_day: 30 },
+        '8_days': { full_day: 38, half_day: 28.50 },
+        '12_days': { full_day: 37, half_day: 27.75 },
+        '16_days': { full_day: 36, half_day: 27 },
+        '20_days': { full_day: 35, half_day: 25 },
+      }
+
+      const dailyRate = pricingMap[tier]?.[sessionType] || (isFullDay ? 40 : 30)
       const totalDogsCount = selectedDogs.length
       const totalAmount = dailyRate * totalDogsCount
+
+      const sessionTimes = isFullDay
+        ? { start: '07:00', end: '19:00' }
+        : { start: '10:00', end: '14:00' }
 
       const bookings = selectedDates.map(date => ({
         user_id: user.id,
         dog_ids: selectedDogs,
         booking_date: date,
         total_dogs: totalDogsCount,
+        session_type: sessionType,
+        session_start_time: sessionTimes.start,
+        session_end_time: sessionTimes.end,
         daily_rate: dailyRate,
         total_amount: totalAmount,
         status: 'confirmed',
@@ -1228,6 +1248,81 @@ export default function Dashboard() {
                               <span className="text-sm font-medium text-gray-800">{dog.name}</span>
                             </label>
                           ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Session Type Selection */}
+                    {selectedDates.length > 0 && selectedDogs.length > 0 && (
+                      <div className="bg-white rounded-xl border-2 border-canine-gold p-4">
+                        <p className="text-sm font-semibold text-gray-700 mb-3">Choose Session Type:</p>
+                        <div className="space-y-3">
+                          {/* Full Day Option */}
+                          <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                            sessionType === 'full_day'
+                              ? 'border-canine-gold bg-amber-50'
+                              : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                          }`}>
+                            <input
+                              type="radio"
+                              name="sessionType"
+                              value="full_day"
+                              checked={sessionType === 'full_day'}
+                              onChange={() => setSessionType('full_day')}
+                              className="mt-1 text-canine-gold focus:ring-canine-gold"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-canine-navy">Full Day</span>
+                                <SunIcon className="h-5 w-5 text-amber-500" />
+                              </div>
+                              <p className="text-xs text-gray-600 mt-1">7:00 AM - 7:00 PM</p>
+                              <p className="text-sm font-semibold text-canine-gold mt-2">
+                                £{subscription?.tier ? ({'4_days': 40, '8_days': 38, '12_days': 37, '16_days': 36, '20_days': 35}[subscription.tier] || 40) : 40}/day
+                              </p>
+                            </div>
+                          </label>
+
+                          {/* Half Day Option */}
+                          <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                            sessionType === 'half_day'
+                              ? 'border-canine-gold bg-amber-50'
+                              : 'border-gray-200 bg-gray-50 hover:border-gray-300'
+                          }`}>
+                            <input
+                              type="radio"
+                              name="sessionType"
+                              value="half_day"
+                              checked={sessionType === 'half_day'}
+                              onChange={() => setSessionType('half_day')}
+                              className="mt-1 text-canine-gold focus:ring-canine-gold"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-canine-navy">Half Day</span>
+                                <ClockIcon className="h-5 w-5 text-blue-500" />
+                              </div>
+                              <p className="text-xs text-gray-600 mt-1">10:00 AM - 2:00 PM</p>
+                              <p className="text-sm font-semibold text-canine-gold mt-2">
+                                £{subscription?.tier ? ({'4_days': 30, '8_days': 28.50, '12_days': 27.75, '16_days': 27, '20_days': 25}[subscription.tier] || 30) : 30}/day
+                              </p>
+                            </div>
+                          </label>
+                        </div>
+
+                        {/* Pricing Summary */}
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">{selectedDates.length} day(s) × {selectedDogs.length} dog(s)</span>
+                            <span className="font-bold text-canine-navy">
+                              £{(
+                                (sessionType === 'full_day'
+                                  ? (subscription?.tier ? ({'4_days': 40, '8_days': 38, '12_days': 37, '16_days': 36, '20_days': 35}[subscription.tier] || 40) : 40)
+                                  : (subscription?.tier ? ({'4_days': 30, '8_days': 28.50, '12_days': 27.75, '16_days': 27, '20_days': 25}[subscription.tier] || 30) : 30)
+                                ) * selectedDogs.length
+                              ).toFixed(2)} per day
+                            </span>
+                          </div>
                         </div>
                       </div>
                     )}

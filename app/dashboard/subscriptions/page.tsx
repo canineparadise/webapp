@@ -13,6 +13,7 @@ import {
   SparklesIcon,
   CalendarDaysIcon,
   XCircleIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import { loadStripe } from '@stripe/stripe-js'
 
@@ -26,6 +27,8 @@ export default function SubscriptionsPage() {
   const [tiers, setTiers] = useState<any[]>([])
   const [currentSubscription, setCurrentSubscription] = useState<any>(null)
   const [selectedTier, setSelectedTier] = useState<string | null>(null)
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
     init()
@@ -158,28 +161,37 @@ export default function SubscriptionsPage() {
     }
   }
 
-  const handleCancelSubscription = async () => {
+  const handleCancelSubscription = () => {
+    setShowCancelModal(true)
+  }
+
+  const confirmCancellation = async () => {
     if (!currentSubscription) return
 
-    if (!confirm('Are you sure you want to cancel your subscription? This will take effect at the end of your billing period.')) {
-      return
-    }
+    setCancelling(true)
 
     try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          auto_renew: false,
-          is_active: false
-        })
-        .eq('id', currentSubscription.id)
+      // Call the database function for proper notice period handling
+      const { data, error } = await supabase.rpc('request_subscription_cancellation', {
+        p_subscription_id: currentSubscription.id,
+        p_user_id: user.id
+      })
 
       if (error) throw error
 
-      toast.success('Subscription cancelled successfully')
-      await init() // Refresh
+      if (data.success) {
+        toast.success(data.message)
+        setShowCancelModal(false)
+        init() // Reload data to show cancellation status
+      } else {
+        toast.error(data.error || 'Failed to cancel subscription')
+      }
+
     } catch (error: any) {
-      toast.error(error.message || 'Failed to cancel subscription')
+      console.error('Cancel error:', error)
+      toast.error('Failed to cancel subscription')
+    } finally {
+      setCancelling(false)
     }
   }
 
@@ -408,11 +420,114 @@ export default function SubscriptionsPage() {
               <li>• Subscriptions are billed monthly</li>
               <li>• Unused days do not roll over to the next month</li>
               <li>• Extra days can be purchased at your current per-day rate</li>
-              <li>• Cancel anytime - no long-term commitments</li>
+              <li>• <strong>One month notice period required for cancellation</strong></li>
             </ul>
           </div>
         </motion.div>
       </div>
+
+      {/* Cancellation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl"
+          >
+            <div className="flex items-start gap-4 mb-6">
+              <div className="bg-amber-100 rounded-full p-3">
+                <ExclamationTriangleIcon className="h-8 w-8 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-canine-navy mb-2">
+                  Cancel Subscription - One Month Notice Required
+                </h2>
+                <p className="text-gray-600">
+                  Please read the cancellation policy carefully
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-6 mb-6">
+              <h3 className="font-bold text-amber-900 mb-3 flex items-center gap-2">
+                <ExclamationTriangleIcon className="h-5 w-5" />
+                Important: 30-Day Notice Period
+              </h3>
+              <ul className="text-sm text-amber-900 space-y-2">
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">•</span>
+                  <span>You must provide <strong>one (1) full calendar month (30 days) notice</strong> to cancel your subscription.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">•</span>
+                  <span>Your cancellation will become effective <strong>30 days from today</strong>.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">•</span>
+                  <span>You will be charged for one additional month at your current rate of <strong>£{parseFloat(currentSubscription?.monthly_price || 0).toFixed(2)}</strong>.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">•</span>
+                  <span>You may continue to use your remaining days during the notice period.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold">•</span>
+                  <span>No refunds will be provided for unused days.</span>
+                </li>
+              </ul>
+
+              <div className="mt-4 pt-4 border-t border-amber-300">
+                <p className="text-sm font-bold text-amber-900">
+                  Effective Cancellation Date: {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+                <p className="text-sm text-amber-800 mt-1">
+                  Final Charge: £{parseFloat(currentSubscription?.monthly_price || 0).toFixed(2)} on {new Date().toLocaleDateString('en-GB')}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-gray-700">
+                <strong>What happens next:</strong>
+              </p>
+              <ol className="text-sm text-gray-700 mt-2 space-y-1 ml-4 list-decimal">
+                <li>Your subscription will remain active for the next 30 days</li>
+                <li>You can continue booking and using your days as normal</li>
+                <li>After 30 days, your subscription will automatically end</li>
+                <li>No further charges will be applied after the notice period</li>
+              </ol>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                disabled={cancelling}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Keep My Subscription
+              </button>
+              <button
+                onClick={confirmCancellation}
+                disabled={cancelling}
+                className="flex-1 px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {cancelling ? (
+                  <>
+                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Cancellation'
+                )}
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-4 text-center">
+              By confirming, you acknowledge that you have read and understand the cancellation policy.
+            </p>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

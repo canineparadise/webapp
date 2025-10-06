@@ -35,6 +35,7 @@ export default function LegalAgreementsPage() {
     property_damage_waiver: false,
     collection_procedure_agreed: false,
     data_protection_consent: false,
+    notice_period_accepted: false,
   })
 
   useEffect(() => {
@@ -97,7 +98,8 @@ export default function LegalAgreementsPage() {
     agreements.emergency_contact_consent &&
     agreements.property_damage_waiver &&
     agreements.collection_procedure_agreed &&
-    agreements.data_protection_consent
+    agreements.data_protection_consent &&
+    agreements.notice_period_accepted
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -131,6 +133,8 @@ export default function LegalAgreementsPage() {
         property_damage_waiver_at: agreements.property_damage_waiver ? now : null,
         collection_procedure_agreed_at: agreements.collection_procedure_agreed ? now : null,
         data_protection_consent_at: agreements.data_protection_consent ? now : null,
+        notice_period_accepted: agreements.notice_period_accepted,
+        notice_period_accepted_at: agreements.notice_period_accepted ? now : null,
         digital_signature: signature,
         ip_address: null, // Could capture this if needed
         signed_at: now,
@@ -309,9 +313,22 @@ export default function LegalAgreementsPage() {
                 </ul>
 
                 <p><strong>5. Cancellation Policy</strong></p>
-                <p>24-hour notice required for cancellations. Monthly package days cannot be carried over to the following month.</p>
+                <p>24-hour notice required for individual day cancellations. Monthly package days cannot be carried over to the following month.</p>
 
-                <p><strong>6. Owner Responsibilities</strong></p>
+                <p><strong>6. Subscription Cancellation - One Month Notice Period</strong></p>
+                <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-4 my-3">
+                  <p className="font-bold text-amber-900 mb-2">⚠️ IMPORTANT: Notice Period Requirement</p>
+                  <ul className="list-disc pl-6 text-sm space-y-1">
+                    <li><strong>One (1) full calendar month notice is required to cancel your subscription.</strong></li>
+                    <li>If you wish to stop attending, you must provide notice at least 30 days before the effective cancellation date.</li>
+                    <li>If less than one month's notice is given, you will be charged for one additional month based on your current subscription tier.</li>
+                    <li>Example: If you cancel on January 15th, your subscription will end February 28th (or 30 days from cancellation date, whichever is later), and you will be charged for both January and February.</li>
+                    <li>Cancellation becomes effective 30 days from the date you submit your cancellation request.</li>
+                    <li>You may continue to use your remaining days during the notice period.</li>
+                  </ul>
+                </div>
+
+                <p><strong>7. Owner Responsibilities</strong></p>
                 <ul className="list-disc pl-6">
                   <li>Provide accurate and complete information about your dog</li>
                   <li>Inform us of any behavioral or health changes</li>
@@ -575,6 +592,59 @@ export default function LegalAgreementsPage() {
                   </label>
                 </div>
               </div>
+            </div>
+
+            {/* One Month Notice Period Agreement */}
+            <div className="bg-white rounded-2xl shadow-lg p-8 border-4 border-amber-300">
+              <h2 className="text-xl font-semibold text-canine-navy mb-4 flex items-center">
+                <ExclamationTriangleIcon className="h-6 w-6 mr-2 text-amber-600" />
+                Subscription Cancellation Notice Period
+              </h2>
+
+              <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-6 mb-6">
+                <p className="text-sm font-bold text-amber-900 mb-3">
+                  ⚠️ CRITICAL REQUIREMENT: ONE MONTH NOTICE PERIOD
+                </p>
+                <div className="prose max-w-none text-amber-900 space-y-3 text-sm">
+                  <p className="font-semibold">
+                    By accepting this agreement, you understand and agree that:
+                  </p>
+                  <ul className="list-disc pl-6 space-y-2">
+                    <li><strong>You must provide one (1) full calendar month (30 days) notice if you wish to cancel your subscription.</strong></li>
+                    <li>If you cancel with less than 30 days notice, you will be charged for one additional month at your current subscription rate.</li>
+                    <li>The cancellation becomes effective 30 days from the date you submit your cancellation request.</li>
+                    <li>During the notice period, you may continue to use any remaining days in your subscription.</li>
+                    <li>No refunds will be provided for unused days after cancellation.</li>
+                  </ul>
+
+                  <div className="bg-white border border-amber-400 rounded p-3 mt-4">
+                    <p className="font-bold text-amber-900 mb-2">Example:</p>
+                    <p className="text-xs">
+                      If you submit a cancellation request on <strong>January 15, 2025</strong>:<br/>
+                      • Your effective cancellation date will be <strong>February 14, 2025</strong> (30 days later)<br/>
+                      • You will be charged for both January and February<br/>
+                      • You can continue using your subscription until February 14th<br/>
+                      • After February 14th, no further charges will apply
+                    </p>
+                  </div>
+
+                  <p className="font-bold text-red-700 mt-4">
+                    THIS IS A BINDING COMMITMENT. FAILURE TO PROVIDE PROPER NOTICE WILL RESULT IN ADDITIONAL CHARGES.
+                  </p>
+                </div>
+              </div>
+
+              <label className="flex items-start cursor-pointer bg-white border-2 border-amber-400 rounded-lg p-4 hover:bg-amber-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={agreements.notice_period_accepted}
+                  onChange={() => handleToggleAgreement('notice_period_accepted')}
+                  className="mt-1 mr-3 h-5 w-5 text-amber-600 focus:ring-amber-600 rounded"
+                />
+                <span className="text-gray-800 font-semibold">
+                  I have read and fully understand the one month notice period requirement. I agree that if I wish to cancel my subscription, I must provide 30 days notice or I will be charged for an additional month.
+                </span>
+              </label>
             </div>
 
             {/* Digital Signature */}
