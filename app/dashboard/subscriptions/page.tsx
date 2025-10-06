@@ -415,7 +415,7 @@ export default function SubscriptionsPage() {
                         </div>
                       </div>
 
-                      <ul className="text-xs text-left space-y-2 mb-6">
+                      <ul className="text-xs text-left space-y-2 mb-4">
                         <li className="flex items-start gap-2">
                           <CheckCircleIcon className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                           <span>
@@ -437,6 +437,15 @@ export default function SubscriptionsPage() {
                           <span className="text-gray-500">Days don't roll over</span>
                         </li>
                       </ul>
+
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+                        <p className="text-xs text-blue-900 font-semibold mb-1">
+                          Automatic Monthly Billing
+                        </p>
+                        <p className="text-xs text-blue-800">
+                          Your card will be charged £{pricing.monthly.toFixed(2)} automatically on the same day each month until you cancel. Cancel anytime with 30 days notice.
+                        </p>
+                      </div>
 
                       <button
                         onClick={() => handlePurchaseSubscription(tier.id, pricing.monthly, tier.days_included)}
@@ -477,13 +486,29 @@ export default function SubscriptionsPage() {
           </div>
 
           {/* Info */}
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-semibold text-blue-900 mb-2">Important Information</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Subscriptions are billed monthly</li>
-              <li>• Unused days do not roll over to the next month</li>
-              <li>• Extra days can be purchased at your current per-day rate</li>
-              <li>• <strong>One month notice period required for cancellation</strong></li>
+          <div className="mt-8 bg-blue-50 border-2 border-blue-300 rounded-lg p-6">
+            <h4 className="font-bold text-blue-900 mb-3 text-lg">Important Subscription Information</h4>
+            <ul className="text-sm text-blue-900 space-y-2">
+              <li className="flex items-start gap-2">
+                <span className="font-bold">•</span>
+                <span><strong>Automatic Monthly Billing:</strong> Your card will be charged automatically on the same day each month at the rate shown above. You only need to subscribe once.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold">•</span>
+                <span><strong>Recurring Payment:</strong> Payments continue monthly until you cancel your subscription.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold">•</span>
+                <span><strong>Days Reset Monthly:</strong> Unused days do not roll over to the next month. Your days refresh on your billing date.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold">•</span>
+                <span><strong>Cancellation Policy:</strong> One full month (30 days) notice required for cancellation. You will be charged for one additional month after requesting cancellation.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="font-bold">•</span>
+                <span><strong>Extra Days:</strong> You can purchase additional days at your current per-day rate if needed.</span>
+              </li>
             </ul>
           </div>
         </motion.div>
