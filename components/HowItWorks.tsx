@@ -33,7 +33,7 @@ const steps = [
   {
     icon: CalendarDaysIcon,
     title: 'Book Assessment Day',
-    description: 'Schedule your dog\'s assessment visit - available every Friday to meet our team.',
+    description: 'Schedule your dog\'s assessment visit to meet our team and ensure they\'re a great fit.',
     color: 'bg-canine-sky',
   },
   {
@@ -119,16 +119,6 @@ export default function HowItWorks() {
                     <p className="text-gray-600 text-lg leading-relaxed ml-16">
                       {step.description}
                     </p>
-
-                    {/* Special badge for assessment */}
-                    {index === 3 && (
-                      <div className="mt-4 ml-16">
-                        <span className="inline-flex items-center px-4 py-2 bg-canine-gold/10 text-canine-gold rounded-full font-semibold">
-                          <CalendarDaysIcon className="h-4 w-4 mr-2" />
-                          Fridays Only
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
 

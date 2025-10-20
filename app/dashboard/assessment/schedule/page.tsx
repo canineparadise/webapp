@@ -24,9 +24,11 @@ export default function ScheduleAssessment() {
   const [booking, setBooking] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [dogs, setDogs] = useState<any[]>([])
-  const [availableFridays, setAvailableFridays] = useState<any[]>([])
-  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [selectedDogIds, setSelectedDogIds] = useState<string[]>([])
+  const [availableSlots, setAvailableSlots] = useState<any[]>([])
+  const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [existingAssessment, setExistingAssessment] = useState<any>(null)
+  const [assessmentFee, setAssessmentFee] = useState<number>(40) // Default to £40, fetched from database
 
   useEffect(() => {
     init()
@@ -42,17 +44,70 @@ export default function ScheduleAssessment() {
       }
       setUser(user)
 
-      // Get user's dogs
+      // Fetch assessment fee from admin settings
+      const { data: feeData } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'assessment_fee')
+        .maybeSingle()
+
+      if (feeData?.setting_value) {
+        setAssessmentFee(parseFloat(feeData.setting_value))
+      }
+
+      // Get user's dogs that are ready for assessment (not drafts)
       const { data: dogsData } = await supabase
         .from('dogs')
         .select('*')
         .eq('owner_id', user.id)
+        .eq('is_draft', false)
 
       setDogs(dogsData || [])
+
+      // Auto-select all dogs for assessment
+      if (dogsData && dogsData.length > 0) {
+        setSelectedDogIds(dogsData.map(d => d.id))
+      }
 
       if (!dogsData || dogsData.length === 0) {
         toast.error('Please add at least one dog before booking an assessment')
         setTimeout(() => router.push('/dashboard/add-dog'), 2000)
+        return
+      }
+
+      // Check if all dogs have photos and vaccination documents
+      for (const dog of dogsData) {
+        if (!dog.photo_url) {
+          toast.error(`Please upload a photo for ${dog.name} before booking an assessment`)
+          setTimeout(() => router.push('/dashboard'), 2000)
+          return
+        }
+        if (!dog.has_vaccination_docs) {
+          toast.error(`Please upload vaccination records for ${dog.name} before booking an assessment`)
+          setTimeout(() => router.push('/dashboard'), 2000)
+          return
+        }
+      }
+
+      // Check if user has signed legal agreements
+      const { data: agreements } = await supabase
+        .from('legal_agreements')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!agreements) {
+        toast.error('Please sign all required legal agreements before booking an assessment')
+        setTimeout(() => router.push('/dashboard/legal-agreements'), 2000)
+        return
+      }
+
+      // Verify all required waivers are signed (photo permission is optional)
+      if (!agreements.injury_waiver_agreed ||
+          !agreements.terms_accepted ||
+          !agreements.vaccination_requirement_understood) {
+        toast.error('Please sign all required waivers before booking an assessment')
+        setTimeout(() => router.push('/dashboard/legal-agreements'), 2000)
         return
       }
 
@@ -62,14 +117,14 @@ export default function ScheduleAssessment() {
         .select('*')
         .eq('user_id', user.id)
         .in('status', ['pending', 'confirmed'])
-        .single()
+        .maybeSingle()
 
       if (existingData) {
         setExistingAssessment(existingData)
       }
 
-      // Generate next 8 Fridays
-      await generateFridays(user.id)
+      // Fetch available assessment slots
+      await fetchAvailableSlots()
     } catch (error) {
       console.error('Init error:', error)
     } finally {
@@ -77,56 +132,49 @@ export default function ScheduleAssessment() {
     }
   }
 
-  const generateFridays = async (userId: string) => {
-    const fridays = []
-    const today = new Date()
-    let currentDate = new Date(today)
+  const fetchAvailableSlots = async () => {
+    try {
+      // Fetch all available assessment slots from admin configuration
+      const { data: slots, error } = await supabase
+        .from('assessment_slots')
+        .select(`
+          id,
+          assessment_date,
+          start_time,
+          end_time,
+          booked_by_user_id,
+          is_available
+        `)
+        .gte('assessment_date', new Date().toISOString().split('T')[0])
+        .eq('is_available', true)
+        .is('booked_by_user_id', null)
+        .order('assessment_date', { ascending: true })
+        .order('start_time', { ascending: true })
 
-    // Find next Friday
-    const daysUntilFriday = (5 - currentDate.getDay() + 7) % 7
-    currentDate.setDate(currentDate.getDate() + (daysUntilFriday === 0 ? 7 : daysUntilFriday))
+      if (error) throw error
 
-    // Generate 8 Fridays
-    for (let i = 0; i < 8; i++) {
-      const dateStr = currentDate.toISOString().split('T')[0]
+      // Filter to only show slots that are not booked (booked_by_user_id is null)
+      const availableSlots = slots || []
 
-      // Check if this Friday is already booked by another user
-      const { data: bookings } = await supabase
-        .from('assessment_schedule')
-        .select('id, user_id')
-        .eq('requested_date', dateStr)
-        .in('status', ['pending', 'confirmed'])
-
-      const isBooked = bookings && bookings.length > 0 && !bookings.some(b => b.user_id === userId)
-      const isMyBooking = bookings && bookings.some(b => b.user_id === userId)
-
-      fridays.push({
-        date: dateStr,
-        display: currentDate.toLocaleDateString('en-GB', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        }),
-        available: !isBooked,
-        isMyBooking,
-        bookedBy: isBooked ? 'another user' : null
-      })
-
-      // Move to next Friday
-      currentDate.setDate(currentDate.getDate() + 7)
+      setAvailableSlots(availableSlots)
+    } catch (error) {
+      console.error('Error fetching slots:', error)
+      toast.error('Failed to load available assessment slots')
     }
-
-    setAvailableFridays(fridays)
   }
 
   const handleBookAssessment = async () => {
-    if (!selectedDate) {
-      toast.error('Please select a Friday')
+    if (!selectedSlot) {
+      toast.error('Please select an assessment time slot')
       return
     }
 
-    if (!user || dogs.length === 0) {
+    if (selectedDogIds.length === 0) {
+      toast.error('Please select at least one dog for assessment')
+      return
+    }
+
+    if (!user) {
       toast.error('Invalid booking data')
       return
     }
@@ -134,49 +182,60 @@ export default function ScheduleAssessment() {
     setBooking(true)
 
     try {
-      // Double-check availability
-      const { data: existingBookings } = await supabase
-        .from('assessment_schedule')
-        .select('id, user_id')
-        .eq('requested_date', selectedDate)
-        .in('status', ['pending', 'confirmed'])
-
-      if (existingBookings && existingBookings.length > 0 && !existingBookings.some(b => b.user_id === user.id)) {
-        toast.error('Sorry, this date has just been booked by someone else. Please select another Friday.')
-        await generateFridays(user.id) // Refresh
+      // Get the selected slot details
+      const slot = availableSlots.find(s => s.id === selectedSlot)
+      if (!slot) {
+        toast.error('Selected slot not found')
+        setBooking(false)
         return
       }
 
-      // Book all user's dogs for this assessment
-      const assessmentPromises = dogs.map(dog =>
-        supabase
-          .from('assessment_schedule')
-          .insert({
-            user_id: user.id,
-            dog_id: dog.id,
-            requested_date: selectedDate,
-            status: 'pending',
-            notes: `Assessment for ${dog.name} - ${dogs.length} dog(s) total`
-          })
-      )
+      // Double-check availability (slot might have been booked by someone else)
+      const { data: currentSlot } = await supabase
+        .from('assessment_slots')
+        .select('booked_by_user_id, is_available')
+        .eq('id', selectedSlot)
+        .single()
 
-      const results = await Promise.all(assessmentPromises)
-      const hasError = results.some(r => r.error)
-
-      if (hasError) {
-        throw new Error('Failed to book assessment for one or more dogs')
+      if (!currentSlot || !currentSlot.is_available || currentSlot.booked_by_user_id !== null) {
+        toast.error('Sorry, this slot has just been filled. Please select another time.')
+        await fetchAvailableSlots() // Refresh
+        setBooking(false)
+        return
       }
 
-      toast.success(`Assessment booked for ${selectedDate}! We'll see ${dogs.length} dog(s) on this day.`)
+      // Create Stripe checkout session for assessment payment (£40 per dog)
+      const response = await fetch('/api/create-assessment-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          dogIds: selectedDogIds,
+          slotId: selectedSlot,
+          assessmentDate: slot.assessment_date,
+          startTime: slot.start_time,
+          endTime: slot.end_time,
+        }),
+      })
 
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 2000)
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session')
+      }
+
+      const { url } = await response.json()
+
+      if (!url) {
+        throw new Error('No checkout URL returned')
+      }
+
+      // Redirect to Stripe checkout
+      window.location.href = url
 
     } catch (error: any) {
       console.error('Booking error:', error)
-      toast.error(error.message || 'Failed to book assessment')
-    } finally {
+      toast.error(error.message || 'Failed to initiate payment')
       setBooking(false)
     }
   }
@@ -197,7 +256,7 @@ export default function ScheduleAssessment() {
 
       toast.success('Assessment cancelled successfully')
       setExistingAssessment(null)
-      await generateFridays(user.id)
+      await fetchAvailableSlots()
     } catch (error: any) {
       toast.error(error.message || 'Failed to cancel assessment')
     }
@@ -272,14 +331,14 @@ export default function ScheduleAssessment() {
                   <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
                     <div className="flex items-center gap-2 text-white">
                       <CurrencyPoundIcon className="h-5 w-5" />
-                      <span className="font-bold text-xl">£40</span>
+                      <span className="font-bold text-xl">£{assessmentFee}</span>
                       <span className="text-white/80">one-time</span>
                     </div>
                   </div>
                   <div className="bg-white/20 backdrop-blur-sm rounded-xl px-4 py-2">
                     <div className="flex items-center gap-2 text-white">
                       <ClockIcon className="h-5 w-5" />
-                      <span className="font-semibold">9:00 AM Start</span>
+                      <span className="font-semibold">Multiple time slots available</span>
                     </div>
                   </div>
                 </div>
@@ -303,15 +362,15 @@ export default function ScheduleAssessment() {
                 <ul className="text-sm text-blue-800 space-y-2">
                   <li className="flex items-start">
                     <span className="text-blue-500 mr-2 font-bold">•</span>
-                    <span><strong>Cost:</strong> £40 one-time assessment fee (all your dogs together)</span>
+                    <span><strong>Cost:</strong> £{assessmentFee} per dog (select which dogs to assess below)</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-blue-500 mr-2 font-bold">•</span>
-                    <span><strong>When:</strong> 9:00 AM start time</span>
+                    <span><strong>When:</strong> Choose from available time slots below</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-blue-500 mr-2 font-bold">•</span>
-                    <span><strong>Exclusive:</strong> Only ONE client per day - you get our full attention!</span>
+                    <span><strong>Limited spots:</strong> Each time slot has limited capacity - book early!</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-blue-500 mr-2 font-bold">•</span>
@@ -381,47 +440,87 @@ export default function ScheduleAssessment() {
             </motion.div>
           )}
 
-          {/* Dog List */}
+          {/* Dog Selection List */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             className="mb-6 bg-white rounded-2xl shadow-xl p-6 border-2 border-purple-100"
           >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl p-2">
-                <SparklesIcon className="h-6 w-6 text-white" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl p-2">
+                  <SparklesIcon className="h-6 w-6 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">
+                  Select Dogs for Assessment ({dogs.length} available)
+                </h2>
               </div>
-              <h2 className="text-xl font-bold text-gray-900">
-                Your Pups for Assessment ({dogs.length})
-              </h2>
+              {selectedDogIds.length > 0 && (
+                <div className="bg-gradient-to-r from-amber-100 to-orange-100 px-4 py-2 rounded-lg border-2 border-amber-300">
+                  <p className="text-sm font-bold text-amber-900">
+                    Total: £{assessmentFee * selectedDogIds.length}
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    {selectedDogIds.length} dog{selectedDogIds.length !== 1 ? 's' : ''} × £{assessmentFee}
+                  </p>
+                </div>
+              )}
             </div>
-            <div className="grid md:grid-cols-2 gap-3">
-              {dogs.map((dog, index) => (
-                <motion.div
-                  key={dog.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4 + index * 0.1 }}
-                  className="flex items-center gap-4 p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border-2 border-purple-100 hover:border-purple-300 transition-colors"
-                >
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center shadow-lg">
-                    {dog.photo_url ? (
-                      <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      <span className="text-white font-bold text-xl">{dog.name[0]}</span>
+
+            {dogs.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-xl">
+                <p className="text-gray-600 mb-2">All your dogs have completed their assessment!</p>
+                <p className="text-sm text-gray-500">No dogs need assessment at this time.</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-3">
+                {dogs.map((dog, index) => (
+                  <motion.label
+                    key={dog.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.4 + index * 0.1 }}
+                    className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      selectedDogIds.includes(dog.id)
+                        ? 'bg-gradient-to-br from-purple-100 to-pink-100 border-purple-400 shadow-md'
+                        : 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-100 hover:border-purple-300'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedDogIds.includes(dog.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedDogIds([...selectedDogIds, dog.id])
+                        } else {
+                          setSelectedDogIds(selectedDogIds.filter(id => id !== dog.id))
+                        }
+                      }}
+                      className="h-5 w-5 text-purple-600 focus:ring-purple-500 rounded"
+                    />
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center shadow-lg flex-shrink-0">
+                      {dog.photo_url ? (
+                        <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover rounded-full" />
+                      ) : (
+                        <span className="text-white font-bold text-xl">{dog.name[0]}</span>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-900">{dog.name}</p>
+                      <p className="text-sm text-gray-600">{dog.breed}</p>
+                      <p className="text-xs text-purple-600 font-medium mt-1">+£{assessmentFee}</p>
+                    </div>
+                    {selectedDogIds.includes(dog.id) && (
+                      <CheckCircleIcon className="h-6 w-6 text-purple-600 flex-shrink-0" />
                     )}
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900">{dog.name}</p>
-                    <p className="text-sm text-gray-600">{dog.breed}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                  </motion.label>
+                ))}
+              </div>
+            )}
           </motion.div>
 
-          {/* Available Fridays */}
+          {/* Available Slots */}
           {!existingAssessment && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -434,78 +533,77 @@ export default function ScheduleAssessment() {
                   <CalendarDaysIcon className="h-6 w-6 text-white" />
                 </div>
                 <h2 className="text-xl font-bold text-gray-900">
-                  Select Your Friday
+                  Select Assessment Time Slot
                 </h2>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                {availableFridays.map((friday, index) => (
-                  <motion.div
-                    key={friday.date}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 + index * 0.05 }}
-                    whileHover={friday.available ? { scale: 1.03, y: -4 } : {}}
-                    whileTap={friday.available ? { scale: 0.98 } : {}}
-                    onClick={() => friday.available && setSelectedDate(friday.date)}
-                    className={`
-                      p-5 rounded-xl border-2 cursor-pointer transition-all shadow-lg relative overflow-hidden
-                      ${selectedDate === friday.date
-                        ? 'border-amber-500 bg-gradient-to-br from-amber-50 to-orange-50 shadow-xl'
-                        : friday.available
-                          ? 'border-gray-200 hover:border-amber-400 bg-white hover:shadow-xl'
-                          : 'border-gray-100 bg-gray-50 cursor-not-allowed opacity-60'
+              {availableSlots.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <CalendarDaysIcon className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg font-semibold mb-2">No assessment slots available</p>
+                  <p className="text-sm">Please check back later or contact us for more information.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {Object.entries(
+                    availableSlots.reduce((acc: any, slot: any) => {
+                      if (!acc[slot.assessment_date]) {
+                        acc[slot.assessment_date] = []
                       }
-                    `}
-                  >
-                    {selectedDate === friday.date && (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                        className="absolute -top-8 -right-8 opacity-10"
-                      >
-                        <CheckCircleIcon className="h-24 w-24 text-amber-500" />
-                      </motion.div>
-                    )}
+                      acc[slot.assessment_date].push(slot)
+                      return acc
+                    }, {})
+                  ).map(([date, dateSlots]: [string, any], dateIndex) => (
+                    <div key={date} className="border-2 border-gray-100 rounded-xl p-4">
+                      <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
+                        <CalendarDaysIcon className="h-5 w-5 text-amber-500" />
+                        {new Date(date).toLocaleDateString('en-GB', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
+                      </h3>
+                      <div className="grid md:grid-cols-3 gap-3">
+                        {dateSlots.map((slot: any, index: number) => (
+                          <motion.div
+                            key={slot.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.5 + dateIndex * 0.1 + index * 0.05 }}
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setSelectedSlot(slot.id)}
+                            className={`
+                              p-4 rounded-xl border-2 cursor-pointer transition-all shadow relative overflow-hidden
+                              ${selectedSlot === slot.id
+                                ? 'border-amber-500 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg'
+                                : 'border-gray-200 hover:border-amber-400 bg-white hover:shadow-md'
+                              }
+                            `}
+                          >
+                            {selectedSlot === slot.id && (
+                              <div className="absolute top-2 right-2">
+                                <CheckCircleIcon className="h-6 w-6 text-amber-500" />
+                              </div>
+                            )}
 
-                    <div className="relative z-10">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <CalendarDaysIcon className={`h-6 w-6 ${friday.available ? 'text-amber-500' : 'text-gray-400'}`} />
-                          <span className="font-bold text-gray-900">{friday.display.split(',')[0]}</span>
-                        </div>
-                        {friday.available ? (
-                          <div className="bg-green-100 rounded-full p-1">
-                            <CheckCircleIcon className="h-5 w-5 text-green-600" />
-                          </div>
-                        ) : (
-                          <div className="bg-red-100 rounded-full p-1">
-                            <XCircleIcon className="h-5 w-5 text-red-600" />
-                          </div>
-                        )}
-                      </div>
-
-                      <p className="text-sm text-gray-600 mb-3">{friday.display.split(',').slice(1).join(',')}</p>
-
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
-                        <ClockIcon className="h-4 w-4" />
-                        <span>9:00 AM</span>
-                      </div>
-
-                      <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
-                        friday.available
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}>
-                        {friday.available ? '✓ Available' : '✗ Fully Booked'}
+                            <div className="flex items-center gap-2">
+                              <ClockIcon className="h-5 w-5 text-amber-500" />
+                              <span className="font-bold text-gray-900">
+                                {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                              </span>
+                            </div>
+                          </motion.div>
+                        ))}
                       </div>
                     </div>
-                  </motion.div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               {/* Book Button */}
-              {selectedDate && (
+              {selectedSlot && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -514,12 +612,12 @@ export default function ScheduleAssessment() {
                   <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-4 mb-4">
                     <div className="flex items-start gap-3">
                       <SparklesIcon className="h-5 w-5 text-amber-600 mt-0.5" />
-                      <div>
+                      <div className="flex-1">
                         <p className="text-sm text-amber-900 font-semibold">
-                          You're reserving the entire day!
+                          You're booking this time slot!
                         </p>
                         <p className="text-sm text-amber-800 mt-1">
-                          All {dogs.length} of your dog(s) will be assessed together on this exclusive assessment day.
+                          {selectedDogIds.length} dog{selectedDogIds.length !== 1 ? 's' : ''} selected for assessment - Total: £{assessmentFee * selectedDogIds.length}
                         </p>
                       </div>
                     </div>
@@ -550,7 +648,7 @@ export default function ScheduleAssessment() {
                       ) : (
                         <>
                           <CheckCircleIcon className="h-6 w-6" />
-                          Confirm Assessment Booking 🎉
+                          Proceed to Checkout (£{assessmentFee * selectedDogIds.length})
                         </>
                       )}
                     </span>

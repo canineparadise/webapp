@@ -271,15 +271,6 @@ export default function ContactUs() {
                   </motion.div>
                 ))}
               </div>
-
-              {/* Image Placeholder */}
-              <div className="rounded-2xl overflow-hidden shadow-xl">
-                <img
-                  src="https://via.placeholder.com/600x400/e8f4f8/1a3a52?text=Happy+Dogs+at+Facility"
-                  alt="Canine Paradise Facility"
-                  className="w-full h-64 object-cover"
-                />
-              </div>
             </motion.div>
           </div>
         </div>
@@ -321,30 +312,6 @@ export default function ContactUs() {
               className="w-full"
             />
           </motion.div>
-
-          <div className="mt-8 grid md:grid-cols-3 gap-6">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="bg-canine-sky rounded-xl p-6 text-center"
-            >
-              <h3 className="font-semibold text-canine-navy mb-2">By Car</h3>
-              <p className="text-gray-700 text-sm">Free parking available on-site</p>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="bg-canine-cream rounded-xl p-6 text-center"
-            >
-              <h3 className="font-semibold text-canine-navy mb-2">By Train</h3>
-              <p className="text-gray-700 text-sm">10 min walk from Elstree & Borehamwood station</p>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="bg-canine-gold/20 rounded-xl p-6 text-center"
-            >
-              <h3 className="font-semibold text-canine-navy mb-2">By Bus</h3>
-              <p className="text-gray-700 text-sm">Routes 107, 292, and 306 stop nearby</p>
-            </motion.div>
-          </div>
         </div>
       </section>
 

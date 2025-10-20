@@ -24,6 +24,7 @@ export default function LegalAgreementsPage() {
   const [existingAgreement, setExistingAgreement] = useState<any>(null)
   const [signature, setSignature] = useState('')
   const [signatureDate, setSignatureDate] = useState('')
+  const [assessmentFee, setAssessmentFee] = useState<number>(40) // Default to £40, fetched from database
   const [agreements, setAgreements] = useState({
     terms_accepted: false,
     injury_waiver_agreed: false,
@@ -37,6 +38,7 @@ export default function LegalAgreementsPage() {
     data_protection_consent: false,
     notice_period_accepted: false,
     recurring_billing_accepted: false,
+    password_policy_agreed: false,
   })
 
   useEffect(() => {
@@ -51,6 +53,17 @@ export default function LegalAgreementsPage() {
         return
       }
       setUser(user)
+
+      // Fetch assessment fee from admin settings
+      const { data: feeData } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'assessment_fee')
+        .maybeSingle()
+
+      if (feeData?.setting_value) {
+        setAssessmentFee(parseFloat(feeData.setting_value))
+      }
 
       // Check for existing agreements
       const { data: existing } = await supabase
@@ -101,7 +114,8 @@ export default function LegalAgreementsPage() {
     agreements.collection_procedure_agreed &&
     agreements.data_protection_consent &&
     agreements.notice_period_accepted &&
-    agreements.recurring_billing_accepted
+    agreements.recurring_billing_accepted &&
+    agreements.password_policy_agreed
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -139,6 +153,8 @@ export default function LegalAgreementsPage() {
         notice_period_accepted_at: agreements.notice_period_accepted ? now : null,
         recurring_billing_accepted: agreements.recurring_billing_accepted,
         recurring_billing_accepted_at: agreements.recurring_billing_accepted ? now : null,
+        password_policy_agreed: agreements.password_policy_agreed,
+        password_policy_agreed_at: agreements.password_policy_agreed ? now : null,
         digital_signature: signature,
         ip_address: null, // Could capture this if needed
         signed_at: now,
@@ -283,12 +299,21 @@ export default function LegalAgreementsPage() {
                   <li>Current flea and worming treatments are required</li>
                   <li>Dogs must be in good health and free from contagious conditions</li>
                   <li>Vaccination records must be provided and kept current</li>
+                  <li><strong>Male dogs over 1 year old must be neutered</strong></li>
+                  <li><strong>Female dogs that are not spayed cannot attend daycare when in season</strong></li>
                 </ul>
 
                 <p><strong>3. Assessment Requirements</strong></p>
-                <p>All dogs must complete a FREE assessment day. This ensures your dog is comfortable in our environment and can safely socialize with other dogs.</p>
+                <p>All dogs must complete an assessment day at a cost of £{assessmentFee}. This ensures your dog is comfortable in our environment and can safely socialize with other dogs.</p>
 
-                <p><strong>4. Pricing & Payment</strong></p>
+                <p><strong>4. Feeding & Meal Requirements</strong></p>
+                <ul className="list-disc pl-6">
+                  <li>All meals must be provided by the owner in portion-sized servings</li>
+                  <li>Containers must be clearly labeled with your dog's name and feeding instructions</li>
+                  <li>Please specify any dietary restrictions or allergies</li>
+                </ul>
+
+                <p><strong>5. Pricing & Payment</strong></p>
                 <p className="font-semibold mb-2">Monthly Package Options (Minimum 4 days/month required):</p>
                 <ul className="list-disc pl-6 mb-3">
                   <li>4 days per month: £40/day = £160 total</li>
@@ -298,12 +323,23 @@ export default function LegalAgreementsPage() {
                   <li>20 days per month: £36/day = £720 total</li>
                 </ul>
 
+                <p className="font-semibold mb-2">Half-Day Sessions (10 AM - 3 PM):</p>
+                <ul className="list-disc pl-6 mb-3">
+                  <li>4 days per month: £30/half-day = £120 total</li>
+                  <li>8 days per month: £28.50/half-day = £228 total</li>
+                  <li>12 days per month: £27.75/half-day = £333 total</li>
+                  <li>16 days per month: £27/half-day = £432 total</li>
+                  <li>20 days per month: £25/half-day = £500 total</li>
+                </ul>
+
                 <p className="font-semibold mb-2">Additional Days:</p>
                 <ul className="list-disc pl-6 mb-3">
                   <li>Extra days are charged at your subscription rate:</li>
-                  <li className="ml-4">4-day package clients: £40 per additional day</li>
-                  <li className="ml-4">8 or 12-day package clients: £38 per additional day</li>
-                  <li className="ml-4">16 or 20-day package clients: £36 per additional day</li>
+                  <li className="ml-4">4-day package clients: £40 per additional full day, £30 per additional half-day</li>
+                  <li className="ml-4">8-day package clients: £38 per additional full day, £28.50 per additional half-day</li>
+                  <li className="ml-4">12-day package clients: £38 per additional full day, £27.75 per additional half-day</li>
+                  <li className="ml-4">16-day package clients: £36 per additional full day, £27 per additional half-day</li>
+                  <li className="ml-4">20-day package clients: £36 per additional full day, £25 per additional half-day</li>
                 </ul>
                 <p className="text-sm italic">Example: 15 days with 12-day package = £456 + (3 × £38) = £570 total</p>
 
@@ -314,9 +350,10 @@ export default function LegalAgreementsPage() {
                   <li>Late pickup fee: £1 per minute after 7 PM</li>
                   <li>Monthly package days must be used within the calendar month - no carry over</li>
                   <li>Payment is due at time of booking</li>
+                  <li><strong>Multi-Dog Discount:</strong> Pricing is per dog. When booking multiple dogs, you receive 5% off each additional dog after the first.</li>
                 </ul>
 
-                <p><strong>5. Recurring Monthly Billing</strong></p>
+                <p><strong>6. Recurring Monthly Billing</strong></p>
                 <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-4 my-3">
                   <p className="font-bold text-blue-900 mb-2">💳 AUTOMATIC MONTHLY PAYMENTS</p>
                   <ul className="list-disc pl-6 text-sm space-y-1">
@@ -331,10 +368,10 @@ export default function LegalAgreementsPage() {
                   </ul>
                 </div>
 
-                <p><strong>6. Cancellation Policy</strong></p>
+                <p><strong>7. Cancellation Policy</strong></p>
                 <p>24-hour notice required for individual day cancellations. Monthly package days cannot be carried over to the following month.</p>
 
-                <p><strong>7. Subscription Cancellation - One Month Notice Period</strong></p>
+                <p><strong>8. Subscription Cancellation - One Month Notice Period</strong></p>
                 <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-4 my-3">
                   <p className="font-bold text-amber-900 mb-2">⚠️ IMPORTANT: Notice Period Requirement</p>
                   <ul className="list-disc pl-6 text-sm space-y-1">
@@ -347,7 +384,7 @@ export default function LegalAgreementsPage() {
                   </ul>
                 </div>
 
-                <p><strong>8. Owner Responsibilities</strong></p>
+                <p><strong>9. Owner Responsibilities</strong></p>
                 <ul className="list-disc pl-6">
                   <li>Provide accurate and complete information about your dog</li>
                   <li>Inform us of any behavioral or health changes</li>
@@ -589,6 +626,40 @@ export default function LegalAgreementsPage() {
                     />
                     <span className="text-gray-700">
                       I understand the collection procedures
+                    </span>
+                  </label>
+                </div>
+
+                <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4">
+                  <h3 className="font-semibold text-red-900 mb-2 flex items-center">
+                    <ShieldCheckIcon className="h-5 w-5 mr-2" />
+                    Checkout Password Security Policy
+                  </h3>
+                  <p className="text-sm text-red-800 mb-3 font-semibold">
+                    🔒 IMPORTANT SECURITY REQUIREMENT
+                  </p>
+                  <p className="text-sm text-gray-700 mb-3">
+                    I understand and agree that my dog will <strong className="text-red-900">NOT be released</strong> to anyone who is not on my authorized pickup list unless they provide the correct checkout password that I have specified in my dog's profile. This security measure is in place to protect my dog and ensure their safety.
+                  </p>
+                  <div className="bg-white rounded p-3 mb-3">
+                    <p className="text-xs text-gray-600 mb-2">This policy includes:</p>
+                    <ul className="text-xs text-gray-700 space-y-1 list-disc pl-4">
+                      <li>Only persons on my authorized pickup list can collect my dog without a password</li>
+                      <li>Anyone NOT on the list MUST provide the correct checkout password</li>
+                      <li>Staff will verify the password before releasing my dog</li>
+                      <li>Incorrect passwords will result in dog not being released</li>
+                      <li>I am responsible for keeping my password secure and sharing it only with trusted individuals</li>
+                    </ul>
+                  </div>
+                  <label className="flex items-start cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreements.password_policy_agreed}
+                      onChange={() => handleToggleAgreement('password_policy_agreed')}
+                      className="mt-1 mr-3 text-red-600 focus:ring-red-600 rounded"
+                    />
+                    <span className="text-gray-900 font-semibold">
+                      I understand and agree that my dog will NOT be released without proper authorization or the correct password
                     </span>
                   </label>
                 </div>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // Use service role key to bypass RLS and create users
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   {
@@ -15,7 +15,34 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password, firstName, lastName, role } = await req.json()
+    // Get the authorization header
+    const authHeader = req.headers.get('authorization')
+
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized - Please log in' }, { status: 401 })
+    }
+
+    // Extract the token from "Bearer <token>"
+    const token = authHeader.replace('Bearer ', '')
+
+    // Verify the user session using admin client
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token)
+
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Unauthorized - Invalid session' }, { status: 401 })
+    }
+
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
+    }
+
+    const { email, password, firstName, lastName, phone, role, permissions } = await req.json()
 
     // Validate input
     if (!email || !password || !firstName || !lastName || !role) {
@@ -23,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Create user in Supabase Auth with admin API
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true, // Auto-confirm the email
@@ -38,13 +65,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: authError.message }, { status: 400 })
     }
 
-    // Update profile with role
-    const { error: profileError } = await supabase
+    // Update profile with role, phone, and permissions
+    const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .update({
         role,
         first_name: firstName,
         last_name: lastName,
+        phone: phone || null,
+        staff_permissions: permissions || {},
       })
       .eq('id', authData.user.id)
 

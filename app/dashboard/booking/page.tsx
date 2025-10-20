@@ -26,6 +26,12 @@ export default function BookingPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [subscription, setSubscription] = useState<any>(null)
   const [bookedDates, setBookedDates] = useState<string[]>([])
+  const [mealOptions, setMealOptions] = useState({ breakfast: false, lunch: false, dinner: false })
+  const [specialNotes, setSpecialNotes] = useState('')
+  const [showMealAgreement, setShowMealAgreement] = useState(false)
+  const [mealAgreementAccepted, setMealAgreementAccepted] = useState(false)
+  const [maxDogsPerDay, setMaxDogsPerDay] = useState(20)
+  const [dateCapacity, setDateCapacity] = useState<Record<string, number>>({})
 
   useEffect(() => {
     checkAuthAndLoadData()
@@ -68,6 +74,38 @@ export default function BookingPage() {
       const booked = bookingsData?.map(b => b.booking_date) || []
       setBookedDates(booked)
 
+      // Fetch max dogs per day setting
+      const { data: maxDogsSettings } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'max_dogs_per_day')
+        .single()
+
+      if (maxDogsSettings) {
+        setMaxDogsPerDay(parseInt(maxDogsSettings.setting_value))
+      }
+
+      // Calculate capacity for upcoming dates (next 60 days)
+      const today = new Date()
+      const endDate = new Date()
+      endDate.setDate(endDate.getDate() + 60)
+
+      const { data: allBookingsData } = await supabase
+        .from('bookings')
+        .select('booking_date, dog_ids')
+        .gte('booking_date', today.toISOString().split('T')[0])
+        .lte('booking_date', endDate.toISOString().split('T')[0])
+        .in('status', ['confirmed', 'pending'])
+
+      // Count dogs per date
+      const capacityMap: Record<string, number> = {}
+      allBookingsData?.forEach(booking => {
+        const date = booking.booking_date
+        const dogCount = booking.dog_ids?.length || 0
+        capacityMap[date] = (capacityMap[date] || 0) + dogCount
+      })
+      setDateCapacity(capacityMap)
+
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -101,7 +139,17 @@ export default function BookingPage() {
     // Check if already booked
     if (bookedDates.includes(dateString)) return false
 
+    // Check if day is at capacity (total dogs booked >= max allowed)
+    const currentCapacity = dateCapacity[dateString] || 0
+    if (currentCapacity >= maxDogsPerDay) return false
+
     return true
+  }
+
+  const getDateCapacityInfo = (dateString: string) => {
+    const currentCapacity = dateCapacity[dateString] || 0
+    const spotsRemaining = maxDogsPerDay - currentCapacity
+    return { currentCapacity, spotsRemaining, maxDogsPerDay }
   }
 
   const toggleDate = (dateString: string) => {
@@ -130,6 +178,28 @@ export default function BookingPage() {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
   }
 
+  const handleMealOptionChange = (meal: 'breakfast' | 'lunch' | 'dinner') => {
+    const newMealOptions = { ...mealOptions, [meal]: !mealOptions[meal] }
+    setMealOptions(newMealOptions)
+
+    // Show agreement modal if any meal is selected and agreement hasn't been accepted
+    if ((newMealOptions.breakfast || newMealOptions.lunch || newMealOptions.dinner) && !mealAgreementAccepted) {
+      setShowMealAgreement(true)
+    }
+  }
+
+  const handleMealAgreementAccept = () => {
+    setMealAgreementAccepted(true)
+    setShowMealAgreement(false)
+    toast.success('Meal agreement accepted')
+  }
+
+  const handleMealAgreementDecline = () => {
+    setMealOptions({ breakfast: false, lunch: false, dinner: false })
+    setShowMealAgreement(false)
+    toast('Meal options cleared - you must accept the agreement to provide meals')
+  }
+
   const handleSubmit = async () => {
     if (selectedDogs.length === 0) {
       toast.error('Please select at least one dog')
@@ -146,6 +216,13 @@ export default function BookingPage() {
       return
     }
 
+    // Check if meals are selected but agreement not accepted
+    if ((mealOptions.breakfast || mealOptions.lunch || mealOptions.dinner) && !mealAgreementAccepted) {
+      toast.error('Please accept the meal agreement to continue')
+      setShowMealAgreement(true)
+      return
+    }
+
     // Check if user has enough days remaining
     const daysRemaining = subscription.days_remaining || 0
     if (selectedDates.length > daysRemaining) {
@@ -153,16 +230,43 @@ export default function BookingPage() {
       return
     }
 
+    // Check capacity for each selected date
+    for (const date of selectedDates) {
+      const { currentCapacity, spotsRemaining } = getDateCapacityInfo(date)
+      if (currentCapacity + selectedDogs.length > maxDogsPerDay) {
+        toast.error(`Cannot book ${date}: Only ${spotsRemaining} spots remaining (max ${maxDogsPerDay} dogs/day)`)
+        return
+      }
+    }
+
     setSubmitting(true)
 
     try {
+      // Build meal requirements text
+      const mealRequirements = []
+      if (mealOptions.breakfast) mealRequirements.push('Breakfast')
+      if (mealOptions.lunch) mealRequirements.push('Lunch')
+      if (mealOptions.dinner) mealRequirements.push('Dinner')
+      const mealText = mealRequirements.length > 0
+        ? `MEALS REQUIRED: ${mealRequirements.join(', ')}. `
+        : ''
+
+      // Combine meal requirements with special notes
+      const fullInstructions = mealText + (specialNotes || '')
+
       // Create bookings for each selected date
       const bookings = selectedDates.map(date => ({
         user_id: user.id,
         dog_ids: selectedDogs,
         booking_date: date,
+        total_dogs: selectedDogs.length,
+        daily_rate: 40.00, // Default rate - will be updated based on subscription tier
+        total_amount: 40.00 * selectedDogs.length,
         status: 'confirmed',
-        created_at: new Date().toISOString()
+        payment_status: 'paid',
+        subscription_id: subscription.id,
+        is_subscription_booking: true,
+        special_instructions: fullInstructions.trim() || null
       }))
 
       const { error: bookingError } = await supabase
@@ -184,9 +288,12 @@ export default function BookingPage() {
 
       toast.success(`Successfully booked ${selectedDates.length} day${selectedDates.length > 1 ? 's' : ''}! 🎉`)
 
-      // Refresh data
+      // Reset form
       setSelectedDates([])
       setSelectedDogs([])
+      setMealOptions({ breakfast: false, lunch: false, dinner: false })
+      setSpecialNotes('')
+      setMealAgreementAccepted(false)
       checkAuthAndLoadData()
 
     } catch (error: any) {
@@ -501,6 +608,127 @@ export default function BookingPage() {
                   ))}
                 </div>
               </motion.div>
+            )}
+
+            {/* Meal Options */}
+            {selectedDates.length > 0 && selectedDogs.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-white rounded-3xl shadow-xl p-6"
+              >
+                <h3 className="text-xl font-bold text-canine-navy mb-4">Meal Requirements</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Will your dog need any meals during daycare?
+                </p>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={mealOptions.breakfast}
+                      onChange={() => handleMealOptionChange('breakfast')}
+                      className="w-5 h-5 text-canine-gold focus:ring-canine-gold rounded"
+                    />
+                    <span className="font-medium text-gray-900">Breakfast</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={mealOptions.lunch}
+                      onChange={() => handleMealOptionChange('lunch')}
+                      className="w-5 h-5 text-canine-gold focus:ring-canine-gold rounded"
+                    />
+                    <span className="font-medium text-gray-900">Lunch</span>
+                  </label>
+                  <label className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={mealOptions.dinner}
+                      onChange={() => handleMealOptionChange('dinner')}
+                      className="w-5 h-5 text-canine-gold focus:ring-canine-gold rounded"
+                    />
+                    <span className="font-medium text-gray-900">Dinner</span>
+                  </label>
+                </div>
+                {(mealOptions.breakfast || mealOptions.lunch || mealOptions.dinner) && mealAgreementAccepted && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-800 font-medium">✓ Meal agreement accepted</p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Special Notes */}
+            {selectedDates.length > 0 && selectedDogs.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-white rounded-3xl shadow-xl p-6"
+              >
+                <h3 className="text-xl font-bold text-canine-navy mb-4">Special Notes</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Add any special instructions or notes for our staff
+                </p>
+                <textarea
+                  value={specialNotes}
+                  onChange={(e) => setSpecialNotes(e.target.value)}
+                  rows={4}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-canine-gold focus:border-canine-gold resize-none"
+                  placeholder="e.g., Please ensure my dog takes medication at lunch time, My dog is nervous around large dogs, etc."
+                />
+              </motion.div>
+            )}
+
+            {/* Meal Agreement Modal */}
+            {showMealAgreement && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full"
+                >
+                  <h3 className="text-2xl font-bold text-canine-navy mb-4">Meal Agreement</h3>
+                  <div className="space-y-4 mb-6">
+                    <p className="text-gray-700 font-medium">
+                      Please read and agree to the following:
+                    </p>
+                    <ul className="space-y-3 text-gray-600">
+                      <li className="flex items-start gap-2">
+                        <span className="text-canine-gold font-bold mt-1">•</span>
+                        <span>You must <strong>bring your dog's food</strong> - we do not supply food</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-canine-gold font-bold mt-1">•</span>
+                        <span>Food must be in <strong>portion-sized amounts</strong> in separate containers</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-canine-gold font-bold mt-1">•</span>
+                        <span>Each container must be <strong>clearly labeled</strong> with your dog's name</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-canine-gold font-bold mt-1">•</span>
+                        <span>Include any <strong>feeding instructions</strong> in the special notes field</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleMealAgreementDecline}
+                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-xl font-semibold transition-colors"
+                    >
+                      Decline
+                    </button>
+                    <button
+                      onClick={handleMealAgreementAccept}
+                      className="flex-1 bg-gradient-to-r from-canine-gold to-amber-400 hover:from-canine-light-gold hover:to-amber-500 text-white py-3 rounded-xl font-semibold transition-all"
+                    >
+                      I Agree
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
             )}
 
             {/* Book Button */}

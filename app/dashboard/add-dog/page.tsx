@@ -13,7 +13,8 @@ import {
   UserGroupIcon,
   HomeIcon,
   BeakerIcon,
-  PhoneIcon
+  PhoneIcon,
+  CalendarIcon
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid'
 import toast from 'react-hot-toast'
@@ -32,19 +33,21 @@ export default function AddDogPage() {
   const [vaccinationFile, setVaccinationFile] = useState<File | null>(null)
   const [vaccinationFileName, setVaccinationFileName] = useState<string>('')
   const [currentSection, setCurrentSection] = useState(0)
+  const [draftDogId, setDraftDogId] = useState<string | null>(null)
+  const [lastSavedSection, setLastSavedSection] = useState(0)
 
   const [formData, setFormData] = useState({
     // Basic Information
     name: '',
     breed: '',
-    age_years: '',
-    age_months: '0',
+    date_of_birth: '',
     gender: 'male',
     size: 'medium',
     weight: '',
     color: '',
     neutered: false,
     microchipped: false,
+    microchip_number: '',
 
     // Health Information
     vaccinated: false,
@@ -95,9 +98,52 @@ export default function AddDogPage() {
     feeding_schedule: '',
     special_requirements: '',
     favorite_activities: '',
+
+    // Pickup & Dropoff Authorization
+    authorized_dropoff_people: [] as string[],
+    authorized_pickup_people: [] as string[],
+    checkout_password: '',
   })
 
+  // For adding/editing authorized people
+  const [newDropoffPerson, setNewDropoffPerson] = useState('')
+  const [newPickupPerson, setNewPickupPerson] = useState('')
+
   useEffect(() => {
+    // Check if this is a new dog request (not resuming draft)
+    const urlParams = new URLSearchParams(window.location.search)
+    const isNew = urlParams.get('new') === 'true'
+
+    if (isNew) {
+      // Clear localStorage for a fresh start
+      localStorage.removeItem('dogFormDraft')
+      localStorage.removeItem('dogFormSection')
+      localStorage.removeItem('dogFormPhoto')
+      toast.success('Starting fresh dog profile')
+    } else {
+      // Load from localStorage ONLY if not a new request
+      const savedFormData = localStorage.getItem('dogFormDraft')
+      const savedSection = localStorage.getItem('dogFormSection')
+      const savedPhoto = localStorage.getItem('dogFormPhoto')
+
+      if (savedFormData) {
+        const parsed = JSON.parse(savedFormData)
+
+        // Clean up any "null null" entries from old drafts
+        if (parsed.authorized_dropoff_people) {
+          parsed.authorized_dropoff_people = parsed.authorized_dropoff_people.filter((name: string) => name !== 'null null' && name.trim() !== '')
+        }
+        if (parsed.authorized_pickup_people) {
+          parsed.authorized_pickup_people = parsed.authorized_pickup_people.filter((name: string) => name !== 'null null' && name.trim() !== '')
+        }
+
+        setFormData(parsed)
+        if (savedSection) setCurrentSection(parseInt(savedSection))
+        if (savedPhoto) setPhotoPreview(savedPhoto)
+        toast.success('Loaded your saved progress')
+      }
+    }
+
     checkAuthAndDogCount()
   }, [])
 
@@ -109,10 +155,133 @@ export default function AddDogPage() {
     }
     setUser(user)
 
+    // Get user profile to get their full name
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', user.id)
+      .single()
+
+    // Check if user has completed their profile
+    if (!profile || !profile.first_name || !profile.last_name) {
+      toast.error('Please complete your profile before adding a dog')
+      router.push('/dashboard/profile')
+      return
+    }
+
+    const fullName = `${profile.first_name} ${profile.last_name}`.trim()
+
+    // Check for existing draft
+    const { data: draftDogs } = await supabase
+      .from('dogs')
+      .select('*')
+      .eq('owner_id', user.id)
+      .eq('is_draft', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (draftDogs && draftDogs.length > 0) {
+      const draft = draftDogs[0]
+      console.log('DRAFT DOG DATA:', draft)
+      setDraftDogId(draft.id)
+
+      // ONLY load from database if localStorage is EMPTY
+      const hasLocalStorage = localStorage.getItem('dogFormDraft')
+      if (!hasLocalStorage) {
+        // Load the section they were on
+        setCurrentSection(draft.draft_section || 0)
+        setLastSavedSection(draft.draft_section || 0)
+
+        // Load draft data into form - ALL FIELDS FROM DATABASE
+        const loadedData = {
+          // Basic Information
+          name: draft.name || '',
+          breed: draft.breed || '',
+          date_of_birth: draft.date_of_birth || '',
+          gender: draft.gender || 'male',
+          size: draft.size || 'medium',
+          weight: draft.weight_kg?.toString() || '',
+          color: draft.color || '',
+          neutered: draft.neutered || false,
+          microchipped: draft.microchipped || false,
+          microchip_number: draft.microchip_number || '',
+
+          // Health Information
+          vaccinated: draft.vaccinated || false,
+          vaccination_expiry: draft.vaccination_expiry || '',
+          medical_conditions: draft.medical_conditions || '',
+          current_medications: draft.current_medications || [],
+          medication_requirements: draft.medication_requirements || '',
+          allergies: draft.allergies || '',
+          can_be_given_treats: draft.can_be_given_treats !== undefined ? draft.can_be_given_treats : true,
+
+          // Behavioral
+          resource_guarding: draft.resource_guarding || false,
+          separation_anxiety: draft.separation_anxiety || false,
+          leash_pulling: draft.leash_pulling || false,
+          house_trained: draft.house_trained !== undefined ? draft.house_trained : true,
+          crate_trained: draft.crate_trained || false,
+          aggression_triggers: draft.aggression_triggers || '',
+          behavioral_challenges: draft.behavioral_challenges || '',
+          training_needs: draft.training_needs || '',
+
+          // Social
+          good_with_dogs: draft.good_with_dogs !== undefined ? draft.good_with_dogs : true,
+          good_with_cats: draft.good_with_cats || false,
+          good_with_children: draft.good_with_children !== undefined ? draft.good_with_children : true,
+          good_with_strangers: draft.good_with_strangers !== undefined ? draft.good_with_strangers : true,
+          play_style: draft.play_style || '',
+
+          // Safety
+          escape_artist: draft.escape_artist || false,
+          fence_jumper: draft.fence_jumper || false,
+          recall_reliability: draft.recall_reliability || 'good',
+
+          // Emergency & Vet
+          vet_name: draft.vet_name || '',
+          vet_phone: draft.vet_phone || '',
+          vet_address: draft.vet_address || '',
+          emergency_medical_consent: draft.emergency_medical_consent || false,
+          max_vet_cost_approval: draft.max_vet_cost_approval?.toString() || '',
+
+          // Pickup & Dropoff
+          authorized_dropoff_people: draft.authorized_dropoff_people && draft.authorized_dropoff_people.length > 0 && draft.authorized_dropoff_people[0] !== 'null null'
+            ? draft.authorized_dropoff_people
+            : (fullName ? [fullName] : []),
+          authorized_pickup_people: draft.authorized_pickup_people && draft.authorized_pickup_people.length > 0 && draft.authorized_pickup_people[0] !== 'null null'
+            ? draft.authorized_pickup_people
+            : (fullName ? [fullName] : []),
+          checkout_password: draft.checkout_password || '',
+        }
+
+        setFormData(prev => ({
+          ...prev,
+          ...loadedData
+        }))
+
+        if (draft.photo_url) {
+          setPhotoPreview(draft.photo_url)
+        }
+        toast.success(`Loaded draft from database`)
+      } else {
+        toast.success(`Loaded from your browser - all fields preserved!`)
+      }
+    } else {
+      // Auto-add the user's name to pickup and dropoff lists for new forms
+      if (fullName) {
+        setFormData(prev => ({
+          ...prev,
+          authorized_dropoff_people: [fullName],
+          authorized_pickup_people: [fullName]
+        }))
+      }
+    }
+
     const { data: dogs } = await supabase
       .from('dogs')
       .select('id')
       .eq('owner_id', user.id)
+      .eq('is_draft', false)
 
     if (dogs) {
       setDogCount(dogs.length)
@@ -235,14 +404,29 @@ export default function AddDogPage() {
     })
   }
 
+  const calculateAge = (birthDate: string) => {
+    if (!birthDate) return { years: 0, months: 0 }
+    const birth = new Date(birthDate)
+    const today = new Date()
+    let years = today.getFullYear() - birth.getFullYear()
+    let months = today.getMonth() - birth.getMonth()
+
+    if (months < 0) {
+      years--
+      months += 12
+    }
+
+    return { years, months }
+  }
+
   const validateSection = (section: number): boolean => {
     switch(section) {
       case 0: // Basic Information
-        if (!photoFile) {
+        if (!photoFile && !photoPreview) {
           toast.error('Please upload a photo of your dog')
           return false
         }
-        if (!formData.name || !formData.breed || !formData.age_years) {
+        if (!formData.name || !formData.breed || !formData.date_of_birth) {
           toast.error('Please fill in all required fields')
           return false
         }
@@ -250,6 +434,24 @@ export default function AddDogPage() {
           toast.error('Please select gender and size')
           return false
         }
+        if (!formData.microchipped) {
+          toast.error('Your dog must be microchipped to attend our daycare')
+          return false
+        }
+
+        // Neutered/Spayed validation
+        const age = calculateAge(formData.date_of_birth)
+        if (formData.gender === 'male' && age.years >= 1 && !formData.neutered) {
+          toast.error('Male dogs over 1 year old must be neutered to attend our daycare')
+          return false
+        }
+        if (formData.gender === 'female' && !formData.neutered) {
+          toast('Please note: Your dog may not attend daycare while in season', {
+            icon: '⚠️',
+            duration: 5000
+          })
+        }
+
         return true
       case 1: // Health Information
         if (!formData.vaccinated) {
@@ -260,7 +462,7 @@ export default function AddDogPage() {
           toast.error('Please provide vaccination expiry date')
           return false
         }
-        if (!vaccinationFile) {
+        if (!vaccinationFile && !formData.has_vaccination_docs) {
           toast.error('Please upload vaccination records')
           return false
         }
@@ -279,6 +481,20 @@ export default function AddDogPage() {
           return false
         }
         return true
+      case 5: // Pickup & Dropoff Authorization
+        if (formData.authorized_dropoff_people.length === 0) {
+          toast.error('Please add at least one person authorized to drop off your dog')
+          return false
+        }
+        if (formData.authorized_pickup_people.length === 0) {
+          toast.error('Please add at least one person authorized to pick up your dog')
+          return false
+        }
+        if (!formData.checkout_password || formData.checkout_password.trim().length < 3) {
+          toast.error('Please provide a checkout password (at least 3 characters)')
+          return false
+        }
+        return true
       default:
         return true
     }
@@ -294,6 +510,92 @@ export default function AddDogPage() {
     setCurrentSection(currentSection - 1)
   }
 
+  const handleSaveAndContinue = async () => {
+    if (!user) {
+      toast.error('Please login to continue')
+      return
+    }
+
+    // Apply validation for current section (same as Next Section button)
+    if (!validateSection(currentSection)) {
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      const age = formData.date_of_birth ? calculateAge(formData.date_of_birth) : { years: 0, months: 0 }
+
+      // ONLY save ESSENTIAL fields for drafts - localStorage saves everything else
+      const dogData: any = {
+        owner_id: user.id,
+        name: formData.name || 'Draft Dog',
+        breed: formData.breed || 'Unknown',
+        age_years: age.years,
+        age_months: age.months,
+        gender: formData.gender,
+        neutered: formData.neutered,
+        vaccinated: formData.vaccinated,
+        photo_url: photoPreview || null,
+        is_approved: false,
+        is_draft: true,
+        draft_section: currentSection,
+      }
+
+      if (draftDogId) {
+        // Update existing draft
+        const { error } = await supabase
+          .from('dogs')
+          .update(dogData)
+          .eq('id', draftDogId)
+
+        if (error) throw error
+        setLastSavedSection(currentSection)
+
+        // Save to localStorage for ALL form data
+        localStorage.setItem('dogFormDraft', JSON.stringify(formData))
+        localStorage.setItem('dogFormSection', (currentSection + 1).toString())
+        if (photoPreview) localStorage.setItem('dogFormPhoto', photoPreview)
+
+        toast.success('✓ Progress saved! You can continue anytime.')
+
+        // Move to next section after saving
+        if (currentSection < 5) {
+          setCurrentSection(currentSection + 1)
+        }
+      } else {
+        // Create new draft
+        const { data: dog, error } = await supabase
+          .from('dogs')
+          .insert(dogData)
+          .select()
+          .single()
+
+        if (error) throw error
+        setDraftDogId(dog.id)
+        setLastSavedSection(currentSection)
+
+        // Save to localStorage for ALL form data
+        localStorage.setItem('dogFormDraft', JSON.stringify(formData))
+        localStorage.setItem('dogFormSection', (currentSection + 1).toString())
+        if (photoPreview) localStorage.setItem('dogFormPhoto', photoPreview)
+
+        toast.success('✓ Progress saved! You can continue anytime.')
+
+        // Move to next section after saving
+        if (currentSection < 5) {
+          setCurrentSection(currentSection + 1)
+        }
+      }
+    } catch (error: any) {
+      console.error('Error saving draft:', error)
+      console.error('Error details:', error.details, error.hint, error.code)
+      toast.error(error.message || 'Failed to save progress')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -303,7 +605,7 @@ export default function AddDogPage() {
     }
 
     // Validate all sections
-    for (let i = 0; i <= 3; i++) {
+    for (let i = 0; i <= 5; i++) {
       if (!validateSection(i)) {
         setCurrentSection(i)
         return
@@ -313,30 +615,32 @@ export default function AddDogPage() {
     setLoading(true)
 
     try {
-      const { data: dog, error: dogError } = await supabase
-        .from('dogs')
-        .insert({
+      // Calculate age from date of birth
+      const age = calculateAge(formData.date_of_birth)
+
+      let dog
+      let dogError
+
+      if (draftDogId) {
+        // Update existing draft to mark as complete
+        const updateData: any = {
           owner_id: user.id,
           name: formData.name,
           breed: formData.breed,
-          age_years: parseInt(formData.age_years),
-          age_months: parseInt(formData.age_months || '0'),
+          date_of_birth: formData.date_of_birth,
+          age_years: age.years,
+          age_months: age.months,
           gender: formData.gender,
           size: formData.size,
           weight_kg: formData.weight ? parseFloat(formData.weight) : null,
           color: formData.color,
           neutered: formData.neutered,
           microchipped: formData.microchipped,
+          microchip_number: formData.microchip_number || null,
 
           // Health
           vaccinated: formData.vaccinated,
           vaccination_expiry: formData.vaccination_expiry || null,
-          flea_treatment: formData.flea_treatment,
-          flea_treatment_date: formData.flea_treatment_date || null,
-          worming_treatment: formData.worming_treatment,
-          worming_treatment_date: formData.worming_treatment_date || null,
-          heartworm_prevention: formData.heartworm_prevention,
-          heartworm_prevention_date: formData.heartworm_prevention_date || null,
           medical_conditions: formData.medical_conditions || null,
           current_medications: formData.current_medications.length > 0 ? formData.current_medications : null,
           medication_requirements: formData.medication_requirements || null,
@@ -346,7 +650,6 @@ export default function AddDogPage() {
           // Behavioral
           resource_guarding: formData.resource_guarding,
           separation_anxiety: formData.separation_anxiety,
-          excessive_barking: formData.excessive_barking,
           leash_pulling: formData.leash_pulling,
           house_trained: formData.house_trained,
           crate_trained: formData.crate_trained,
@@ -373,28 +676,128 @@ export default function AddDogPage() {
           emergency_medical_consent: formData.emergency_medical_consent,
           max_vet_cost_approval: formData.max_vet_cost_approval ? parseFloat(formData.max_vet_cost_approval) : null,
 
-          // Care
-          feeding_schedule: formData.feeding_schedule || null,
-          special_requirements: formData.special_requirements || null,
-          favorite_activities: formData.favorite_activities || null,
+          // Pickup & Dropoff Authorization
+          authorized_dropoff_people: formData.authorized_dropoff_people.length > 0 ? formData.authorized_dropoff_people : null,
+          authorized_pickup_people: formData.authorized_pickup_people.length > 0 ? formData.authorized_pickup_people : null,
+          checkout_password: formData.checkout_password || null,
 
-          photo_url: null,
           has_vaccination_docs: false,
           is_approved: false,
-        })
-        .select()
-        .single()
+          is_draft: false,
+        }
+
+        // Keep existing photo if no new photo file uploaded
+        if (!photoFile && photoPreview) {
+          updateData.photo_url = photoPreview
+        }
+
+        const result = await supabase
+          .from('dogs')
+          .update(updateData)
+          .eq('id', draftDogId)
+          .select()
+          .single()
+
+        dog = result.data
+        dogError = result.error
+      } else {
+        // Create new dog profile
+        const result = await supabase
+          .from('dogs')
+          .insert({
+            owner_id: user.id,
+            name: formData.name,
+            breed: formData.breed,
+            date_of_birth: formData.date_of_birth,
+            age_years: age.years,
+            age_months: age.months,
+            gender: formData.gender,
+            size: formData.size,
+            weight_kg: formData.weight ? parseFloat(formData.weight) : null,
+            color: formData.color,
+            neutered: formData.neutered,
+            microchipped: formData.microchipped,
+            microchip_number: formData.microchip_number || null,
+            vaccinated: formData.vaccinated,
+            vaccination_expiry: formData.vaccination_expiry || null,
+            medical_conditions: formData.medical_conditions || null,
+            current_medications: formData.current_medications.length > 0 ? formData.current_medications : null,
+            medication_requirements: formData.medication_requirements || null,
+            allergies: formData.allergies || null,
+            can_be_given_treats: formData.can_be_given_treats,
+            resource_guarding: formData.resource_guarding,
+            separation_anxiety: formData.separation_anxiety,
+            leash_pulling: formData.leash_pulling,
+            house_trained: formData.house_trained,
+            crate_trained: formData.crate_trained,
+            aggression_triggers: formData.aggression_triggers || null,
+            behavioral_challenges: formData.behavioral_challenges || null,
+            training_needs: formData.training_needs || null,
+            good_with_dogs: formData.good_with_dogs,
+            good_with_cats: formData.good_with_cats,
+            good_with_children: formData.good_with_children,
+            good_with_strangers: formData.good_with_strangers,
+            play_style: formData.play_style || null,
+            escape_artist: formData.escape_artist,
+            fence_jumper: formData.fence_jumper,
+            recall_reliability: formData.recall_reliability,
+            vet_name: formData.vet_name,
+            vet_phone: formData.vet_phone,
+            vet_address: formData.vet_address || null,
+            emergency_medical_consent: formData.emergency_medical_consent,
+            max_vet_cost_approval: formData.max_vet_cost_approval ? parseFloat(formData.max_vet_cost_approval) : null,
+            authorized_dropoff_people: formData.authorized_dropoff_people.length > 0 ? formData.authorized_dropoff_people : null,
+            authorized_pickup_people: formData.authorized_pickup_people.length > 0 ? formData.authorized_pickup_people : null,
+            checkout_password: formData.checkout_password || null,
+            has_vaccination_docs: false,
+            is_approved: false,
+            is_draft: false,
+          })
+          .select()
+          .single()
+
+        dog = result.data
+        dogError = result.error
+      }
 
       if (dogError) throw dogError
 
-      // Upload photo if provided
-      if (photoFile && dog) {
-        const photoUrl = await uploadPhoto(dog.id)
-        if (photoUrl) {
-          await supabase
-            .from('dogs')
-            .update({ photo_url: photoUrl })
-            .eq('id', dog.id)
+      // Upload photo if provided (either from new file upload or from base64 preview)
+      if (dog) {
+        if (photoFile) {
+          // New photo file uploaded - upload to Supabase storage
+          const photoUrl = await uploadPhoto(dog.id)
+          if (photoUrl) {
+            await supabase
+              .from('dogs')
+              .update({ photo_url: photoUrl })
+              .eq('id', dog.id)
+          }
+        } else if (photoPreview && photoPreview.startsWith('data:image/')) {
+          // Base64 preview exists from draft - convert to File and upload
+          try {
+            const response = await fetch(photoPreview)
+            const blob = await response.blob()
+            const file = new File([blob], 'dog-photo.jpg', { type: blob.type })
+
+            const filePath = `${dog.id}/photo.${file.name.split('.').pop()}`
+            const { error: uploadError } = await supabase.storage
+              .from('dog-photos')
+              .upload(filePath, file, { upsert: true })
+
+            if (!uploadError) {
+              const { data: urlData } = supabase.storage
+                .from('dog-photos')
+                .getPublicUrl(filePath)
+
+              await supabase
+                .from('dogs')
+                .update({ photo_url: urlData.publicUrl })
+                .eq('id', dog.id)
+            }
+          } catch (error) {
+            console.error('Error uploading base64 photo:', error)
+          }
         }
       }
 
@@ -595,7 +998,9 @@ export default function AddDogPage() {
                   </div>
 
                   <h3 className="text-lg font-semibold text-canine-navy mb-4">Basic Information</h3>
-                  <div className="grid md:grid-cols-2 gap-4">
+
+                  {/* Name and Breed FIRST */}
+                  <div className="grid md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Dog's Name *
@@ -624,34 +1029,39 @@ export default function AddDogPage() {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-4 gap-4">
+                  {/* Date of Birth - with calendar popup */}
+                  <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Age (Years) *
+                        Date of Birth * <span className="text-xs text-gray-500">(Click to open calendar)</span>
                       </label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        max="25"
-                        value={formData.age_years}
-                        onChange={(e) => setFormData({ ...formData, age_years: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
-                      />
+                      <div className="relative">
+                        <input
+                          type="date"
+                          required
+                          max={new Date().toISOString().split('T')[0]}
+                          value={formData.date_of_birth}
+                          onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-canine-gold text-base cursor-pointer hover:border-canine-gold transition-colors"
+                          style={{ colorScheme: 'light' }}
+                        />
+                        <CalendarIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Months
+                        Age <span className="text-xs text-gray-500">(Auto-calculated)</span>
                       </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="11"
-                        value={formData.age_months}
-                        onChange={(e) => setFormData({ ...formData, age_months: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
-                      />
+                      <div className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 font-medium">
+                        {formData.date_of_birth ? (() => {
+                          const age = calculateAge(formData.date_of_birth)
+                          return `${age.years} year${age.years !== 1 ? 's' : ''}, ${age.months} month${age.months !== 1 ? 's' : ''}`
+                        })() : '📅 Select date of birth first'}
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Gender *
@@ -710,7 +1120,7 @@ export default function AddDogPage() {
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
                     <label className="flex items-center bg-gray-50 p-3 rounded-lg cursor-pointer hover:bg-gray-100">
                       <input
                         type="checkbox"
@@ -718,17 +1128,45 @@ export default function AddDogPage() {
                         onChange={(e) => setFormData({ ...formData, neutered: e.target.checked })}
                         className="mr-3 text-canine-gold focus:ring-canine-gold rounded"
                       />
-                      <span className="text-gray-700">Neutered/Spayed</span>
+                      <span className="text-gray-700">
+                        {formData.gender === 'male' ? 'Neutered' : 'Spayed'}
+                        {formData.gender === 'male' && formData.date_of_birth && calculateAge(formData.date_of_birth).years >= 1 && (
+                          <span className="text-red-600 ml-2">*</span>
+                        )}
+                      </span>
                     </label>
-                    <label className="flex items-center bg-gray-50 p-3 rounded-lg cursor-pointer hover:bg-gray-100">
-                      <input
-                        type="checkbox"
-                        checked={formData.microchipped}
-                        onChange={(e) => setFormData({ ...formData, microchipped: e.target.checked })}
-                        className="mr-3 text-canine-gold focus:ring-canine-gold rounded"
-                      />
-                      <span className="text-gray-700">Microchipped</span>
-                    </label>
+
+                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3">
+                      <label className="flex items-start cursor-pointer">
+                        <input
+                          type="checkbox"
+                          required
+                          checked={formData.microchipped}
+                          onChange={(e) => setFormData({ ...formData, microchipped: e.target.checked })}
+                          className="mt-1 mr-3 text-canine-gold focus:ring-canine-gold rounded"
+                        />
+                        <div className="flex-1">
+                          <span className="text-gray-700 font-medium">Microchipped *</span>
+                          <p className="text-xs text-red-700 mt-1">Required - All dogs must be microchipped to attend daycare</p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {formData.microchipped && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Microchip Number
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.microchip_number}
+                          onChange={(e) => setFormData({ ...formData, microchip_number: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
+                          placeholder="Optional - We can record this at daycare"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">You don't need to fill this in now - we'll record it when you attend daycare</p>
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -1312,6 +1750,160 @@ export default function AddDogPage() {
                     />
                   </div>
 
+                </>
+              )}
+
+              {/* Section 5: Pickup & Dropoff Authorization */}
+              {currentSection === 5 && (
+                <>
+                  <h3 className="text-lg font-semibold text-canine-navy mb-4 flex items-center">
+                    <UserGroupIcon className="h-6 w-6 mr-2" />
+                    Pickup & Dropoff Authorization
+                  </h3>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-blue-800">
+                      <strong>Important:</strong> For your dog's safety, specify who is authorized to drop off and pick up your dog.
+                      A password will be required if someone else picks up your dog.
+                    </p>
+                  </div>
+
+                  {/* Authorized Dropoff People */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Who can drop off your dog? *
+                    </label>
+                    <div className="mb-3">
+                      <input
+                        type="text"
+                        value={newDropoffPerson}
+                        onChange={(e) => setNewDropoffPerson(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            if (newDropoffPerson.trim()) {
+                              setFormData({
+                                ...formData,
+                                authorized_dropoff_people: [...formData.authorized_dropoff_people, newDropoffPerson.trim()]
+                              })
+                              setNewDropoffPerson('')
+                            }
+                          }
+                        }}
+                        onBlur={() => {
+                          if (newDropoffPerson.trim()) {
+                            setFormData({
+                              ...formData,
+                              authorized_dropoff_people: [...formData.authorized_dropoff_people, newDropoffPerson.trim()]
+                            })
+                            setNewDropoffPerson('')
+                          }
+                        }}
+                        placeholder="Type full name and press Enter (e.g., Jane Smith)"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Press Enter or click away to add name</p>
+                    </div>
+                    {formData.authorized_dropoff_people.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {formData.authorized_dropoff_people.map((person, index) => (
+                          <div key={index} className="bg-green-100 text-green-800 px-3 py-1 rounded-full flex items-center gap-2">
+                            <span>{person}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  authorized_dropoff_people: formData.authorized_dropoff_people.filter((_, i) => i !== index)
+                                })
+                              }}
+                              className="text-green-600 hover:text-green-800"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Authorized Pickup People */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Who can pick up your dog? *
+                    </label>
+                    <div className="mb-3">
+                      <input
+                        type="text"
+                        value={newPickupPerson}
+                        onChange={(e) => setNewPickupPerson(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            if (newPickupPerson.trim()) {
+                              setFormData({
+                                ...formData,
+                                authorized_pickup_people: [...formData.authorized_pickup_people, newPickupPerson.trim()]
+                              })
+                              setNewPickupPerson('')
+                            }
+                          }
+                        }}
+                        onBlur={() => {
+                          if (newPickupPerson.trim()) {
+                            setFormData({
+                              ...formData,
+                              authorized_pickup_people: [...formData.authorized_pickup_people, newPickupPerson.trim()]
+                            })
+                            setNewPickupPerson('')
+                          }
+                        }}
+                        placeholder="Type full name and press Enter (e.g., Sarah Johnson)"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Press Enter or click away to add name</p>
+                    </div>
+                    {formData.authorized_pickup_people.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {formData.authorized_pickup_people.map((person, index) => (
+                          <div key={index} className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center gap-2">
+                            <span>{person}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData({
+                                  ...formData,
+                                  authorized_pickup_people: formData.authorized_pickup_people.filter((_, i) => i !== index)
+                                })
+                              }}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Checkout Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Checkout Password *
+                    </label>
+                    <p className="text-sm text-gray-600 mb-2">
+                      Required if someone NOT on the authorized pickup list picks up your dog
+                    </p>
+                    <input
+                      type="text"
+                      value={formData.checkout_password}
+                      onChange={(e) => setFormData({ ...formData, checkout_password: e.target.value })}
+                      placeholder={`e.g., "${formData.name} is king" or "pickup123"`}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
+                      required
+                    />
+                  </div>
+
                   {/* Summary Notice */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-6">
                     <div className="flex items-start">
@@ -1341,13 +1933,24 @@ export default function AddDogPage() {
                   {currentSection === 0 ? 'Cancel' : 'Previous'}
                 </button>
 
-                {currentSection < 4 ? (
+                {currentSection < 5 ? (
                   <button
                     type="button"
-                    onClick={nextSection}
-                    className="bg-canine-gold text-white px-6 py-2 rounded-lg font-semibold hover:bg-canine-light-gold transition-colors"
+                    onClick={handleSaveAndContinue}
+                    disabled={loading}
+                    className="bg-canine-gold text-white px-8 py-3 rounded-lg font-semibold hover:bg-canine-light-gold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
-                    Next Section
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Saving...
+                      </>
+                    ) : (
+                      'Save & Continue'
+                    )}
                   </button>
                 ) : (
                   <motion.button

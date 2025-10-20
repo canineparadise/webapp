@@ -61,4 +61,16 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Mobile responsiveness for tables */
+  @media (max-width: 640px) {
+    table {
+      @apply text-sm;
+    }
+
+    /* Make cards stack better on mobile */
+    .grid {
+      @apply gap-3;
+    }
+  }
 }

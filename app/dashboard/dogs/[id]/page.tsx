@@ -75,14 +75,19 @@ export default function DogProfilePage() {
 
       setOwner(ownerData)
 
-      // Fetch documents
-      const { data: docsData } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('dog_id', params.id)
-        .order('created_at', { ascending: false })
+      // Fetch documents from storage bucket
+      const { data: storageFiles } = await supabase.storage
+        .from('dog-vaccinations')
+        .list(`${params.id}`)
 
-      setDocuments(docsData || [])
+      // Get public URLs for the files
+      const docsWithUrls = (storageFiles || []).map(file => ({
+        name: file.name,
+        url: supabase.storage.from('dog-vaccinations').getPublicUrl(`${params.id}/${file.name}`).data.publicUrl,
+        created_at: file.created_at
+      }))
+
+      setDocuments(docsWithUrls)
 
       // Fetch recent visits/bookings
       const { data: visitsData } = await supabase
