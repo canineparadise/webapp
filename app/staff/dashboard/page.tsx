@@ -153,6 +153,9 @@ interface RollCall {
   dogs_present: string[]
   dogs_missing: string[]
   notes?: string
+  section?: string
+  dog_count?: number
+  actual_time?: string
 }
 
 interface StaffAssignment {
@@ -489,7 +492,7 @@ export default function StaffDashboard() {
       }
 
       // Get all unique dog IDs from the week
-      const allDogIds = [...new Set(bookingsData.flatMap(b => b.dog_ids))]
+      const allDogIds = Array.from(new Set(bookingsData.flatMap(b => b.dog_ids)))
 
       // Fetch dog details
       const { data: dogsData } = await supabase
@@ -507,7 +510,7 @@ export default function StaffDashboard() {
       const scheduleMap = new Map<string, WeeklyBooking>()
 
       bookingsData.forEach(booking => {
-        const existing = scheduleMap.get(booking.booking_date) || {
+        const existing: WeeklyBooking = scheduleMap.get(booking.booking_date) || {
           date: booking.booking_date,
           dog_count: 0,
           dogs: []
@@ -516,10 +519,11 @@ export default function StaffDashboard() {
         booking.dog_ids.forEach((dogId: string) => {
           const dog = dogsData?.find(d => d.id === dogId)
           if (dog && !existing.dogs.some(d => d.name === dog.name)) {
+            const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
             existing.dogs.push({
               name: dog.name,
               breed: dog.breed,
-              owner_name: `${dog.owner?.first_name} ${dog.owner?.last_name}`,
+              owner_name: `${owner?.first_name || ''} ${owner?.last_name || ''}`.trim(),
               photo_url: dog.photo_url
             })
           }
@@ -664,7 +668,7 @@ export default function StaffDashboard() {
       }
 
       // Get all dog IDs that need feeding
-      const allDogIds = [...new Set(bookingsData.flatMap(b => b.dog_ids))]
+      const allDogIds = Array.from(new Set(bookingsData.flatMap(b => b.dog_ids)))
 
       const { data: dogsData } = await supabase
         .from('dogs')
@@ -687,11 +691,12 @@ export default function StaffDashboard() {
           const dog = dogsData?.find(d => d.id === dogId)
           if (!dog) return
 
+          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
           const feedingDog: FeedingDog = {
             dog_id: dog.id,
             dog_name: dog.name,
             dog_photo_url: dog.photo_url,
-            owner_name: `${dog.owner?.first_name} ${dog.owner?.last_name}`,
+            owner_name: `${owner?.first_name} ${owner?.last_name}`,
             booking_id: booking.id,
             feeding_schedule: dog.feeding_schedule,
             dietary_requirements: dog.dietary_requirements,
@@ -747,7 +752,7 @@ export default function StaffDashboard() {
         .eq('is_approved', true)
         .order('name', { ascending: true })
 
-      setAllDogs(dogsData || [])
+      setAllDogs((dogsData as any) || [])
     } catch (error) {
       console.error('Error fetching incidents:', error)
       toast.error('Failed to load incidents')
@@ -1632,7 +1637,9 @@ export default function StaffDashboard() {
                         Not Checked In ({todayDogs.notCheckedIn.length})
                       </h3>
                       <div className="space-y-3">
-                        {todayDogs.notCheckedIn.map(dog => (
+                        {todayDogs.notCheckedIn.map(dog => {
+                          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+                          return (
                           <motion.div
                             key={dog.id}
                             whileHover={{ scale: 1.02 }}
@@ -1650,7 +1657,7 @@ export default function StaffDashboard() {
                                 <div>
                                   <h4 className="font-bold text-canine-navy">{dog.name}</h4>
                                   <p className="text-sm text-gray-600">{dog.breed}</p>
-                                  <p className="text-xs text-gray-500">{dog.owner?.first_name} {dog.owner?.last_name}</p>
+                                  <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
                                 </div>
                               </div>
                             </div>
@@ -1665,7 +1672,8 @@ export default function StaffDashboard() {
                               <span>Check In</span>
                             </button>
                           </motion.div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
 
@@ -1676,7 +1684,9 @@ export default function StaffDashboard() {
                         Checked In ({todayDogs.checkedIn.length})
                       </h3>
                       <div className="space-y-3">
-                        {todayDogs.checkedIn.map(dog => (
+                        {todayDogs.checkedIn.map(dog => {
+                          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+                          return (
                           <motion.div
                             key={dog.id}
                             whileHover={{ scale: 1.02 }}
@@ -1694,7 +1704,7 @@ export default function StaffDashboard() {
                                 <div>
                                   <h4 className="font-bold text-canine-navy">{dog.name}</h4>
                                   <p className="text-sm text-gray-600">{dog.breed}</p>
-                                  <p className="text-xs text-gray-500">{dog.owner?.first_name} {dog.owner?.last_name}</p>
+                                  <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
                                   {dog.check_in_time && (
                                     <p className="text-xs text-green-700 font-semibold">
                                       In: {new Date(dog.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1714,7 +1724,8 @@ export default function StaffDashboard() {
                               <span>Check Out</span>
                             </button>
                           </motion.div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
 
@@ -1725,7 +1736,9 @@ export default function StaffDashboard() {
                         Checked Out ({todayDogs.checkedOut.length})
                       </h3>
                       <div className="space-y-3">
-                        {todayDogs.checkedOut.map(dog => (
+                        {todayDogs.checkedOut.map(dog => {
+                          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+                          return (
                           <motion.div
                             key={dog.id}
                             whileHover={{ scale: 1.02 }}
@@ -1743,7 +1756,7 @@ export default function StaffDashboard() {
                               <div>
                                 <h4 className="font-bold text-canine-navy">{dog.name}</h4>
                                 <p className="text-sm text-gray-600">{dog.breed}</p>
-                                <p className="text-xs text-gray-500">{dog.owner?.first_name} {dog.owner?.last_name}</p>
+                                <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
                                 {dog.check_out_time && (
                                   <p className="text-xs text-gray-700 font-semibold">
                                     Out: {new Date(dog.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1752,7 +1765,8 @@ export default function StaffDashboard() {
                               </div>
                             </div>
                           </motion.div>
-                        ))}
+                          )
+                        })}
                       </div>
                     </div>
                   </div>
@@ -2234,7 +2248,9 @@ export default function StaffDashboard() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {scheduledAssessments.map(dog => (
+                        {scheduledAssessments.map(dog => {
+                          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+                          return (
                           <motion.div
                             key={dog.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -2253,8 +2269,8 @@ export default function StaffDashboard() {
                                 <div>
                                   <h3 className="font-bold text-2xl text-blue-900">{dog.name}</h3>
                                   <p className="text-gray-600">{dog.breed}</p>
-                                  <p className="text-sm text-gray-500">{dog.owner?.first_name} {dog.owner?.last_name}</p>
-                                  <p className="text-sm text-gray-500">{dog.owner?.phone}</p>
+                                  <p className="text-sm text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                  <p className="text-sm text-gray-500">{owner?.phone}</p>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -2267,7 +2283,8 @@ export default function StaffDashboard() {
                               </div>
                             </div>
                           </motion.div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -2280,7 +2297,9 @@ export default function StaffDashboard() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {pendingApprovals.map(dog => (
+                        {pendingApprovals.map(dog => {
+                          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+                          return (
                           <motion.div
                             key={dog.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -2299,8 +2318,8 @@ export default function StaffDashboard() {
                                 <div>
                                   <h3 className="font-bold text-2xl text-orange-900">{dog.name}</h3>
                                   <p className="text-gray-600">{dog.breed}</p>
-                                  <p className="text-sm text-gray-500">{dog.owner?.first_name} {dog.owner?.last_name}</p>
-                                  <p className="text-sm text-gray-500">{dog.owner?.phone}</p>
+                                  <p className="text-sm text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                  <p className="text-sm text-gray-500">{owner?.phone}</p>
                                 </div>
                               </div>
                               <div className="flex space-x-2">
@@ -2333,7 +2352,8 @@ export default function StaffDashboard() {
                               </div>
                             )}
                           </motion.div>
-                        ))}
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -2853,7 +2873,9 @@ export default function StaffDashboard() {
                       {/* Dogs in Group */}
                       <div className="p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {group.dogs.map((dog) => (
+                          {group.dogs.map((dog) => {
+                            const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+                            return (
                             <motion.div
                               key={dog.id}
                               whileHover={{ scale: 1.02 }}
@@ -2872,7 +2894,7 @@ export default function StaffDashboard() {
                                   <h3 className="font-bold text-canine-navy truncate">{dog.name}</h3>
                                   <p className="text-sm text-gray-600 truncate">{dog.breed}</p>
                                   <p className="text-xs text-gray-500 truncate">
-                                    {dog.owner?.first_name} {dog.owner?.last_name}
+                                    {owner?.first_name} {owner?.last_name}
                                   </p>
                                 </div>
                               </div>
@@ -2908,7 +2930,8 @@ export default function StaffDashboard() {
                                 )}
                               </div>
                             </motion.div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     </motion.div>
@@ -2936,7 +2959,9 @@ export default function StaffDashboard() {
 
                       <div className="p-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {unassignedDogs.map((dog) => (
+                          {unassignedDogs.map((dog) => {
+                            const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+                            return (
                             <motion.div
                               key={dog.id}
                               whileHover={{ scale: 1.02 }}
@@ -2955,7 +2980,7 @@ export default function StaffDashboard() {
                                   <h3 className="font-bold text-canine-navy truncate">{dog.name}</h3>
                                   <p className="text-sm text-gray-600 truncate">{dog.breed}</p>
                                   <p className="text-xs text-gray-500 truncate">
-                                    {dog.owner?.first_name} {dog.owner?.last_name}
+                                    {owner?.first_name} {owner?.last_name}
                                   </p>
                                 </div>
                               </div>
@@ -2975,7 +3000,8 @@ export default function StaffDashboard() {
                                 )}
                               </div>
                             </motion.div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     </motion.div>
@@ -2989,7 +3015,9 @@ export default function StaffDashboard() {
 
       {/* Dog Details Modal */}
       <AnimatePresence>
-        {showDogModal && selectedDog && (
+        {showDogModal && selectedDog && (() => {
+          const owner = Array.isArray(selectedDog.owner) ? selectedDog.owner[0] : selectedDog.owner
+          return (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -3026,9 +3054,9 @@ export default function StaffDashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-white rounded-lg p-4">
                       <p className="text-sm text-red-700 mb-1">Owner</p>
-                      <p className="font-bold text-xl text-red-900">{selectedDog.owner?.first_name} {selectedDog.owner?.last_name}</p>
-                      <p className="font-bold text-2xl text-red-900 mt-2">{selectedDog.owner?.phone}</p>
-                      <p className="text-sm text-gray-600 mt-1">{selectedDog.owner?.email}</p>
+                      <p className="font-bold text-xl text-red-900">{owner?.first_name} {owner?.last_name}</p>
+                      <p className="font-bold text-2xl text-red-900 mt-2">{owner?.phone}</p>
+                      <p className="text-sm text-gray-600 mt-1">{owner?.email}</p>
                     </div>
                     {selectedDog.emergency_contact_name && (
                       <div className="bg-white rounded-lg p-4">
@@ -3108,7 +3136,8 @@ export default function StaffDashboard() {
               </div>
             </motion.div>
           </motion.div>
-        )}
+          )
+        })()}
       </AnimatePresence>
 
       {/* Check In Modal */}

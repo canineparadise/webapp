@@ -98,7 +98,14 @@ export default function CancellationsPage() {
 
       if (error) throw error
 
-      setCancellations(data || [])
+      // Map the data to handle Supabase nested arrays
+      const mappedData: Cancellation[] = (data || []).map((item: any) => ({
+        ...item,
+        user: Array.isArray(item.user) ? item.user[0] : item.user,
+        tier: Array.isArray(item.tier) ? item.tier[0] : item.tier,
+      }))
+
+      setCancellations(mappedData)
     } catch (error) {
       console.error('Error fetching cancellations:', error)
       toast.error('Failed to load cancellations')

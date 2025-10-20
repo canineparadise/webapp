@@ -96,6 +96,7 @@ export default function NoticePeriodReport() {
 
         return {
           ...notice,
+          user: Array.isArray(notice.user) ? notice.user[0] : notice.user,
           days_remaining_in_notice: daysRemaining
         }
       })

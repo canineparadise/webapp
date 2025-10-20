@@ -132,7 +132,12 @@ export default function StaffIncidents() {
         .order('name')
 
       if (error) throw error
-      setDogs(data || [])
+      // Map to handle owner as array
+      const mappedDogs = (data || []).map((dog: any) => ({
+        ...dog,
+        owner: Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+      }))
+      setDogs(mappedDogs)
     } catch (error) {
       console.error('Error fetching dogs:', error)
     }

@@ -52,6 +52,7 @@ export default function AddDogPage() {
     // Health Information
     vaccinated: false,
     vaccination_expiry: '',
+    has_vaccination_docs: false,
     flea_treatment: false,
     flea_treatment_date: '',
     worming_treatment: false,

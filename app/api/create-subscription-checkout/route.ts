@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import { supabase } from '@/lib/supabase'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2025-08-27.basil',
 })
 
 export async function POST(request: Request) {
@@ -110,10 +110,18 @@ export async function POST(request: Request) {
       })
 
       // Increment usage count
-      await supabase
+      const { data: discountCode } = await supabase
         .from('discount_codes')
-        .update({ current_uses: supabase.raw('current_uses + 1') })
+        .select('current_uses')
         .eq('id', discountCodeId)
+        .single()
+      
+      if (discountCode) {
+        await supabase
+          .from('discount_codes')
+          .update({ current_uses: discountCode.current_uses + 1 })
+          .eq('id', discountCodeId)
+      }
     }
 
     return NextResponse.json({ sessionId: session.id })

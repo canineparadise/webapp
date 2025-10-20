@@ -121,6 +121,7 @@ interface User {
   role: string
   dogs_count?: number
   subscription_status?: string
+  created_at?: string
 }
 
 interface Assessment {
@@ -771,7 +772,7 @@ export default function AdminDashboard() {
 
       // Get unique users from assessment bookings
       const uniquePendingUsers = pendingAssessmentUsers
-        ? [...new Set(pendingAssessmentUsers.map(b => b.user_id))]
+        ? Array.from(new Set(pendingAssessmentUsers.map(b => b.user_id)))
         : []
 
       // Also get dogs awaiting approval (completed assessment but not approved)
@@ -960,12 +961,12 @@ export default function AdminDashboard() {
         id: booking.id,
         user_id: booking.user_id,
         booking_id: booking.id,
-        stripe_payment_id: null,
+        stripe_payment_id: undefined,
         amount: Math.round((settings.assessment_fee || 40) * 100), // Assessment fee (stored in pence)
         transaction_type: 'assessment',
         status: 'completed',
         created_at: booking.booked_at,
-        profiles: booking.profiles
+        profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles
       }))
 
       // Fetch regular bookings with amount as transactions
@@ -988,12 +989,12 @@ export default function AdminDashboard() {
         id: booking.id,
         user_id: booking.user_id,
         booking_id: booking.id,
-        stripe_payment_id: null,
+        stripe_payment_id: undefined,
         amount: booking.amount,
         transaction_type: 'booking',
         status: booking.status,
         created_at: booking.booking_date,
-        profiles: booking.profiles
+        profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles
       }))
 
       // Combine and sort all transactions by date
@@ -2355,7 +2356,7 @@ export default function AdminDashboard() {
                             >
                               <item.icon className="h-5 w-5" />
                               <span>{item.name}</span>
-                              {item.badge !== undefined && item.badge > 0 && (
+                              {'badge' in item && item.badge !== undefined && item.badge > 0 && (
                                 <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                                   {item.badge}
                                 </span>
@@ -4481,7 +4482,7 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm">
-                          {new Date(user.created_at).toLocaleDateString('en-GB')}
+                          {user.created_at ? new Date(user.created_at).toLocaleDateString('en-GB') : 'N/A'}
                         </td>
                       </tr>
                     ))}
@@ -4770,7 +4771,7 @@ export default function AdminDashboard() {
                                             {keywords.reduce((text, keyword) => {
                                               const regex = new RegExp(`(${keyword})`, 'gi')
                                               return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>')
-                                            }, reason).split(/<mark class="bg-yellow-200 px-1 rounded">|<\/mark>/).map((part, i) => {
+                                            }, reason).split(/<mark class="bg-yellow-200 px-1 rounded">|<\/mark>/).map((part: string, i: number) => {
                                               if (keywords.some(kw => part.toLowerCase().includes(kw.toLowerCase()))) {
                                                 return <mark key={i} className="bg-yellow-200 px-1 rounded">{part}</mark>
                                               }

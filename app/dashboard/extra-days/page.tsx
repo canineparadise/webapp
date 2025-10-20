@@ -110,11 +110,14 @@ export default function BuyExtraDaysPage() {
       // Combine dogs with their subscriptions
       const dogsWithSubs: DogWithSubscription[] = (dogsData || []).map((dog: any) => {
         const sub = subsData?.find((s: any) => s.dog_id === dog.id)
+        const tierData: any = sub?.subscription_tiers
+        const tierName = (Array.isArray(tierData) ? tierData[0]?.name : tierData?.name) || 'Unknown'
+
         return {
           ...dog,
           subscription: sub ? {
             ...sub,
-            tier_name: sub.subscription_tiers?.name || 'Unknown'
+            tier_name: tierName
           } : null
         }
       })
