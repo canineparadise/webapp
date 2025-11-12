@@ -6,7 +6,7 @@ import { StarIcon } from '@heroicons/react/24/solid'
 const testimonials = [
   {
     name: 'Anthony Cloke',
-    text: 'Our doggy, Poppy, has been going to Canine Paradise for several years. She regularly goes to the daycare and absolutely loves it. She doesn\'t say goodbye when we drop her off as she\'s running into the building! When she comes home she\'s always happy. Cannot recommend this place enough. Fantastic staff, lovely and hugely experienced.',
+    text: 'Our doggy, Poppy, has been going to Aldenham Doggy Day Care for several years. She regularly goes to the daycare and absolutely loves it. She doesn\'t say goodbye when we drop her off as she\'s running into the building! When she comes home she\'s always happy. Cannot recommend this place enough. Fantastic staff, lovely and hugely experienced.',
     rating: 5,
   },
   {

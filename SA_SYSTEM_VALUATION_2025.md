@@ -1,4 +1,4 @@
-# Canine Paradise Complete System Valuation - South African Market 2025
+# Aldenham Doggy Day Care Complete System Valuation - South African Market 2025
 
 ## Executive Summary
 **Estimated Market Value of Complete System: R1,200,000 - R2,800,000**

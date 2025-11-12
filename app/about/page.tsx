@@ -52,7 +52,7 @@ export default function AboutUs() {
             </h1>
             <p className="text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
               From African adventures to creating Hertfordshire's most beloved dog daycare,
-              discover how Canine Paradise became a second home for your furry friends.
+              discover how Aldenham Doggy Day Care became a second home for your furry friends.
             </p>
           </motion.div>
         </div>
@@ -85,11 +85,11 @@ export default function AboutUs() {
               IT background behind for a life working with dogs.
             </p>
             <p className="text-lg text-gray-700 mb-4">
-              In 2010, as they welcomed their daughter Emmalee, they launched Canine Paradise
+              In 2010, as they welcomed their daughter Emmalee, they launched Aldenham Doggy Day Care
               in Chiswell Green. In 2014, they moved to Fieldgrove Farm, transforming a derelict
               property into a beautiful space filled with love and care. Today, with their
               children Emmalee and Seth, four dogs, and four cats, they continue to make
-              Canine Paradise a special place where every dog feels at home.
+              Aldenham Doggy Day Care a special place where every dog feels at home.
             </p>
           </motion.div>
         </div>

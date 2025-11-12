@@ -190,12 +190,12 @@ export default function SignUp() {
               <Link href="/" className="inline-block mb-6">
                 <img
                   src="/Logo.png"
-                  alt="Canine Paradise"
+                  alt="Aldenham Doggy Day Care"
                   className="h-16 w-auto mx-auto rounded-lg shadow-lg"
                 />
               </Link>
               <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">
-                Join Canine Paradise
+                Join Aldenham Doggy Day Care
               </h1>
               <p className="text-gray-600">
                 Create your account to get started

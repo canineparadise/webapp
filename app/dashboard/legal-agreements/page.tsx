@@ -291,7 +291,7 @@ export default function LegalAgreementsPage() {
 
               <div className="prose max-w-none text-gray-700 space-y-4 text-sm">
                 <p><strong>1. Service Agreement</strong></p>
-                <p>Canine Paradise provides dog daycare services Monday through Friday, 7:00 AM to 7:00 PM. Services include supervised play, socialization, and care for your dog(s) in our facility.</p>
+                <p>Aldenham Doggy Day Care provides dog daycare services Monday through Friday, 7:00 AM to 7:00 PM. Services include supervised play, socialization, and care for your dog(s) in our facility.</p>
 
                 <p><strong>2. Health Requirements</strong></p>
                 <ul className="list-disc pl-6">
@@ -416,7 +416,7 @@ export default function LegalAgreementsPage() {
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                 <p className="text-sm font-semibold text-red-800 mb-2">IMPORTANT: Please read carefully</p>
                 <p className="text-sm text-red-700">
-                  This waiver releases Canine Paradise from liability for injuries that may occur during normal daycare activities.
+                  This waiver releases Aldenham Doggy Day Care from liability for injuries that may occur during normal daycare activities.
                 </p>
               </div>
 
@@ -438,10 +438,10 @@ export default function LegalAgreementsPage() {
                 <ol className="list-decimal pl-6">
                   <li>You understand dogs can be unpredictable and injuries may occur even with proper supervision</li>
                   <li>You accept the risks inherent in dog socialization and group play</li>
-                  <li>You release Canine Paradise, its owners, employees, and agents from any liability for injuries, illness, death, loss, or damage to personal property</li>
-                  <li>You agree to indemnify Canine Paradise for any damages or injuries caused by your dog to other dogs, people, or property</li>
+                  <li>You release Aldenham Doggy Day Care, its owners, employees, and agents from any liability for injuries, illness, death, loss, or damage to personal property</li>
+                  <li>You agree to indemnify Aldenham Doggy Day Care for any damages or injuries caused by your dog to other dogs, people, or property</li>
                   <li>You are solely responsible for any veterinary costs resulting from injuries or illness</li>
-                  <li>Canine Paradise reserves the right to seek emergency veterinary care at your expense</li>
+                  <li>Aldenham Doggy Day Care reserves the right to seek emergency veterinary care at your expense</li>
                   <li>This waiver remains in effect for all future visits unless explicitly revoked in writing</li>
                 </ol>
 
@@ -458,7 +458,7 @@ export default function LegalAgreementsPage() {
                   className="mt-1 mr-3 text-canine-gold focus:ring-canine-gold rounded"
                 />
                 <span className="text-gray-700 font-semibold">
-                  I understand and accept all risks and release Canine Paradise from liability
+                  I understand and accept all risks and release Aldenham Doggy Day Care from liability
                 </span>
               </label>
             </div>
@@ -472,7 +472,7 @@ export default function LegalAgreementsPage() {
 
               <div className="prose max-w-none text-gray-700 space-y-4 text-sm">
                 <p>
-                  Canine Paradise may take photos and videos of dogs during daycare activities for:
+                  Aldenham Doggy Day Care may take photos and videos of dogs during daycare activities for:
                 </p>
                 <ul className="list-disc pl-6">
                   <li>Social media posts (Facebook, Instagram)</li>
@@ -485,7 +485,7 @@ export default function LegalAgreementsPage() {
                   By granting permission, you agree that:
                 </p>
                 <ul className="list-disc pl-6">
-                  <li>Photos/videos become property of Canine Paradise</li>
+                  <li>Photos/videos become property of Aldenham Doggy Day Care</li>
                   <li>No compensation will be provided for use of images</li>
                   <li>Your dog's name may be used in posts</li>
                   <li>You can revoke permission at any time in writing</li>
@@ -570,7 +570,7 @@ export default function LegalAgreementsPage() {
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-2">Emergency Veterinary Care</h3>
                   <p className="text-sm text-gray-700 mb-3">
-                    In case of emergency, Canine Paradise will attempt to contact me and my emergency contact. If we cannot be reached, Canine Paradise has permission to seek veterinary care at my expense.
+                    In case of emergency, Aldenham Doggy Day Care will attempt to contact me and my emergency contact. If we cannot be reached, Aldenham Doggy Day Care has permission to seek veterinary care at my expense.
                   </p>
                   <label className="flex items-start cursor-pointer">
                     <input
@@ -667,7 +667,7 @@ export default function LegalAgreementsPage() {
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-2">Data Protection</h3>
                   <p className="text-sm text-gray-700 mb-3">
-                    I consent to Canine Paradise storing and processing my personal data and my dog's information for the purpose of providing daycare services.
+                    I consent to Aldenham Doggy Day Care storing and processing my personal data and my dog's information for the purpose of providing daycare services.
                   </p>
                   <label className="flex items-start cursor-pointer">
                     <input

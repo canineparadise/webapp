@@ -12,7 +12,7 @@ const teamMembers = [
   {
     name: 'Sarah Johnson',
     role: 'Owner & Head of Operations',
-    description: 'Sarah founded Canine Paradise with over 10 years of experience in animal care. She holds certifications in canine behavior and first aid.',
+    description: 'Sarah founded Aldenham Doggy Day Care with over 10 years of experience in animal care. She holds certifications in canine behavior and first aid.',
     specialties: ['Business Management', 'Canine Behavior', 'Emergency Care'],
     icon: HeartIcon,
     image: 'https://via.placeholder.com/300x300/e8f4f8/1a3a52?text=Sarah+Johnson',
@@ -58,7 +58,7 @@ export default function Team() {
             Meet Our Pack
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Our experienced and passionate team members who make Canine Paradise special
+            Our experienced and passionate team members who make Aldenham Doggy Day Care special
           </p>
         </motion.div>
 

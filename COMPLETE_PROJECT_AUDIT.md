@@ -2,7 +2,7 @@
 
 **Audit Date:** October 17, 2025
 **Auditor:** Claude Code
-**Project:** Canine Paradise Doggy Daycare Management System
+**Project:** Aldenham Doggy Day Care Doggy Daycare Management System
 
 ---
 

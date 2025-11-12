@@ -1048,9 +1048,9 @@ export default function AssessmentForm() {
                 </p>
 
                 <p>
-                  <strong>Daycare Risks:</strong> I understand that Canine Paradise operates a Doggy Day Care
+                  <strong>Daycare Risks:</strong> I understand that Aldenham Doggy Day Care operates a Doggy Day Care
                   where my dog will socialize with other dogs. I accept the risks involved and agree that
-                  Canine Paradise is not liable for any injuries or illnesses except those arising from negligence.
+                  Aldenham Doggy Day Care is not liable for any injuries or illnesses except those arising from negligence.
                 </p>
 
                 <p>
@@ -1060,7 +1060,7 @@ export default function AssessmentForm() {
 
                 <p>
                   <strong>Medical Authorization:</strong> If medical problems develop and I cannot be contacted,
-                  I authorize Canine Paradise to do whatever they deem necessary for my dog's safety and wellbeing.
+                  I authorize Aldenham Doggy Day Care to do whatever they deem necessary for my dog's safety and wellbeing.
                 </p>
 
                 <p>
@@ -1101,7 +1101,7 @@ export default function AssessmentForm() {
         <div className="text-center mb-8">
           <Image
             src="/Logo.png"
-            alt="Canine Paradise"
+            alt="Aldenham Doggy Day Care"
             width={180}
             height={60}
             className="h-20 w-auto mx-auto mb-4"

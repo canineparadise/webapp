@@ -15,25 +15,25 @@ export async function POST(request: NextRequest) {
     // For now, just log and return success
     console.log('📧 Approval Email:', {
       to: ownerEmail,
-      subject: `${dogName} has been approved for Canine Paradise!`,
+      subject: `${dogName} has been approved for Aldenham Doggy Day Care!`,
       body: `
         Hi ${ownerName},
 
-        Great news! ${dogName} has successfully completed the assessment and has been approved to join Canine Paradise Daycare!
+        Great news! ${dogName} has successfully completed the assessment and has been approved to join Aldenham Doggy Day Care Daycare!
 
         You can now book daycare sessions for ${dogName} through your dashboard.
 
         We're excited to welcome ${dogName} to our pack!
 
         Best regards,
-        The Canine Paradise Team
+        The Aldenham Doggy Day Care Team
       `
     })
 
     // In production, you would send the email here:
     // await sendEmail({
     //   to: ownerEmail,
-    //   subject: `${dogName} has been approved for Canine Paradise!`,
+    //   subject: `${dogName} has been approved for Aldenham Doggy Day Care!`,
     //   html: emailTemplate
     // })
 

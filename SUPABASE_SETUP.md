@@ -1,4 +1,4 @@
-# Supabase Setup Guide for Canine Paradise
+# Supabase Setup Guide for Aldenham Doggy Day Care
 
 ## Prerequisites
 - Node.js 18+ installed
@@ -10,7 +10,7 @@
 1. Go to https://app.supabase.com
 2. Click "New Project"
 3. Enter project details:
-   - Name: "Canine Paradise"
+   - Name: "Aldenham Doggy Day Care"
    - Database Password: (save this securely)
    - Region: Choose closest to your location (Europe West for UK)
 4. Wait for project to be created (~2 minutes)

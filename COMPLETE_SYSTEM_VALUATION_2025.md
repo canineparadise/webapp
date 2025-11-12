@@ -1,4 +1,4 @@
-# Canine Paradise Complete System Valuation - UK Market 2025
+# Aldenham Doggy Day Care Complete System Valuation - UK Market 2025
 
 ## Executive Summary
 **Estimated Market Value of Complete System: £85,000 - £150,000**

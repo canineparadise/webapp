@@ -1,4 +1,4 @@
-# Canine Paradise Complete System Valuation - US Market 2025
+# Aldenham Doggy Day Care Complete System Valuation - US Market 2025
 
 ## Executive Summary
 **Estimated Market Value of Complete System: $125,000 - $275,000**

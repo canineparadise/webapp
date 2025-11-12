@@ -1679,7 +1679,7 @@ export default function AddDogPage() {
                       <div>
                         <span className="text-gray-700 font-medium">Emergency Medical Consent *</span>
                         <p className="text-sm text-gray-600 mt-1">
-                          I authorize Canine Paradise to seek emergency veterinary care for my dog if needed.
+                          I authorize Aldenham Doggy Day Care to seek emergency veterinary care for my dog if needed.
                           I understand I will be responsible for all veterinary costs incurred.
                         </p>
                       </div>

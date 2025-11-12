@@ -27,7 +27,7 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-canine-navy mb-4">1. Introduction</h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                At Canine Paradise, we are committed to protecting your privacy and the security of your personal information. This Privacy Policy explains how we collect, use, store, and protect your data when you use our services.
+                At Aldenham Doggy Day Care, we are committed to protecting your privacy and the security of your personal information. This Privacy Policy explains how we collect, use, store, and protect your data when you use our services.
               </p>
             </section>
 
@@ -193,7 +193,7 @@ export default function PrivacyPolicy() {
                 <p className="mb-3">If you have questions about this Privacy Policy or how we handle your data, please contact us:</p>
                 <div className="bg-canine-cream p-4 rounded-lg">
                   <p><strong>Email:</strong> <a href="mailto:wecare@canineparadise.com" className="text-canine-gold hover:text-canine-light-gold">wecare@canineparadise.com</a></p>
-                  <p><strong>Business Name:</strong> Canine Paradise</p>
+                  <p><strong>Business Name:</strong> Aldenham Doggy Day Care</p>
                 </div>
               </div>
             </section>

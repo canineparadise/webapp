@@ -3,7 +3,7 @@
 ## Step 1: Access Email Templates
 
 1. Go to your Supabase Dashboard: https://app.supabase.com
-2. Select your project (Canine Paradise)
+2. Select your project (Aldenham Doggy Day Care)
 3. Navigate to **Authentication** > **Email Templates**
 
 ## Step 2: Configure Welcome/Confirmation Email
@@ -12,7 +12,7 @@ Replace the default "Confirm your email" template with this branded version:
 
 ### Subject Line:
 ```
-Welcome to Canine Paradise! 🐕 Please Confirm Your Email
+Welcome to Aldenham Doggy Day Care! 🐕 Please Confirm Your Email
 ```
 
 ### Email Body (HTML):
@@ -22,7 +22,7 @@ Welcome to Canine Paradise! 🐕 Please Confirm Your Email
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Canine Paradise</title>
+  <title>Welcome to Aldenham Doggy Day Care</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f2e8;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f2e8; padding: 40px 20px;">
@@ -33,7 +33,7 @@ Welcome to Canine Paradise! 🐕 Please Confirm Your Email
           <tr>
             <td style="background: linear-gradient(135deg, #1a3a52 0%, #d4af37 100%); padding: 40px; text-align: center; border-radius: 12px 12px 0 0;">
               <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold;">
-                Welcome to Canine Paradise! 🐕
+                Welcome to Aldenham Doggy Day Care! 🐕
               </h1>
               <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.95;">
                 Your dog's home away from home
@@ -49,7 +49,7 @@ Welcome to Canine Paradise! 🐕 Please Confirm Your Email
               </p>
 
               <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                Thank you for joining Canine Paradise! We're excited to welcome you and your furry friend to our exclusive doggy daycare community.
+                Thank you for joining Aldenham Doggy Day Care! We're excited to welcome you and your furry friend to our exclusive doggy daycare community.
               </p>
 
               <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
@@ -89,7 +89,7 @@ Welcome to Canine Paradise! 🐕 Please Confirm Your Email
               <!-- About Us -->
               <div style="margin: 30px 0;">
                 <h3 style="color: #1a3a52; font-size: 18px; margin: 0 0 10px 0;">
-                  Why Canine Paradise? 🌟
+                  Why Aldenham Doggy Day Care? 🌟
                 </h3>
                 <ul style="color: #666666; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
                   <li>14+ years of experience in dog care</li>
@@ -115,7 +115,7 @@ Welcome to Canine Paradise! 🐕 Please Confirm Your Email
           <tr>
             <td style="background-color: #1a3a52; padding: 30px; text-align: center; border-radius: 0 0 12px 12px;">
               <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0;">
-                <strong>Canine Paradise</strong><br>
+                <strong>Aldenham Doggy Day Care</strong><br>
                 Elstree Road, Elstree, WD6 3FS
               </p>
               <p style="color: #ffffff; font-size: 13px; margin: 0 0 10px 0;">
@@ -125,7 +125,7 @@ Welcome to Canine Paradise! 🐕 Please Confirm Your Email
                 Open Monday - Friday, 7:00 AM - 7:00 PM
               </p>
               <p style="color: #d4af37; font-size: 12px; margin: 0;">
-                © 2010-2025 Canine Paradise. All rights reserved.
+                © 2010-2025 Aldenham Doggy Day Care. All rights reserved.
               </p>
             </td>
           </tr>
@@ -141,7 +141,7 @@ Welcome to Canine Paradise! 🐕 Please Confirm Your Email
 
 ### Subject Line:
 ```
-Reset Your Canine Paradise Password 🔐
+Reset Your Aldenham Doggy Day Care Password 🔐
 ```
 
 ### Email Body:
@@ -174,7 +174,7 @@ For production, use a custom email service for better deliverability:
    - Username: resend
    - Password: [Your Resend API Key]
    - Sender email: noreply@canineparadise.com
-   - Sender name: Canine Paradise
+   - Sender name: Aldenham Doggy Day Care
 
 ### Option B: Gmail (for testing only)
 1. Use your Gmail account

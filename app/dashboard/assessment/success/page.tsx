@@ -312,7 +312,7 @@ function SuccessContent() {
             </li>
             <li className="flex items-start">
               <CheckCircleIcon className="w-5 h-5 text-canine-gold mr-3 mt-0.5 flex-shrink-0" />
-              <span>Bring your dog(s) to Canine Paradise on the scheduled day</span>
+              <span>Bring your dog(s) to Aldenham Doggy Day Care on the scheduled day</span>
             </li>
             <li className="flex items-start">
               <CheckCircleIcon className="w-5 h-5 text-canine-gold mr-3 mt-0.5 flex-shrink-0" />

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Send email to Canine Paradise
+    // Send email to Aldenham Doggy Day Care
     const { data, error } = await resend.emails.send({
       from: 'Contact Form <noreply@yourdomain.com>', // Change to your verified domain
       to: ['wecare@canineparadise.com'],
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
         <p>${message.replace(/\n/g, '<br>')}</p>
         <hr>
         <p style="color: #666; font-size: 12px;">
-          Sent from Canine Paradise website contact form
+          Sent from Aldenham Doggy Day Care website contact form
         </p>
       `,
     })
@@ -85,21 +85,21 @@ export async function POST(request: Request) {
 
     // Send confirmation email to user
     await resend.emails.send({
-      from: 'Canine Paradise <noreply@yourdomain.com>',
+      from: 'Aldenham Doggy Day Care <noreply@yourdomain.com>',
       to: [email],
       subject: 'We received your message!',
       html: `
-        <h2>Thank you for contacting Canine Paradise!</h2>
+        <h2>Thank you for contacting Aldenham Doggy Day Care!</h2>
         <p>Hi ${name},</p>
         <p>We've received your message and will get back to you within 24 hours.</p>
         <h3>Your message:</h3>
         <p style="background: #f5f5f5; padding: 15px; border-radius: 8px;">
           ${message.replace(/\n/g, '<br>')}
         </p>
-        <p>Best regards,<br>The Canine Paradise Team</p>
+        <p>Best regards,<br>The Aldenham Doggy Day Care Team</p>
         <hr>
         <p style="color: #666; font-size: 12px;">
-          Canine Paradise<br>
+          Aldenham Doggy Day Care<br>
           Elstree Road, Elstree, WD6 3FS<br>
           07963 656556
         </p>
@@ -296,7 +296,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
-SMTP_FROM="Canine Paradise <noreply@canineparadise.com>"
+SMTP_FROM="Aldenham Doggy Day Care <noreply@canineparadise.com>"
 ```
 
 ---
@@ -315,7 +315,7 @@ SMTP_FROM="Canine Paradise <noreply@canineparadise.com>"
 3. Fill out the form and submit
 
 4. Check your email for:
-   - Email to Canine Paradise (wecare@canineparadise.com)
+   - Email to Aldenham Doggy Day Care (wecare@canineparadise.com)
    - Confirmation email to the user
 
 ### Test Edge Cases:

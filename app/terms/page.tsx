@@ -27,14 +27,14 @@ export default function TermsAndConditions() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-canine-navy mb-4">1. Introduction</h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Welcome to Canine Paradise. These Terms and Conditions govern your use of our doggy daycare services and website. By using our services, you agree to these terms in full.
+                Welcome to Aldenham Doggy Day Care. These Terms and Conditions govern your use of our doggy daycare services and website. By using our services, you agree to these terms in full.
               </p>
             </section>
 
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-canine-navy mb-4">2. Service Description</h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                Canine Paradise provides professional doggy daycare services, including full-day care (7am-7pm) and half-day care (10am-2pm). Our services include supervised play, socialization, enrichment activities, and professional care by certified handlers.
+                Aldenham Doggy Day Care provides professional doggy daycare services, including full-day care (7am-7pm) and half-day care (10am-2pm). Our services include supervised play, socialization, enrichment activities, and professional care by certified handlers.
               </p>
             </section>
 
@@ -71,7 +71,7 @@ export default function TermsAndConditions() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-canine-navy mb-4">6. Liability and Insurance</h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                While we take every precaution to ensure the safety of your dog, you acknowledge that doggy daycare involves inherent risks. Canine Paradise carries comprehensive liability insurance, but owners are responsible for any injuries their dog may cause to other dogs or staff. We are not liable for pre-existing conditions or injuries that occur despite reasonable care.
+                While we take every precaution to ensure the safety of your dog, you acknowledge that doggy daycare involves inherent risks. Aldenham Doggy Day Care carries comprehensive liability insurance, but owners are responsible for any injuries their dog may cause to other dogs or staff. We are not liable for pre-existing conditions or injuries that occur despite reasonable care.
               </p>
             </section>
 
@@ -101,7 +101,7 @@ export default function TermsAndConditions() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-canine-navy mb-4">10. Photography and Media</h2>
               <p className="text-gray-700 leading-relaxed mb-4">
-                By using our services, you consent to Canine Paradise photographing your dog and using these images for marketing purposes including social media, website, and promotional materials. If you do not wish your dog to be photographed, please notify us in writing.
+                By using our services, you consent to Aldenham Doggy Day Care photographing your dog and using these images for marketing purposes including social media, website, and promotional materials. If you do not wish your dog to be photographed, please notify us in writing.
               </p>
             </section>
 
@@ -122,10 +122,10 @@ export default function TermsAndConditions() {
 
             <div className="mt-12 p-6 bg-canine-sky rounded-lg border-l-4 border-canine-gold">
               <p className="text-canine-navy font-semibold mb-2">
-                By using Canine Paradise services, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
+                By using Aldenham Doggy Day Care services, you acknowledge that you have read, understood, and agree to be bound by these Terms and Conditions.
               </p>
               <p className="text-gray-700 text-sm">
-                These terms form a legally binding agreement between you and Canine Paradise.
+                These terms form a legally binding agreement between you and Aldenham Doggy Day Care.
               </p>
             </div>
           </div>

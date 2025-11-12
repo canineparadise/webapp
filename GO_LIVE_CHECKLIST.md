@@ -1,4 +1,4 @@
-# 🚀 Canine Paradise - Go Live Checklist
+# 🚀 Aldenham Doggy Day Care - Go Live Checklist
 
 ## ✅ BUILD STATUS: PASSING
 **Last Build**: Successful ✓

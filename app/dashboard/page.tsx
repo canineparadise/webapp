@@ -859,7 +859,7 @@ export default function Dashboard() {
                                   className="mt-1 text-canine-gold focus:ring-canine-gold"
                                 />
                                 <div className="flex-1">
-                                  <span className="font-bold text-canine-navy">Meals Provided by Canine Paradise</span>
+                                  <span className="font-bold text-canine-navy">Meals Provided by Aldenham Doggy Day Care</span>
                                   <p className="text-xs text-gray-600 mt-1">We'll provide nutritious meals for your dog(s)</p>
                                 </div>
                               </label>

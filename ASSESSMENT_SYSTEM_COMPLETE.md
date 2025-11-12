@@ -96,7 +96,7 @@ We can't wait to see your furry friend(s)!
 
 #### Denial Email:
 ```
-Subject: Assessment Update from Canine Paradise
+Subject: Assessment Update from Aldenham Doggy Day Care
 
 Dear [name],
 

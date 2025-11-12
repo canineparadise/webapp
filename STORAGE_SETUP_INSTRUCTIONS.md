@@ -31,7 +31,7 @@ All code has been updated to use proper storage buckets and upload functions:
 ### Step 1: Go to Supabase Dashboard
 
 1. Open your Supabase project: https://supabase.com/dashboard
-2. Select your project: **Canine Paradise** (hmlmazrdoglqfictjcnm)
+2. Select your project: **Aldenham Doggy Day Care** (hmlmazrdoglqfictjcnm)
 3. Go to **SQL Editor** (left sidebar)
 
 ### Step 2: Run Storage Setup SQL

@@ -232,7 +232,7 @@ These issues occurred because:
 
 ## ✨ SUMMARY
 
-Your Canine Paradise webapp had **4 major systems completely broken** due to schema mismatches:
+Your Aldenham Doggy Day Care webapp had **4 major systems completely broken** due to schema mismatches:
 1. ✅ **FIXED**: Booking system
 2. ✅ **FIXED**: Dog registration
 3. ✅ **NEEDS SQL**: Subscriptions (run migration)

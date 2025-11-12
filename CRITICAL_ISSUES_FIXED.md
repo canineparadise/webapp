@@ -56,7 +56,7 @@ chmod +x start-server.sh
 - Documented step-by-step setup process
 
 **Features of reset-password page:**
-- Clean, branded UI matching Canine Paradise design
+- Clean, branded UI matching Aldenham Doggy Day Care design
 - Password validation (min 6 characters, must match confirmation)
 - Success/error handling with toast notifications
 - Auto-redirect to login after successful reset

@@ -1,4 +1,4 @@
-# Canine Paradise System - Full Ownership vs Rental Costs (UK Market)
+# Aldenham Doggy Day Care System - Full Ownership vs Rental Costs (UK Market)
 
 ## 1. FULL SYSTEM PURCHASE (Own Forever)
 

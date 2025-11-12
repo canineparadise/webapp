@@ -65,7 +65,7 @@ export default function HowItWorks() {
             How It Works
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-6">
-            Getting started with Canine Paradise is simple and straightforward
+            Getting started with Aldenham Doggy Day Care is simple and straightforward
           </p>
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

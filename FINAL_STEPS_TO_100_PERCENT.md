@@ -198,11 +198,11 @@ export function getWelcomeEmail(firstName: string) {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Welcome to Canine Paradise! 🐾</h1>
+          <h1>Welcome to Aldenham Doggy Day Care! 🐾</h1>
         </div>
         <div class="content">
           <p>Hi ${firstName},</p>
-          <p>Welcome to Canine Paradise! We're thrilled to have you and your furry friend join our pack.</p>
+          <p>Welcome to Aldenham Doggy Day Care! We're thrilled to have you and your furry friend join our pack.</p>
           <p>Next steps:</p>
           <ol>
             <li>Add your dog's profile</li>

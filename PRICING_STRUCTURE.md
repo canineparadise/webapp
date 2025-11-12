@@ -1,4 +1,4 @@
-# Canine Paradise - UK Pricing Structure
+# Aldenham Doggy Day Care - UK Pricing Structure
 
 ## Market Research Summary
 Based on analysis of UK pet care management software market (2024), competitor pricing ranges from:
@@ -9,7 +9,7 @@ Based on analysis of UK pet care management software market (2024), competitor p
 
 Key competitors analyzed: DoggieDashboard, PawPartner, ProPet, Gingr, Revelation Pets, Kennel Connection
 
-## Proposed Pricing Tiers for Canine Paradise
+## Proposed Pricing Tiers for Aldenham Doggy Day Care
 
 ### 🐕 Starter Plan - FREE
 **Perfect for**: New businesses, home-based daycare
@@ -103,7 +103,7 @@ Key competitors analyzed: DoggieDashboard, PawPartner, ProPet, Gingr, Revelation
 
 ## Comparison with Competitors
 
-| Feature | Canine Paradise | DoggieDashboard | ProPet | Gingr |
+| Feature | Aldenham Doggy Day Care | DoggieDashboard | ProPet | Gingr |
 |---------|----------------|-----------------|--------|-------|
 | Starting Price | FREE | FREE (limited) | £38/month | £60+/month |
 | Professional Plan | £49/month | £31/month | £58/month | £80+/month |

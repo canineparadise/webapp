@@ -72,7 +72,7 @@ export default function PricingPage() {
             <Link href="/" className="inline-block mb-6">
               <img
                 src="/Logo.png"
-                alt="Canine Paradise"
+                alt="Aldenham Doggy Day Care"
                 className="h-16 w-auto mx-auto rounded-lg shadow-lg"
               />
             </Link>

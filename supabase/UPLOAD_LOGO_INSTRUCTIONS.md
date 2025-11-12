@@ -16,8 +16,8 @@ Replace the header section in your email template with this:
 <!-- Header with Navy Background -->
 <tr>
   <td style="background: linear-gradient(135deg, #1a3a52 0%, #2a4a62 100%); padding: 40px 30px; text-align: center;">
-    <img src="YOUR_LOGO_URL_HERE" alt="Canine Paradise Logo" style="max-width: 150px; height: auto; margin-bottom: 15px; border-radius: 8px;">
-    <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">Canine Paradise</h1>
+    <img src="YOUR_LOGO_URL_HERE" alt="Aldenham Doggy Day Care Logo" style="max-width: 150px; height: auto; margin-bottom: 15px; border-radius: 8px;">
+    <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">Aldenham Doggy Day Care</h1>
     <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px;">Where Every Dog Finds Paradise</p>
   </td>
 </tr>

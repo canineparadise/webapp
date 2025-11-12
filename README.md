@@ -1,1 +1,1 @@
-# Canine Paradise - Doggy Daycare Management System
+# Aldenham Doggy Day Care - Doggy Daycare Management System

@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is a Next.js 14 application for "Canine Paradise" - a doggy daycare webapp built with:
+This is a Next.js 14 application for "Aldenham Doggy Day Care" - a doggy daycare webapp built with:
 - **Framework**: Next.js 14 with App Router
 - **Styling**: Tailwind CSS with custom theme colors and utilities
 - **UI**: React 18 with TypeScript, Framer Motion for animations

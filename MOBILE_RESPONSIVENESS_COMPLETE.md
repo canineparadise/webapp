@@ -254,7 +254,7 @@ When creating new pages, always:
 
 ## ✨ RESULT
 
-Your Canine Paradise webapp now:
+Your Aldenham Doggy Day Care webapp now:
 - ✅ Works beautifully on iPhone SE (375px) and up
 - ✅ Scales gracefully from mobile → tablet → desktop
 - ✅ Maintains touch-friendly interface on all screens

@@ -1,4 +1,4 @@
-# Complete Canine Paradise Email Templates Setup Guide
+# Complete Aldenham Doggy Day Care Email Templates Setup Guide
 
 ## 🚀 Quick Setup Steps
 
@@ -64,7 +64,7 @@ Replace `YOUR_LOGO_URL` with: `https://yourdomain.com/Logo.png`
 
 ### Subject:
 ```
-Welcome to Canine Paradise! Please Confirm Your Email 🐕
+Welcome to Aldenham Doggy Day Care! Please Confirm Your Email 🐕
 ```
 
 ### Email Body:
@@ -74,7 +74,7 @@ Welcome to Canine Paradise! Please Confirm Your Email 🐕
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Canine Paradise</title>
+  <title>Welcome to Aldenham Doggy Day Care</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f2e8;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f2e8; padding: 40px 20px;">
@@ -86,10 +86,10 @@ Welcome to Canine Paradise! Please Confirm Your Email 🐕
           <tr>
             <td style="background-color: #1a3a52; padding: 30px 40px; text-align: center;">
               <!-- Logo -->
-              <img src="YOUR_LOGO_URL" alt="Canine Paradise" style="width: 80px; height: 80px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+              <img src="YOUR_LOGO_URL" alt="Aldenham Doggy Day Care" style="width: 80px; height: 80px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
 
               <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold;">
-                Welcome to Canine Paradise!
+                Welcome to Aldenham Doggy Day Care!
               </h1>
               <p style="color: #d4af37; margin: 10px 0 0 0; font-size: 16px;">
                 Your dog's home away from home
@@ -105,7 +105,7 @@ Welcome to Canine Paradise! Please Confirm Your Email 🐕
               </p>
 
               <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                Thank you for joining Canine Paradise! We're excited to welcome you and your furry friend to our exclusive doggy daycare community.
+                Thank you for joining Aldenham Doggy Day Care! We're excited to welcome you and your furry friend to our exclusive doggy daycare community.
               </p>
 
               <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
@@ -168,10 +168,10 @@ Welcome to Canine Paradise! Please Confirm Your Email 🐕
                 </p>
               </div>
 
-              <!-- Why Canine Paradise -->
+              <!-- Why Aldenham Doggy Day Care -->
               <div style="margin: 30px 0;">
                 <h3 style="color: #1a3a52; font-size: 18px; margin: 0 0 10px 0;">
-                  Why Choose Canine Paradise?
+                  Why Choose Aldenham Doggy Day Care?
                 </h3>
                 <ul style="color: #666666; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
                   <li>14+ years of professional dog care experience</li>
@@ -198,7 +198,7 @@ Welcome to Canine Paradise! Please Confirm Your Email 🐕
           <tr>
             <td style="background-color: #1a3a52; padding: 30px; text-align: center;">
               <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0;">
-                <strong>Canine Paradise</strong><br>
+                <strong>Aldenham Doggy Day Care</strong><br>
                 Elstree Road, Elstree, WD6 3FS
               </p>
               <p style="color: #ffffff; font-size: 13px; margin: 0 0 10px 0;">
@@ -208,7 +208,7 @@ Welcome to Canine Paradise! Please Confirm Your Email 🐕
                 Open Monday - Friday, 7:00 AM - 7:00 PM
               </p>
               <p style="color: #d4af37; font-size: 12px; margin: 0;">
-                © 2010-2025 Canine Paradise. All rights reserved.
+                © 2010-2025 Aldenham Doggy Day Care. All rights reserved.
               </p>
             </td>
           </tr>
@@ -226,7 +226,7 @@ Welcome to Canine Paradise! Please Confirm Your Email 🐕
 
 ### Subject:
 ```
-Reset Your Canine Paradise Password 🔐
+Reset Your Aldenham Doggy Day Care Password 🔐
 ```
 
 ### Email Body:
@@ -248,13 +248,13 @@ Reset Your Canine Paradise Password 🔐
           <tr>
             <td style="background-color: #1a3a52; padding: 30px 40px; text-align: center;">
               <!-- Logo -->
-              <img src="YOUR_LOGO_URL" alt="Canine Paradise" style="width: 80px; height: 80px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+              <img src="YOUR_LOGO_URL" alt="Aldenham Doggy Day Care" style="width: 80px; height: 80px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
 
               <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold;">
                 Password Reset Request
               </h1>
               <p style="color: #d4af37; margin: 10px 0 0 0; font-size: 16px;">
-                Canine Paradise Account Security
+                Aldenham Doggy Day Care Account Security
               </p>
             </td>
           </tr>
@@ -267,7 +267,7 @@ Reset Your Canine Paradise Password 🔐
               </p>
 
               <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                We received a request to reset the password for your Canine Paradise account. If you made this request, click the button below to create a new password.
+                We received a request to reset the password for your Aldenham Doggy Day Care account. If you made this request, click the button below to create a new password.
               </p>
 
               <!-- CTA Button -->
@@ -315,14 +315,14 @@ Reset Your Canine Paradise Password 🔐
           <tr>
             <td style="background-color: #1a3a52; padding: 30px; text-align: center;">
               <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0;">
-                <strong>Canine Paradise</strong><br>
+                <strong>Aldenham Doggy Day Care</strong><br>
                 Elstree Road, Elstree, WD6 3FS
               </p>
               <p style="color: #ffffff; font-size: 13px; margin: 0 0 10px 0;">
                 📞 07963 656556 | ✉️ info@canineparadise.com
               </p>
               <p style="color: #d4af37; font-size: 12px; margin: 0;">
-                © 2010-2025 Canine Paradise. All rights reserved.
+                © 2010-2025 Aldenham Doggy Day Care. All rights reserved.
               </p>
             </td>
           </tr>
@@ -340,7 +340,7 @@ Reset Your Canine Paradise Password 🔐
 
 ### Subject:
 ```
-Your Canine Paradise Login Link 🔗
+Your Aldenham Doggy Day Care Login Link 🔗
 ```
 
 ### Email Body:
@@ -350,7 +350,7 @@ Your Canine Paradise Login Link 🔗
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login to Canine Paradise</title>
+  <title>Login to Aldenham Doggy Day Care</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f2e8;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f2e8; padding: 40px 20px;">
@@ -362,7 +362,7 @@ Your Canine Paradise Login Link 🔗
           <tr>
             <td style="background-color: #1a3a52; padding: 30px 40px; text-align: center;">
               <!-- Logo -->
-              <img src="YOUR_LOGO_URL" alt="Canine Paradise" style="width: 80px; height: 80px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+              <img src="YOUR_LOGO_URL" alt="Aldenham Doggy Day Care" style="width: 80px; height: 80px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
 
               <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold;">
                 Your Login Link
@@ -381,7 +381,7 @@ Your Canine Paradise Login Link 🔗
               </p>
 
               <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                Click the button below to instantly log in to your Canine Paradise account.
+                Click the button below to instantly log in to your Aldenham Doggy Day Care account.
               </p>
 
               <!-- CTA Button -->
@@ -414,14 +414,14 @@ Your Canine Paradise Login Link 🔗
           <tr>
             <td style="background-color: #1a3a52; padding: 30px; text-align: center;">
               <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0;">
-                <strong>Canine Paradise</strong><br>
+                <strong>Aldenham Doggy Day Care</strong><br>
                 Elstree Road, Elstree, WD6 3FS
               </p>
               <p style="color: #ffffff; font-size: 13px; margin: 0 0 10px 0;">
                 📞 07963 656556 | ✉️ info@canineparadise.com
               </p>
               <p style="color: #d4af37; font-size: 12px; margin: 0;">
-                © 2010-2025 Canine Paradise. All rights reserved.
+                © 2010-2025 Aldenham Doggy Day Care. All rights reserved.
               </p>
             </td>
           </tr>
@@ -439,7 +439,7 @@ Your Canine Paradise Login Link 🔗
 
 ### Subject:
 ```
-Confirm Your New Email Address for Canine Paradise 📧
+Confirm Your New Email Address for Aldenham Doggy Day Care 📧
 ```
 
 ### Email Body:
@@ -461,7 +461,7 @@ Confirm Your New Email Address for Canine Paradise 📧
           <tr>
             <td style="background-color: #1a3a52; padding: 30px 40px; text-align: center;">
               <!-- Logo -->
-              <img src="YOUR_LOGO_URL" alt="Canine Paradise" style="width: 80px; height: 80px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+              <img src="YOUR_LOGO_URL" alt="Aldenham Doggy Day Care" style="width: 80px; height: 80px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
 
               <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: bold;">
                 Email Address Change Request
@@ -480,7 +480,7 @@ Confirm Your New Email Address for Canine Paradise 📧
               </p>
 
               <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                You've requested to change your email address for your Canine Paradise account. Please confirm this change by clicking the button below.
+                You've requested to change your email address for your Aldenham Doggy Day Care account. Please confirm this change by clicking the button below.
               </p>
 
               <div style="background-color: #f5f2e8; padding: 20px; border-radius: 8px; margin: 25px 0;">
@@ -519,14 +519,14 @@ Confirm Your New Email Address for Canine Paradise 📧
           <tr>
             <td style="background-color: #1a3a52; padding: 30px; text-align: center;">
               <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0;">
-                <strong>Canine Paradise</strong><br>
+                <strong>Aldenham Doggy Day Care</strong><br>
                 Elstree Road, Elstree, WD6 3FS
               </p>
               <p style="color: #ffffff; font-size: 13px; margin: 0 0 10px 0;">
                 📞 07963 656556 | ✉️ info@canineparadise.com
               </p>
               <p style="color: #d4af37; font-size: 12px; margin: 0;">
-                © 2010-2025 Canine Paradise. All rights reserved.
+                © 2010-2025 Aldenham Doggy Day Care. All rights reserved.
               </p>
             </td>
           </tr>

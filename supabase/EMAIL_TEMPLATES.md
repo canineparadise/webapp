@@ -1,4 +1,4 @@
-# Canine Paradise - Branded Email Templates
+# Aldenham Doggy Day Care - Branded Email Templates
 
 Copy and paste these into Supabase → Authentication → Email Templates
 
@@ -14,7 +14,7 @@ Brand Colors:
 
 **Subject:**
 ```
-Welcome to Canine Paradise – Verify Your Email 🐾
+Welcome to Aldenham Doggy Day Care – Verify Your Email 🐾
 ```
 
 **Body:**
@@ -34,7 +34,7 @@ Welcome to Canine Paradise – Verify Your Email 🐾
           <!-- Header with Navy Background -->
           <tr>
             <td style="background: linear-gradient(135deg, #1a3a52 0%, #2a4a62 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">🐾 Canine Paradise</h1>
+              <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">🐾 Aldenham Doggy Day Care</h1>
               <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px;">Where Every Dog Finds Paradise</p>
             </td>
           </tr>
@@ -45,7 +45,7 @@ Welcome to Canine Paradise – Verify Your Email 🐾
               <h2 style="color: #1a3a52; font-size: 24px; margin: 0 0 20px 0; font-weight: bold;">Welcome to Our Pack!</h2>
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                We're thrilled to have you join the Canine Paradise family! Your furry friend is one step closer to experiencing our loving care and exciting adventures.
+                We're thrilled to have you join the Aldenham Doggy Day Care family! Your furry friend is one step closer to experiencing our loving care and exciting adventures.
               </p>
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
@@ -77,7 +77,7 @@ Welcome to Canine Paradise – Verify Your Email 🐾
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 30px 0 0 0;">
                 With love and tail wags,<br>
-                <strong style="color: #1a3a52;">The Canine Paradise Team</strong>
+                <strong style="color: #1a3a52;">The Aldenham Doggy Day Care Team</strong>
               </p>
             </td>
           </tr>
@@ -93,7 +93,7 @@ Welcome to Canine Paradise – Verify Your Email 🐾
                 Licensed & Insured | 14+ Years Experience | 24/7 Emergency Support
               </p>
               <p style="color: #999999; font-size: 12px; margin: 0;">
-                © 2025 Canine Paradise. All rights reserved.
+                © 2025 Aldenham Doggy Day Care. All rights reserved.
               </p>
             </td>
           </tr>
@@ -112,7 +112,7 @@ Welcome to Canine Paradise – Verify Your Email 🐾
 
 **Subject:**
 ```
-Reset Your Canine Paradise Password 🔐
+Reset Your Aldenham Doggy Day Care Password 🔐
 ```
 
 **Body:**
@@ -132,7 +132,7 @@ Reset Your Canine Paradise Password 🔐
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #1a3a52 0%, #2a4a62 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">🐾 Canine Paradise</h1>
+              <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">🐾 Aldenham Doggy Day Care</h1>
               <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px;">Where Every Dog Finds Paradise</p>
             </td>
           </tr>
@@ -143,7 +143,7 @@ Reset Your Canine Paradise Password 🔐
               <h2 style="color: #1a3a52; font-size: 24px; margin: 0 0 20px 0; font-weight: bold;">Reset Your Password</h2>
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                We received a request to reset the password for your Canine Paradise account. No worries – it happens to the best of us!
+                We received a request to reset the password for your Aldenham Doggy Day Care account. No worries – it happens to the best of us!
               </p>
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
@@ -175,7 +175,7 @@ Reset Your Canine Paradise Password 🔐
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 30px 0 0 0;">
                 Stay safe,<br>
-                <strong style="color: #1a3a52;">The Canine Paradise Team</strong>
+                <strong style="color: #1a3a52;">The Aldenham Doggy Day Care Team</strong>
               </p>
             </td>
           </tr>
@@ -191,7 +191,7 @@ Reset Your Canine Paradise Password 🔐
                 Licensed & Insured | 14+ Years Experience | 24/7 Emergency Support
               </p>
               <p style="color: #999999; font-size: 12px; margin: 0;">
-                © 2025 Canine Paradise. All rights reserved.
+                © 2025 Aldenham Doggy Day Care. All rights reserved.
               </p>
             </td>
           </tr>
@@ -210,7 +210,7 @@ Reset Your Canine Paradise Password 🔐
 
 **Subject:**
 ```
-Your Canine Paradise Login Link 🔑
+Your Aldenham Doggy Day Care Login Link 🔑
 ```
 
 **Body:**
@@ -230,7 +230,7 @@ Your Canine Paradise Login Link 🔑
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #1a3a52 0%, #2a4a62 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">🐾 Canine Paradise</h1>
+              <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">🐾 Aldenham Doggy Day Care</h1>
               <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px;">Where Every Dog Finds Paradise</p>
             </td>
           </tr>
@@ -241,7 +241,7 @@ Your Canine Paradise Login Link 🔑
               <h2 style="color: #1a3a52; font-size: 24px; margin: 0 0 20px 0; font-weight: bold;">Your Login Link is Ready!</h2>
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                Click the button below to securely log in to your Canine Paradise account:
+                Click the button below to securely log in to your Aldenham Doggy Day Care account:
               </p>
 
               <!-- CTA Button -->
@@ -269,7 +269,7 @@ Your Canine Paradise Login Link 🔑
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 30px 0 0 0;">
                 Happy tail wags,<br>
-                <strong style="color: #1a3a52;">The Canine Paradise Team</strong>
+                <strong style="color: #1a3a52;">The Aldenham Doggy Day Care Team</strong>
               </p>
             </td>
           </tr>
@@ -285,7 +285,7 @@ Your Canine Paradise Login Link 🔑
                 Licensed & Insured | 14+ Years Experience | 24/7 Emergency Support
               </p>
               <p style="color: #999999; font-size: 12px; margin: 0;">
-                © 2025 Canine Paradise. All rights reserved.
+                © 2025 Aldenham Doggy Day Care. All rights reserved.
               </p>
             </td>
           </tr>
@@ -304,7 +304,7 @@ Your Canine Paradise Login Link 🔑
 
 **Subject:**
 ```
-Confirm Your New Email Address for Canine Paradise ✉️
+Confirm Your New Email Address for Aldenham Doggy Day Care ✉️
 ```
 
 **Body:**
@@ -324,7 +324,7 @@ Confirm Your New Email Address for Canine Paradise ✉️
           <!-- Header -->
           <tr>
             <td style="background: linear-gradient(135deg, #1a3a52 0%, #2a4a62 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">🐾 Canine Paradise</h1>
+              <h1 style="margin: 0; color: #a68756; font-size: 32px; font-weight: bold;">🐾 Aldenham Doggy Day Care</h1>
               <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px;">Where Every Dog Finds Paradise</p>
             </td>
           </tr>
@@ -335,7 +335,7 @@ Confirm Your New Email Address for Canine Paradise ✉️
               <h2 style="color: #1a3a52; font-size: 24px; margin: 0 0 20px 0; font-weight: bold;">Confirm Your New Email</h2>
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-                You've requested to change the email address associated with your Canine Paradise account. To complete this change, please confirm your new email address.
+                You've requested to change the email address associated with your Aldenham Doggy Day Care account. To complete this change, please confirm your new email address.
               </p>
 
               <!-- CTA Button -->
@@ -363,7 +363,7 @@ Confirm Your New Email Address for Canine Paradise ✉️
 
               <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 30px 0 0 0;">
                 Best regards,<br>
-                <strong style="color: #1a3a52;">The Canine Paradise Team</strong>
+                <strong style="color: #1a3a52;">The Aldenham Doggy Day Care Team</strong>
               </p>
             </td>
           </tr>
@@ -379,7 +379,7 @@ Confirm Your New Email Address for Canine Paradise ✉️
                 Licensed & Insured | 14+ Years Experience | 24/7 Emergency Support
               </p>
               <p style="color: #999999; font-size: 12px; margin: 0;">
-                © 2025 Canine Paradise. All rights reserved.
+                © 2025 Aldenham Doggy Day Care. All rights reserved.
               </p>
             </td>
           </tr>

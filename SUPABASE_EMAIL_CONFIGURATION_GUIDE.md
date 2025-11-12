@@ -1,6 +1,6 @@
 # Supabase Email Configuration Guide
 
-This guide covers how to configure email verification and password reset for Canine Paradise.
+This guide covers how to configure email verification and password reset for Aldenham Doggy Day Care.
 
 ---
 
@@ -12,7 +12,7 @@ Email verification ensures users confirm their email address before accessing th
 
 1. **Go to Supabase Dashboard**
    - Navigate to https://supabase.com/dashboard
-   - Select your "Canine Paradise" project
+   - Select your "Aldenham Doggy Day Care" project
 
 2. **Navigate to Authentication Settings**
    - Click on "Authentication" in the left sidebar
@@ -46,14 +46,14 @@ Password reset allows users to securely reset their forgotten passwords.
 
 2. **Customize the Password Reset Email**
 
-Here's a professional template for Canine Paradise:
+Here's a professional template for Aldenham Doggy Day Care:
 
 ```html
-<h2>🐕 Reset Your Canine Paradise Password</h2>
+<h2>🐕 Reset Your Aldenham Doggy Day Care Password</h2>
 
 <p>Hi there,</p>
 
-<p>We received a request to reset your password for your Canine Paradise account.</p>
+<p>We received a request to reset your password for your Aldenham Doggy Day Care account.</p>
 
 <p>Click the button below to choose a new password:</p>
 
@@ -74,7 +74,7 @@ Here's a professional template for Canine Paradise:
 <hr>
 
 <p style="color: #666; font-size: 12px;">
-  Canine Paradise<br>
+  Aldenham Doggy Day Care<br>
   Where every dog is treated like family<br>
   <a href="http://localhost:3000">Visit our website</a>
 </p>
@@ -103,11 +103,11 @@ Make the signup confirmation email match your brand:
 2. **Use this template:**
 
 ```html
-<h2>🐕 Welcome to Canine Paradise!</h2>
+<h2>🐕 Welcome to Aldenham Doggy Day Care!</h2>
 
 <p>Hi {{ .Email }},</p>
 
-<p>Thank you for signing up for Canine Paradise! We're excited to have you join our pack.</p>
+<p>Thank you for signing up for Aldenham Doggy Day Care! We're excited to have you join our pack.</p>
 
 <p>Before you can log in, please confirm your email address by clicking the button below:</p>
 
@@ -130,7 +130,7 @@ Make the signup confirmation email match your brand:
 <hr>
 
 <p style="color: #666; font-size: 12px;">
-  Canine Paradise<br>
+  Aldenham Doggy Day Care<br>
   Where every dog is treated like family<br>
   <a href="http://localhost:3000">Visit our website</a>
 </p>
@@ -196,7 +196,7 @@ By default, Supabase uses their email service which has limits. For production, 
    - **Username:** Your SMTP username
    - **Password:** Your SMTP password
    - **Sender email:** noreply@yourcompany.com
-   - **Sender name:** Canine Paradise
+   - **Sender name:** Aldenham Doggy Day Care
 
 ### Recommended Email Services:
 - **SendGrid** (free tier: 100 emails/day)

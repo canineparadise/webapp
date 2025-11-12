@@ -17,7 +17,7 @@ export default function Footer() {
           <div>
             <img
               src="/Logo.png"
-              alt="Canine Paradise"
+              alt="Aldenham Doggy Day Care"
               className="h-20 w-auto mb-4 rounded-lg"
             />
             <p className="text-gray-300 text-sm">
@@ -62,7 +62,7 @@ export default function Footer() {
               <li className="flex items-start">
                 <MapPinIcon className="h-5 w-5 text-canine-gold mr-2 mt-0.5" />
                 <span className="text-gray-300 text-sm">
-                  Canine Paradise<br />
+                  Aldenham Doggy Day Care<br />
                   Elstree Road<br />
                   Elstree, WD6 3FS
                 </span>
@@ -109,7 +109,7 @@ export default function Footer() {
 
         <div className="border-t border-gray-700 mt-8 pt-8 text-center">
           <p className="text-gray-400 text-sm">
-            © 2010 Canine Paradise. All rights reserved. |
+            © 2010 Aldenham Doggy Day Care. All rights reserved. |
             <Link href="/privacy" className="hover:text-white ml-2">Privacy Policy</Link> |
             <Link href="/terms" className="hover:text-white ml-2">Terms & Conditions</Link>
           </p>

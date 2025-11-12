@@ -16,7 +16,7 @@ export default function Navbar() {
           <Link href="/" className="flex items-center space-x-3">
             <Image
               src="/images/Logo.png"
-              alt="Canine Paradise"
+              alt="Aldenham Doggy Day Care"
               width={400}
               height={133}
               className="h-32 w-auto"

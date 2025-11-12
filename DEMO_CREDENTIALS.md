@@ -1,4 +1,4 @@
-# Canine Paradise - Demo Credentials
+# Aldenham Doggy Day Care - Demo Credentials
 
 ## Live Site URL
 **https://canineparadise-p88d.vercel.app/**

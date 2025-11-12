@@ -45,7 +45,7 @@ export default function ContactUs() {
     {
       icon: MapPinIcon,
       title: 'Visit Us',
-      details: ['Canine Paradise', 'Elstree Road', 'Elstree, WD6 3FS'],
+      details: ['Aldenham Doggy Day Care', 'Elstree Road', 'Elstree, WD6 3FS'],
     },
     {
       icon: PhoneIcon,

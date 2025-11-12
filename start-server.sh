@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Canine Paradise - Safe Dev Server Startup Script
+# Aldenham Doggy Day Care - Safe Dev Server Startup Script
 # This script ensures only ONE dev server runs at a time
 
-echo "🐕 Canine Paradise - Starting Dev Server"
+echo "🐕 Aldenham Doggy Day Care - Starting Dev Server"
 echo "=========================================="
 
 # Step 1: Kill any existing processes on port 3000

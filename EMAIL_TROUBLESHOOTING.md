@@ -73,7 +73,7 @@ If running Supabase locally, emails go to Inbucket:
      Username: your-email@gmail.com
      Password: [your-app-password]
      Sender email: your-email@gmail.com
-     Sender name: Canine Paradise
+     Sender name: Aldenham Doggy Day Care
      ```
 
 #### Using SendGrid (Professional)

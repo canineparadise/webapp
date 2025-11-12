@@ -100,7 +100,7 @@ export default function Login() {
             <Link href="/" className="inline-block mb-4">
               <img
                 src="/Logo.png"
-                alt="Canine Paradise"
+                alt="Aldenham Doggy Day Care"
                 className="h-16 w-auto mx-auto rounded-lg shadow-md"
               />
             </Link>
@@ -108,7 +108,7 @@ export default function Login() {
               Welcome Back!
             </h2>
             <p className="text-gray-600 mt-2">
-              Log in to your Canine Paradise account
+              Log in to your Aldenham Doggy Day Care account
             </p>
           </div>
 

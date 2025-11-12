@@ -16,14 +16,14 @@ export default function MeetTheTeam() {
     {
       name: 'Claire',
       role: 'Founder & Director',
-      bio: 'Born in Africa and raised with a love for animals, Claire transformed her passion into Canine Paradise. From walking dogs in 2005 to creating a daycare haven, she brings African adventure spirit to English countryside dog care.',
+      bio: 'Born in Africa and raised with a love for animals, Claire transformed her passion into Aldenham Doggy Day Care. From walking dogs in 2005 to creating a daycare haven, she brings African adventure spirit to English countryside dog care.',
       funFact: 'Was once chased by a warthog and a wild donkey in Africa!',
       qualifications: ['Professional Dog Walker since 2005', 'Canine Behavior Expert', 'Business Owner for 14+ years'],
     },
     {
       name: 'Andrew',
       role: 'Operations Director',
-      bio: 'Andrew is more than just the Operations Director - he\'s wherever he\'s needed. With his Yorkshire roots and African upbringing, he brings both business acumen and genuine love for animals to Canine Paradise.',
+      bio: 'Andrew is more than just the Operations Director - he\'s wherever he\'s needed. With his Yorkshire roots and African upbringing, he brings both business acumen and genuine love for animals to Aldenham Doggy Day Care.',
       funFact: 'Left his corporate IT career to work with dogs',
       qualifications: ['Business Management', 'IT & Operations Expert', 'Animal Care Specialist'],
     },
@@ -72,7 +72,7 @@ export default function MeetTheTeam() {
             </h1>
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
               Led by Claire and Andrew, our passionate team is dedicated to making
-              Canine Paradise the happiest place for your furry friends.
+              Aldenham Doggy Day Care the happiest place for your furry friends.
             </p>
           </motion.div>
         </div>
@@ -92,7 +92,7 @@ export default function MeetTheTeam() {
               Our Founders
             </h2>
             <p className="text-xl text-gray-700">
-              The heart and soul behind Canine Paradise
+              The heart and soul behind Aldenham Doggy Day Care
             </p>
           </motion.div>
 
@@ -211,7 +211,7 @@ export default function MeetTheTeam() {
             </h2>
             <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
               We'd love to show you around and introduce you to our wonderful team.
-              Come see why dogs and their owners love Canine Paradise!
+              Come see why dogs and their owners love Aldenham Doggy Day Care!
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link

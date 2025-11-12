@@ -6,7 +6,7 @@ import Footer from '@/components/Footer'
 import { Toaster } from 'react-hot-toast'
 
 export const metadata: Metadata = {
-  title: 'Canine Paradise - Premier Doggy Day Care in the UK',
+  title: 'Aldenham Doggy Day Care - Premier Doggy Day Care in the UK',
   description: 'Professional and loving doggy day care services. Your furry friends deserve paradise!',
 }
 

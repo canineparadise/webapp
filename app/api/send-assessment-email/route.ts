@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Create email content based on approval/decline status
     const isApproved = status === 'approved'
     const subject = isApproved
-      ? `🎉 ${dogName} Has Been Approved for Canine Paradise!`
+      ? `🎉 ${dogName} Has Been Approved for Aldenham Doggy Day Care!`
       : `Assessment Update for ${dogName}`
 
     const emailContent = isApproved
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
             <p style="font-size: 16px; color: #1a3a52;">Dear ${userName},</p>
 
             <p style="font-size: 16px; color: #333; line-height: 1.6;">
-              We're thrilled to inform you that <strong>${dogName}</strong> has successfully completed the assessment and has been <strong style="color: #16a34a;">APPROVED</strong> to join Canine Paradise!
+              We're thrilled to inform you that <strong>${dogName}</strong> has successfully completed the assessment and has been <strong style="color: #16a34a;">APPROVED</strong> to join Aldenham Doggy Day Care!
             </p>
 
             ${notes ? `
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
             </p>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e8f4f8; text-align: center;">
-              <p style="margin: 0; color: #a68756; font-weight: bold; font-size: 18px;">Canine Paradise</p>
+              <p style="margin: 0; color: #a68756; font-weight: bold; font-size: 18px;">Aldenham Doggy Day Care</p>
               <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Where Every Dog's Day is Paradise!</p>
             </div>
           </div>
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
             <p style="font-size: 16px; color: #1a3a52;">Dear ${userName},</p>
 
             <p style="font-size: 16px; color: #333; line-height: 1.6;">
-              Thank you for bringing <strong>${dogName}</strong> in for an assessment at Canine Paradise.
+              Thank you for bringing <strong>${dogName}</strong> in for an assessment at Aldenham Doggy Day Care.
             </p>
 
             <p style="font-size: 16px; color: #333; line-height: 1.6;">
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
             </p>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e8f4f8; text-align: center;">
-              <p style="margin: 0; color: #a68756; font-weight: bold; font-size: 18px;">Canine Paradise</p>
+              <p style="margin: 0; color: #a68756; font-weight: bold; font-size: 18px;">Aldenham Doggy Day Care</p>
               <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">Where Every Dog's Day is Paradise!</p>
             </div>
           </div>
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     //     'Content-Type': 'application/json'
     //   },
     //   body: JSON.stringify({
-    //     from: 'Canine Paradise <noreply@canineparadise.com>',
+    //     from: 'Aldenham Doggy Day Care <noreply@canineparadise.com>',
     //     to: userEmail,
     //     subject,
     //     html: emailContent

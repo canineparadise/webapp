@@ -1,4 +1,4 @@
-# Canine Paradise - Current System Status & Development Needed
+# Aldenham Doggy Day Care - Current System Status & Development Needed
 
 ## WHAT EXISTS NOW (✅ Completed)
 

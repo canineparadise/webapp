@@ -24,11 +24,11 @@ export default function About() {
             viewport={{ once: true }}
           >
             <h2 className="text-4xl md:text-5xl font-display font-bold text-canine-navy mb-6">
-              Why Choose Canine Paradise?
+              Why Choose Aldenham Doggy Day Care?
             </h2>
             <p className="text-lg text-gray-700 mb-8">
               Your dog isn't just a pet – they're a cherished member of your family. That's why at
-              Canine Paradise, we've built more than just a daycare; we've created a second home where
+              Aldenham Doggy Day Care, we've built more than just a daycare; we've created a second home where
               every tail wags with joy and every pup feels truly loved.
             </p>
             <p className="text-lg text-gray-700 mb-8">
