@@ -64,7 +64,7 @@ export default function About() {
             <img
               src="/about-dogs.jpeg"
               alt="Happy dogs playing at daycare"
-              className="rounded-2xl shadow-xl w-full object-cover h-[500px]"
+              className="rounded-2xl shadow-xl w-full object-cover h-64 sm:h-80 md:h-96 lg:h-[500px]"
             />
           </motion.div>
         </div>

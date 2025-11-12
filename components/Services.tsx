@@ -67,7 +67,7 @@ export default function Services() {
         </motion.div>
 
         {/* First row - 3 services */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
           {services.slice(0, 3).map((service, index) => (
             <motion.div
               key={index}
@@ -105,7 +105,7 @@ export default function Services() {
         </div>
 
         {/* Second row - 2 services centered */}
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {services.slice(3, 5).map((service, index) => (
             <motion.div
               key={index + 3}

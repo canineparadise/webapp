@@ -34,7 +34,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-5xl md:text-7xl font-display font-bold text-white mb-6 drop-shadow-lg"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold text-white mb-6 drop-shadow-lg"
           >
             Where Every Dog
             <span className="block text-canine-gold mt-2 drop-shadow-lg">Finds Paradise</span>
@@ -44,7 +44,7 @@ export default function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="text-xl md:text-2xl text-white/95 mb-10 max-w-3xl mx-auto drop-shadow-md"
+            className="text-lg sm:text-xl md:text-2xl text-white/95 mb-10 max-w-3xl mx-auto drop-shadow-md"
           >
             Professional doggy day care services with a touch of love.
             Your furry friend deserves the best care while you're away!
