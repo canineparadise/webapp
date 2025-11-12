@@ -71,7 +71,7 @@ export default function PricingPage() {
           >
             <Link href="/" className="inline-block mb-6">
               <img
-                src="/logo.jpeg"
+                src="/Logo.png"
                 alt="Canine Paradise"
                 className="h-16 w-auto mx-auto rounded-lg shadow-lg"
               />

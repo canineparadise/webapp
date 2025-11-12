@@ -4,9 +4,9 @@
 
 1. Go to Supabase Dashboard → **Storage**
 2. Create a new bucket called `public-assets` (make it PUBLIC)
-3. Upload your logo file (`logo.jpeg` from your public folder)
+3. Upload your logo file (`Logo.png` from your public folder)
 4. After uploading, click on the logo file
-5. Copy the **Public URL** (should look like: `https://hmlmazrdoglqfictjcnm.supabase.co/storage/v1/object/public/public-assets/logo.jpeg`)
+5. Copy the **Public URL** (should look like: `https://hmlmazrdoglqfictjcnm.supabase.co/storage/v1/object/public/public-assets/Logo.png`)
 
 ## Step 2: Add Logo to Email Template
 
@@ -27,6 +27,6 @@ Replace `YOUR_LOGO_URL_HERE` with the public URL from Step 1.
 
 ## Option 2: Use Your Vercel Domain (Easier)
 
-Your logo is already at: `https://canineparadise-p88d.vercel.app/logo.jpeg`
+Your logo is already at: `https://canineparadise-p88d.vercel.app/Logo.png`
 
 Use this URL directly in the template!

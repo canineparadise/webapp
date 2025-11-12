@@ -16,7 +16,7 @@ export default function Footer() {
         <div className="grid md:grid-cols-4 gap-8">
           <div>
             <img
-              src="/logo.jpeg"
+              src="/Logo.png"
               alt="Canine Paradise"
               className="h-20 w-auto mb-4 rounded-lg"
             />

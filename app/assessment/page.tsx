@@ -1100,7 +1100,7 @@ export default function AssessmentForm() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Image
-            src="/logo.jpeg"
+            src="/Logo.png"
             alt="Canine Paradise"
             width={180}
             height={60}

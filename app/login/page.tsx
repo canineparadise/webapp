@@ -99,7 +99,7 @@ export default function Login() {
           <div className="text-center mb-8">
             <Link href="/" className="inline-block mb-4">
               <img
-                src="/logo.jpeg"
+                src="/Logo.png"
                 alt="Canine Paradise"
                 className="h-16 w-auto mx-auto rounded-lg shadow-md"
               />

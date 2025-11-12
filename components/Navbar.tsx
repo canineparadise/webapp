@@ -15,7 +15,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-20">
           <Link href="/" className="flex items-center space-x-3">
             <Image
-              src="/images/logo.jpeg"
+              src="/images/Logo.png"
               alt="Canine Paradise"
               width={180}
               height={60}

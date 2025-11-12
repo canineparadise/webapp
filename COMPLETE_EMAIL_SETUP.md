@@ -8,12 +8,12 @@ First, upload your logo to Supabase Storage or use your website URL:
 **Option A - Supabase Storage (Recommended):**
 1. Go to Supabase Dashboard → Storage
 2. Click on the `dog-photos` bucket (it's public)
-3. Upload your `logo.jpeg` file
-4. Get the public URL (it will look like: `https://hmlmazrdoglqfictjcnm.supabase.co/storage/v1/object/public/dog-photos/logo.jpeg`)
+3. Upload your `Logo.png` file
+4. Get the public URL (it will look like: `https://hmlmazrdoglqfictjcnm.supabase.co/storage/v1/object/public/dog-photos/Logo.png`)
 5. Replace `YOUR_LOGO_URL` in all templates below with this URL
 
 **Option B - Use Website URL:**
-Replace `YOUR_LOGO_URL` with: `https://yourdomain.com/logo.jpeg`
+Replace `YOUR_LOGO_URL` with: `https://yourdomain.com/Logo.png`
 
 ### Step 2: Configure Email Templates in Supabase
 1. Go to your Supabase Dashboard
