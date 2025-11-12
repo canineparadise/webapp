@@ -17,9 +17,9 @@ export default function Navbar() {
             <Image
               src="/images/Logo.png"
               alt="Canine Paradise"
-              width={180}
-              height={60}
-              className="h-14 w-auto"
+              width={240}
+              height={80}
+              className="h-20 w-auto"
             />
           </Link>
 
