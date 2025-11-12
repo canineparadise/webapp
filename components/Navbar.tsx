@@ -12,14 +12,14 @@ export default function Navbar() {
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-20">
+        <div className="flex justify-between items-center h-24">
           <Link href="/" className="flex items-center space-x-3">
             <Image
               src="/images/Logo.png"
               alt="Canine Paradise"
-              width={240}
-              height={80}
-              className="h-20 w-auto"
+              width={400}
+              height={133}
+              className="h-32 w-auto"
             />
           </Link>
 
