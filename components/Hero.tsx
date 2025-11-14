@@ -26,7 +26,7 @@ export default function Hero() {
           >
             <span className="inline-flex items-center px-4 py-2 rounded-full bg-white/90 backdrop-blur-sm text-canine-navy font-semibold text-sm border border-canine-gold/30">
               <SparklesIcon className="h-4 w-4 mr-2 text-canine-gold" />
-              Welcome to Paradise
+              Aldenham Doggy Day Care
             </span>
           </motion.div>
 
@@ -36,8 +36,8 @@ export default function Hero() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold text-white mb-6 drop-shadow-lg"
           >
-            Where Every Dog
-            <span className="block text-canine-gold mt-2 drop-shadow-lg">Finds Paradise</span>
+            Your Dog's
+            <span className="block text-canine-gold mt-2 drop-shadow-lg">Home Away From Home</span>
           </motion.h1>
 
           <motion.p
