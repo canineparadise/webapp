@@ -290,7 +290,7 @@ export default function ContactUs() {
               Find Us Here
             </h2>
             <p className="text-xl text-gray-700 max-w-3xl mx-auto">
-              Conveniently located on Elstree Road with easy access and plenty of parking
+              Located in beautiful Aldenham Country Park with easy access and plenty of parking
             </p>
           </motion.div>
 
@@ -302,7 +302,7 @@ export default function ContactUs() {
             className="rounded-2xl overflow-hidden shadow-2xl"
           >
             <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2478.0654347715!2d-0.29737!3d51.6438!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761c8f6a3b5a3d%3A0x0!2sElstree%20Road%2C%20Elstree%20WD6%203FS!5e0!3m2!1sen!2suk!4v1234567890"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2475.7776543!2d-0.3260899!3d51.6631389!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48766345f1e3b5d9%3A0x7e7c8a7e8e8e8e8e!2sAldenham%20Country%20Park%2C%20Aldenham%20Rd%2C%20Elstree%2C%20WD6%203BA!5e0!3m2!1sen!2suk!4v1234567890"
               width="100%"
               height="500"
               style={{ border: 0 }}
