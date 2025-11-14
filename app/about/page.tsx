@@ -72,24 +72,13 @@ export default function AboutUs() {
               From Africa to Elstree
             </h2>
             <p className="text-lg text-gray-700 mb-4">
-              Claire and Andrew's story began in Africa, where they both grew up surrounded by
-              animals and adventure. Claire, born to a British father and Zimbabwean mother,
-              explored the African outback, climbed trees, and was even chased by warthogs!
-              Their love for animals was evident from childhood, with pets ranging from dogs
-              and cats to birds, tortoises, and even a monkey.
+              Claire and Andrew's journey began in Africa, where both grew up surrounded by wildlife, open landscapes, and endless adventure. Claire, born to a British father and Zimbabwean mother, spent her childhood exploring the bush, climbing trees, and even escaping the occasional warthog. Animals were always part of their world — from dogs and cats to birds, tortoises, and even a cheeky monkey.
             </p>
             <p className="text-lg text-gray-700 mb-4">
-              They met at Claire's brother's 21st birthday party - it was love at first sight.
-              After marrying in 1998 and moving to England, Claire became a dog walker in 2005,
-              loving the 'outdoor office space.' Andrew soon joined her, leaving his corporate
-              IT background behind for a life working with dogs.
+              The pair met at Claire's brother's 21st birthday party, where it was love at first sight. After marrying in 1998 and moving to England, Claire began working as a dog walker in 2005, embracing the freedom of an "outdoor office." Andrew soon joined her, leaving behind a corporate IT background to work with dogs full-time.
             </p>
             <p className="text-lg text-gray-700 mb-4">
-              In 2010, as they welcomed their daughter Emmalee, they launched Aldenham Doggy Day Care
-              in Chiswell Green. In 2014, they moved to Fieldgrove Farm, transforming a derelict
-              property into a beautiful space filled with love and care. Today, with their
-              children Emmalee and Seth, four dogs, and four cats, they continue to make
-              Aldenham Doggy Day Care a special place where every dog feels at home.
+              In 2010, as they welcomed their daughter Emmalee, they expanded their passion into a full-time family venture. Over the years, their dedication, love for animals, and hands-on experience shaped a caring, nurturing environment for dogs. Today, with their children Emmalee and Seth — along with their own four dogs and four cats — Claire and Andrew continue to create a place where every dog feels safe, loved, and truly at home.
             </p>
           </motion.div>
         </div>
