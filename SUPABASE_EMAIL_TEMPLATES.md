@@ -128,7 +128,7 @@ Welcome to Aldenham Doggy Day Care! Please Confirm Your Email 🐕
             <td style="background-color: #1a3a52; padding: 30px; text-align: center;">
               <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0;">
                 <strong>Aldenham Doggy Day Care</strong><br>
-                Elstree Road, Elstree, WD6 3FS
+                Aldenham Country Park, Aldenham Road, Elstree, Hertfordshire, WD6 3BA
               </p>
               <p style="color: #ffffff; font-size: 13px; margin: 0 0 10px 0;">
                 📞 07963 656556 | ✉️ wecare@canineparadise.com
@@ -240,7 +240,7 @@ Reset Your Aldenham Doggy Day Care Password 🔐
             <td style="background-color: #1a3a52; padding: 30px; text-align: center;">
               <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0;">
                 <strong>Aldenham Doggy Day Care</strong><br>
-                Elstree Road, Elstree, WD6 3FS
+                Aldenham Country Park, Aldenham Road, Elstree, Hertfordshire, WD6 3BA
               </p>
               <p style="color: #ffffff; font-size: 13px; margin: 0 0 10px 0;">
                 📞 07963 656556 | ✉️ wecare@canineparadise.com
@@ -334,7 +334,7 @@ Your Aldenham Doggy Day Care Login Link 🔗
             <td style="background-color: #1a3a52; padding: 30px; text-align: center;">
               <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0;">
                 <strong>Aldenham Doggy Day Care</strong><br>
-                Elstree Road, Elstree, WD6 3FS
+                Aldenham Country Park, Aldenham Road, Elstree, Hertfordshire, WD6 3BA
               </p>
               <p style="color: #ffffff; font-size: 13px; margin: 0 0 10px 0;">
                 📞 07963 656556 | ✉️ wecare@canineparadise.com
@@ -434,7 +434,7 @@ Confirm Your New Email Address for Aldenham Doggy Day Care 📧
             <td style="background-color: #1a3a52; padding: 30px; text-align: center;">
               <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0;">
                 <strong>Aldenham Doggy Day Care</strong><br>
-                Elstree Road, Elstree, WD6 3FS
+                Aldenham Country Park, Aldenham Road, Elstree, Hertfordshire, WD6 3BA
               </p>
               <p style="color: #ffffff; font-size: 13px; margin: 0 0 10px 0;">
                 📞 07963 656556 | ✉️ wecare@canineparadise.com

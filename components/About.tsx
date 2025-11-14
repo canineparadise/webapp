@@ -24,18 +24,16 @@ export default function About() {
             viewport={{ once: true }}
           >
             <h2 className="text-4xl md:text-5xl font-display font-bold text-canine-navy mb-6">
-              Why Choose Aldenham Doggy Day Care?
+              From Africa to Elstree
             </h2>
-            <p className="text-lg text-gray-700 mb-8">
-              Your dog isn't just a pet – they're a cherished member of your family. That's why at
-              Aldenham Doggy Day Care, we've built more than just a daycare; we've created a second home where
-              every tail wags with joy and every pup feels truly loved.
+            <p className="text-lg text-gray-700 mb-6">
+              Claire and Andrew's journey began in Africa, where both grew up surrounded by wildlife, open landscapes, and endless adventure. Claire, born to a British father and Zimbabwean mother, spent her childhood exploring the bush, climbing trees, and even escaping the occasional warthog. Animals were always part of their world — from dogs and cats to birds, tortoises, and even a cheeky monkey.
+            </p>
+            <p className="text-lg text-gray-700 mb-6">
+              The pair met at Claire's brother's 21st birthday party, where it was love at first sight. After marrying in 1998 and moving to England, Claire began working as a dog walker in 2005, embracing the freedom of an "outdoor office." Andrew soon joined her, leaving behind a corporate IT background to work with dogs full-time.
             </p>
             <p className="text-lg text-gray-700 mb-8">
-              With over 14 years of dedicated experience, our expert team combines professional training
-              with genuine passion to ensure your furry friend enjoys every moment of their day. From
-              energetic playtime to peaceful rest, we provide the perfect balance of fun, socialization,
-              and tender care that your dog deserves.
+              In 2010, as they welcomed their daughter Emmalee, they expanded their passion into a full-time family venture. Over the years, their dedication, love for animals, and hands-on experience shaped a caring, nurturing environment for dogs. Today, with their children Emmalee and Seth — along with their own four dogs and four cats — Claire and Andrew continue to create a place where every dog feels safe, loved, and truly at home.
             </p>
             <ul className="space-y-3">
               {features.map((feature, index) => (

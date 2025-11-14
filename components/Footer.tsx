@@ -63,8 +63,10 @@ export default function Footer() {
                 <MapPinIcon className="h-5 w-5 text-canine-gold mr-2 mt-0.5" />
                 <span className="text-gray-300 text-sm">
                   Aldenham Doggy Day Care<br />
-                  Elstree Road<br />
-                  Elstree, WD6 3FS
+                  Aldenham Country Park<br />
+                  Aldenham Road<br />
+                  Elstree, Hertfordshire<br />
+                  WD6 3BA
                 </span>
               </li>
               <li className="flex items-center">

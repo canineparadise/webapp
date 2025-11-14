@@ -100,7 +100,7 @@ export async function POST(request: Request) {
         <hr>
         <p style="color: #666; font-size: 12px;">
           Aldenham Doggy Day Care<br>
-          Elstree Road, Elstree, WD6 3FS<br>
+          Aldenham Country Park, Aldenham Road, Elstree, Hertfordshire, WD6 3BA<br>
           07963 656556
         </p>
       `,

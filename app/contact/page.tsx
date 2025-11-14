@@ -45,7 +45,7 @@ export default function ContactUs() {
     {
       icon: MapPinIcon,
       title: 'Visit Us',
-      details: ['Aldenham Doggy Day Care', 'Elstree Road', 'Elstree, WD6 3FS'],
+      details: ['Aldenham Doggy Day Care', 'Aldenham Country Park', 'Aldenham Road', 'Elstree, Hertfordshire', 'WD6 3BA'],
     },
     {
       icon: PhoneIcon,
