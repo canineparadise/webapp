@@ -10,12 +10,12 @@ import {
 
 const teamMembers = [
   {
-    name: 'Sarah Johnson',
-    role: 'Owner & Head of Operations',
-    description: 'Sarah founded Aldenham Doggy Day Care with over 10 years of experience in animal care. She holds certifications in canine behavior and first aid.',
+    name: 'Claire',
+    role: 'Founder & Director',
+    description: 'Born in Africa and raised with a deep love for animals, Claire has always been inspired by the outdoors and the companionship of pets. Starting her journey as a dog walker in 2005, she gradually turned her passion into a warm, welcoming haven for dogs. She brings the spirit of African adventure and a lifetime of animal care to her work, creating a nurturing environment where every dog feels happy, safe, and loved.',
     specialties: ['Business Management', 'Canine Behavior', 'Emergency Care'],
     icon: HeartIcon,
-    image: 'https://via.placeholder.com/300x300/e8f4f8/1a3a52?text=Sarah+Johnson',
+    image: 'https://via.placeholder.com/300x300/e8f4f8/1a3a52?text=Claire',
   },
   {
     name: 'Mark Thompson',
