@@ -5,8 +5,8 @@ import { StarIcon } from '@heroicons/react/24/solid'
 
 const testimonials = [
   {
-    name: 'Anthony Cloke',
-    text: 'Our doggy, Poppy, has been going to Aldenham Doggy Day Care for several years. She regularly goes to the daycare and absolutely loves it. She doesn\'t say goodbye when we drop her off as she\'s running into the building! When she comes home she\'s always happy. Cannot recommend this place enough. Fantastic staff, lovely and hugely experienced.',
+    name: 'Farah Mussani',
+    text: 'My dog loves daycare so much that he barks the whole way driving up and scratches and barks at the door for the staff to let him in! They upload pictures regularly and he looks like he is having the best time and comes home absolutely exhausted! I can also work in peace without worrying as I know he is being well cared for!',
     rating: 5,
   },
   {
