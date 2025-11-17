@@ -28,10 +28,10 @@ STRIPE_SECRET_KEY=your_stripe_secret_key_here
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 
 ### 8. PAYPAL_CLIENT_ID
-PAYPAL_CLIENT_ID=your_paypal_client_id_here
+PAYPAL_CLIENT_ID=AVBAGva5DITHVLIbWBBxKJrmqmchPQjvcIRSykjIIsAX2YM5iGvP-xeH20T2CbDcRCSHofNFY2Cu9mPe
 
 ### 9. PAYPAL_CLIENT_SECRET (Server-side only)
-PAYPAL_CLIENT_SECRET=your_paypal_client_secret_here
+PAYPAL_CLIENT_SECRET=ELZ5c8gXUnlrz0uS-W3TyoaAbnsQ_W73fnmBPV0xAIeuDFxIZ20YhClTTgU4VJe7nu5aCprWOWdx2J8t
 
 ## Important Steps:
 
