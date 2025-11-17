@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { paypalClient } from '@/lib/paypal'
-import { orders } from '@paypal/checkout-server-sdk'
+import { getPayPalConfig, getPayPalAccessToken } from '@/lib/paypal'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -55,42 +54,49 @@ export async function POST(request: NextRequest) {
     const amount = tierData.price.toFixed(2)
     const description = `${tierData.tier_name} Subscription for ${dog.name} - ${tierData.days_per_week} days/week`
 
+    // Get PayPal access token
+    const accessToken = await getPayPalAccessToken()
+    const { baseUrl } = getPayPalConfig()
+
     // Create PayPal order
-    const orderRequest = new orders.OrdersCreateRequest()
-    orderRequest.prefer('return=representation')
-    orderRequest.requestBody({
-      intent: 'CAPTURE',
-      application_context: {
-        brand_name: 'Aldenham Doggy Day Care',
-        landing_page: 'BILLING',
-        user_action: 'PAY_NOW',
-        return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/subscriptions?payment_method=paypal&success=true`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/subscriptions`,
+    const orderResponse = await fetch(`${baseUrl}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
       },
-      purchase_units: [
-        {
-          amount: {
-            currency_code: 'GBP',
-            value: amount,
-          },
-          description: description,
-          custom_id: JSON.stringify({
-            userId,
-            dogId,
-            tier,
-            type: 'subscription',
-          }),
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        application_context: {
+          brand_name: 'Aldenham Doggy Day Care',
+          landing_page: 'BILLING',
+          user_action: 'PAY_NOW',
+          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/subscriptions?payment_method=paypal&success=true`,
+          cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/subscriptions`,
         },
-      ],
+        purchase_units: [
+          {
+            amount: {
+              currency_code: 'GBP',
+              value: amount,
+            },
+            description: description,
+            custom_id: JSON.stringify({
+              userId,
+              dogId,
+              tier,
+              type: 'subscription',
+            }),
+          },
+        ],
+      }),
     })
 
-    const client = paypalClient()
-    const order = await client.execute(orderRequest)
-
-    const approvalUrl = order.result.links?.find((link: any) => link.rel === 'approve')?.href
+    const order = await orderResponse.json()
+    const approvalUrl = order.links?.find((link: any) => link.rel === 'approve')?.href
 
     return NextResponse.json({
-      orderId: order.result.id,
+      orderId: order.id,
       approvalUrl: approvalUrl,
     })
   } catch (error: any) {

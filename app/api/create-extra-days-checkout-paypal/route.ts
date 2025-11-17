@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { paypalClient } from '@/lib/paypal'
-import { orders } from '@paypal/checkout-server-sdk'
+import { getPayPalConfig, getPayPalAccessToken } from '@/lib/paypal'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -44,59 +43,66 @@ export async function POST(request: NextRequest) {
     const totalAmount = (pricePerDay * dates.length).toFixed(2)
     const description = `Extra Days for ${dog.name} - ${dates.length} day${dates.length > 1 ? 's' : ''}`
 
+    // Get PayPal access token
+    const accessToken = await getPayPalAccessToken()
+    const { baseUrl } = getPayPalConfig()
+
     // Create PayPal order
-    const orderRequest = new orders.OrdersCreateRequest()
-    orderRequest.prefer('return=representation')
-    orderRequest.requestBody({
-      intent: 'CAPTURE',
-      application_context: {
-        brand_name: 'Aldenham Doggy Day Care',
-        landing_page: 'BILLING',
-        user_action: 'PAY_NOW',
-        return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/extra-days?payment_method=paypal&success=true`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/extra-days`,
+    const orderResponse = await fetch(`${baseUrl}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
       },
-      purchase_units: [
-        {
-          amount: {
-            currency_code: 'GBP',
-            value: totalAmount,
-            breakdown: {
-              item_total: {
-                currency_code: 'GBP',
-                value: totalAmount,
-              },
-            },
-          },
-          description: description,
-          items: [
-            {
-              name: 'Extra Day Care',
-              description: description,
-              unit_amount: {
-                currency_code: 'GBP',
-                value: pricePerDay.toFixed(2),
-              },
-              quantity: dates.length.toString(),
-            },
-          ],
-          custom_id: JSON.stringify({
-            userId,
-            dogId,
-            dates: dates.join(','),
-            type: 'extra_days',
-          }),
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        application_context: {
+          brand_name: 'Aldenham Doggy Day Care',
+          landing_page: 'BILLING',
+          user_action: 'PAY_NOW',
+          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/extra-days?payment_method=paypal&success=true`,
+          cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/extra-days`,
         },
-      ],
+        purchase_units: [
+          {
+            amount: {
+              currency_code: 'GBP',
+              value: totalAmount,
+              breakdown: {
+                item_total: {
+                  currency_code: 'GBP',
+                  value: totalAmount,
+                },
+              },
+            },
+            description: description,
+            items: [
+              {
+                name: 'Extra Day Care',
+                description: description,
+                unit_amount: {
+                  currency_code: 'GBP',
+                  value: pricePerDay.toFixed(2),
+                },
+                quantity: dates.length.toString(),
+              },
+            ],
+            custom_id: JSON.stringify({
+              userId,
+              dogId,
+              dates: dates.join(','),
+              type: 'extra_days',
+            }),
+          },
+        ],
+      }),
     })
 
-    const client = paypalClient()
-    const order = await client.execute(orderRequest)
-
-    const approvalUrl = order.result.links?.find((link: any) => link.rel === 'approve')?.href
+    const order = await orderResponse.json()
+    const approvalUrl = order.links?.find((link: any) => link.rel === 'approve')?.href
 
     return NextResponse.json({
-      orderId: order.result.id,
+      orderId: order.id,
       approvalUrl: approvalUrl,
     })
   } catch (error: any) {

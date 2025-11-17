@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { paypalClient } from '@/lib/paypal'
-import { orders } from '@paypal/checkout-server-sdk'
+import { getPayPalConfig, getPayPalAccessToken } from '@/lib/paypal'
 import { createClient } from '@supabase/supabase-js'
 
 // Use service role key to bypass RLS in API routes
@@ -83,65 +82,73 @@ export async function POST(request: NextRequest) {
     // Calculate total: £40 per dog
     const totalAmount = (assessmentFee * dogCount).toFixed(2)
 
+    // Get PayPal access token
+    const accessToken = await getPayPalAccessToken()
+    const { baseUrl } = getPayPalConfig()
+
     // Create PayPal order
-    const orderRequest = new orders.OrdersCreateRequest()
-    orderRequest.prefer('return=representation')
-    orderRequest.requestBody({
-      intent: 'CAPTURE',
-      application_context: {
-        brand_name: 'Aldenham Doggy Day Care',
-        landing_page: 'BILLING',
-        user_action: 'PAY_NOW',
-        return_url: slotId
-          ? `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/assessment/success?payment_method=paypal&slot_id=${slotId}&dog_ids=${dogIds.join(',')}`
-          : `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/assessment/success?payment_method=paypal&date=${requestedDate}&dog_ids=${dogIds.join(',')}`,
-        cancel_url: slotId
-          ? `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/assessment/book-slot`
-          : `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/assessment/schedule`,
+    const orderResponse = await fetch(`${baseUrl}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
       },
-      purchase_units: [
-        {
-          amount: {
-            currency_code: 'GBP',
-            value: totalAmount,
-            breakdown: {
-              item_total: {
-                currency_code: 'GBP',
-                value: totalAmount,
-              },
-            },
-          },
-          description: description,
-          items: [
-            {
-              name: 'Dog Assessment Day',
-              description: description,
-              unit_amount: {
-                currency_code: 'GBP',
-                value: assessmentFee.toFixed(2),
-              },
-              quantity: dogCount.toString(),
-            },
-          ],
-          custom_id: JSON.stringify({
-            userId,
-            dogIds: dogIds.join(','),
-            requestedDate: requestedDate || '',
-            slotId: slotId || '',
-            type: 'assessment',
-          }),
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        application_context: {
+          brand_name: 'Aldenham Doggy Day Care',
+          landing_page: 'BILLING',
+          user_action: 'PAY_NOW',
+          return_url: slotId
+            ? `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/assessment/success?payment_method=paypal&slot_id=${slotId}&dog_ids=${dogIds.join(',')}`
+            : `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/assessment/success?payment_method=paypal&date=${requestedDate}&dog_ids=${dogIds.join(',')}`,
+          cancel_url: slotId
+            ? `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/assessment/book-slot`
+            : `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/assessment/schedule`,
         },
-      ],
+        purchase_units: [
+          {
+            amount: {
+              currency_code: 'GBP',
+              value: totalAmount,
+              breakdown: {
+                item_total: {
+                  currency_code: 'GBP',
+                  value: totalAmount,
+                },
+              },
+            },
+            description: description,
+            items: [
+              {
+                name: 'Dog Assessment Day',
+                description: description,
+                unit_amount: {
+                  currency_code: 'GBP',
+                  value: assessmentFee.toFixed(2),
+                },
+                quantity: dogCount.toString(),
+              },
+            ],
+            custom_id: JSON.stringify({
+              userId,
+              dogIds: dogIds.join(','),
+              requestedDate: requestedDate || '',
+              slotId: slotId || '',
+              type: 'assessment',
+            }),
+          },
+        ],
+      }),
     })
 
-    const client = paypalClient()
-    const order = await client.execute(orderRequest)
+    const order = await orderResponse.json()
 
     // Find the approval URL
-    const approvalUrl = order.result.links?.find((link: any) => link.rel === 'approve')?.href
+    const approvalUrl = order.links?.find((link: any) => link.rel === 'approve')?.href
 
     return NextResponse.json({
-      orderId: order.result.id,
+      orderId: order.id,
       approvalUrl: approvalUrl,
     })
   } catch (error: any) {
