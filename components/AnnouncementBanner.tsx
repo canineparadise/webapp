@@ -29,7 +29,7 @@ export default function AnnouncementBanner() {
               </span>
               <span className="flex items-center space-x-2 text-white">
                 <MapPinIcon className="h-4 w-4" />
-                <span>We're moving to a pawsome new location on November 1st, 2025!</span>
+                <span>We're moving to a pawsome new location on December 1st, 2025!</span>
               </span>
               <span className="text-white">🐕 Bigger play areas!</span>
               <span className="text-white">🎾 More fun zones!</span>
@@ -60,7 +60,7 @@ export default function AnnouncementBanner() {
               </span>
               <span className="flex items-center space-x-2 text-white">
                 <MapPinIcon className="h-4 w-4" />
-                <span>We're moving to a pawsome new location on November 1st, 2025!</span>
+                <span>We're moving to a pawsome new location on December 1st, 2025!</span>
               </span>
               <span className="text-white">🐕 Bigger play areas!</span>
               <span className="text-white">🎾 More fun zones!</span>
