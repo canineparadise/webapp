@@ -19,6 +19,21 @@ const testimonials = [
     text: 'Our puppy loves this place. In fact my poor wife was a bit disappointed that he wasn\'t super excited to see her when she picked him up after his first day. He slept so well that evening and night and was much calmer than normal next day. The team here are so cheerful and it\'s clear they love caring for the dogs. I found the place by accident driving past, but am glad I did. The pricing is very reasonable too, and if you book a monthly block in advance the discounts are helpful.',
     rating: 5,
   },
+  {
+    name: 'Sam Roseman',
+    text: 'Amazing care for dogs! Handlers are so good with each dog, and breed. Can\'t recommend enough!',
+    rating: 5,
+  },
+  {
+    name: 'Dilyana Milenkova',
+    text: 'We have been sending our cocker spaniel there for a month and we couldnt be more happier with this doggy day care. We tried another doggy day care and it didnt work out. The staff are so caring, friendly and the price for daycare is fantastic we buy packages. They were so sweet to give us a christmas goodie bag for our doggy and even chocolates for us and a calendar (with his photo). We see photos on instagram which capture the dogs playing its great to see.',
+    rating: 5,
+  },
+  {
+    name: 'Maria Campanella',
+    text: 'My dog Smudge loves going here to day care. She\'s been going just over two years now. All the staff are very friendly and professional. Can\'t recommend this place enough, and neither can Smudge!',
+    rating: 5,
+  },
 ]
 
 export default function Testimonials() {
