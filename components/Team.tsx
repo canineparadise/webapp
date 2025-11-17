@@ -135,8 +135,8 @@ export default function Team() {
                 <div className="text-sm text-gray-600">Hours of Training</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-canine-navy mb-2">24/7</div>
-                <div className="text-sm text-gray-600">Care & Supervision</div>
+                <div className="text-3xl font-bold text-canine-navy mb-2">14+</div>
+                <div className="text-sm text-gray-600">Years Experience</div>
               </div>
               <div>
                 <div className="text-3xl font-bold text-canine-navy mb-2">5★</div>

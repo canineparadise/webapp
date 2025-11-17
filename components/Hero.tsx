@@ -75,7 +75,7 @@ export default function Hero() {
           {[
             { text: 'Licensed & Insured' },
             { text: '14+ Years Experience' },
-            { text: '24/7 Emergency Support' },
+            { text: 'Trusted by Families' },
           ].map((item, index) => (
             <motion.div
               key={index}
