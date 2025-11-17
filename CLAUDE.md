@@ -24,7 +24,11 @@ This is a Next.js 14 application for "Aldenham Doggy Day Care" - a doggy daycare
 - **Notifications**: React Hot Toast
 - **Auth**: Supabase Auth with role-based access (admin, staff, user)
 - **Database**: Supabase (PostgreSQL) - client configured at `/lib/supabase`
-- **Payments**: Stripe integration (Stripe.js & server SDK installed)
+- **Payments**: Dual payment integration - Stripe and PayPal
+  - Stripe: Card payments via Stripe.js & server SDK
+  - PayPal: PayPal payments via @paypal/paypal-server-sdk and @paypal/react-paypal-js
+  - Payment method selection available on all checkout pages
+  - Separate API routes for each payment method
 
 ### Project Structure
 - `/app` - Next.js App Router pages and layouts

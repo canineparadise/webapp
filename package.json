@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.1.5",
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "@paypal/paypal-server-sdk": "^2.0.0",
+    "@paypal/react-paypal-js": "^8.9.2",
     "@stripe/stripe-js": "^7.9.0",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.7.0",
