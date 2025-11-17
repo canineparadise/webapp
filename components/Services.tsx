@@ -42,7 +42,7 @@ const services = [
     icon: ShieldCheckIcon,
     title: 'Safety First',
     description: 'Fully licensed, insured, and staffed by trained professionals who love dogs.',
-    features: ['Vetted staff', 'Secure facilities', 'Regular supervision'],
+    features: ['Vetted staff', 'Secure facilities', 'Professional care'],
     image: '/safetyfirst.jpeg',
   },
 ]
