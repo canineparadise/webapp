@@ -7,8 +7,7 @@ import {
   SparklesIcon,
   AcademicCapIcon,
   TrophyIcon,
-  UserGroupIcon,
-  HomeIcon
+  UserGroupIcon
 } from '@heroicons/react/24/outline'
 
 export default function AboutUs() {
@@ -48,17 +47,16 @@ export default function AboutUs() {
             className="text-center mb-12"
           >
             <h1 className="text-5xl md:text-6xl font-display font-bold text-canine-navy mb-6">
-              Our Story
+              About Us
             </h1>
             <p className="text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
-              From African adventures to creating Hertfordshire's most beloved dog daycare,
-              discover how Aldenham Doggy Day Care became a second home for your furry friends.
+              Discover our passion for providing a safe, enriching environment where every dog feels at home.
             </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Our Beginning */}
+      {/* Mission and Philosophy */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
@@ -68,17 +66,60 @@ export default function AboutUs() {
             viewport={{ once: true }}
             className="max-w-4xl mx-auto"
           >
-            <h2 className="text-4xl font-display font-bold text-canine-navy mb-6 text-center">
-              From Africa to Elstree
+            <h2 className="text-4xl font-display font-bold text-canine-navy mb-6">
+              Our Mission & Philosophy
+            </h2>
+            <p className="text-lg text-gray-700 mb-8">
+              Here at Aldenham Doggy Day Care we have passion to provide a safe, enriching environment for our four legged friends. Whilst dogs are encouraged to be dogs, with playful behaviour among each other, using positive reinforcement, that builds trust amongst each canine and each member of staff too.
+            </p>
+
+            <h2 className="text-4xl font-display font-bold text-canine-navy mb-6 mt-12">
+              Our Staff & Team
+            </h2>
+            <p className="text-lg text-gray-700 mb-8">
+              You must love dogs when you work here. With front of house staff and behind the scenes staff we have over 30 years experience working with dogs, from starting out as dog walkers, to running doggy day cares we have plenty experience amongst us to strive forward to try to be the best doggy day care. Staff are qualified and first aid trained with on going in house training provided. We strive to create and environment of fun and enjoyment for both staff and dogs.
+            </p>
+
+            <h2 className="text-4xl font-display font-bold text-canine-navy mb-6 mt-12">
+              Facility & Environment
             </h2>
             <p className="text-lg text-gray-700 mb-4">
-              Claire and Andrew's journey began in Africa, where both grew up surrounded by wildlife, open landscapes, and endless adventure. Claire, born to a British father and Zimbabwean mother, spent her childhood exploring the bush, climbing trees, and even escaping the occasional warthog. Animals were always part of their world — from dogs and cats to birds, tortoises, and even a cheeky monkey.
+              Dogs are separated in two areas. Medium to large dogs and small to medium dogs. Each area has its own weatherproof indoor space equipped with heating for winter and fans for summer with plenty of space for dogs to rest and relax. Each area has its own large outdoor space where dogs get to have fun with their friends.
             </p>
-            <p className="text-lg text-gray-700 mb-4">
-              The pair met at Claire's brother's 21st birthday party, where it was love at first sight. After marrying in 1998 and moving to England, Claire began working as a dog walker in 2005, embracing the freedom of an "outdoor office." Andrew soon joined her, leaving behind a corporate IT background to work with dogs full-time.
+            <p className="text-lg text-gray-700 mb-8">
+              Large dog areas indoors space is 11 meter x 3 meter with an outdoor space of 35 meters x 18 meter. The Smaller dog areas indoors space space is 9 meter x 3 meter with an outdoor space of 14 meter by 30 meter. Plenty of space for our dogs to enjoy.
             </p>
-            <p className="text-lg text-gray-700 mb-4">
-              In 2010, as they welcomed their daughter Emmalee, they expanded their passion into a full-time family venture. Over the years, their dedication, love for animals, and hands-on experience shaped a caring, nurturing environment for dogs. Today, with their children Emmalee and Seth — along with their own four dogs and four cats — Claire and Andrew continue to create a place where every dog feels safe, loved, and truly at home.
+
+            <h2 className="text-4xl font-display font-bold text-canine-navy mb-6 mt-12">
+              Daily Activities
+            </h2>
+            <p className="text-lg text-gray-700 mb-4">A typical day would include:</p>
+            <ul className="list-disc list-inside text-lg text-gray-700 mb-8 space-y-2">
+              <li>Playtime and socialisation with other dogs</li>
+              <li>Enrichment activities with toys and games</li>
+              <li>Quiet time for naps or relaxation</li>
+            </ul>
+
+            <h2 className="text-4xl font-display font-bold text-canine-navy mb-6 mt-12">
+              Services & Features
+            </h2>
+            <ul className="list-disc list-inside text-lg text-gray-700 mb-8 space-y-2">
+              <li>Full-day or half-day options</li>
+              <li>Special care for puppies or older dogs: The puppies get plenty more rest during the day and the older dogs can roam at their own pace and relax indoors or out doors</li>
+            </ul>
+
+            <h2 className="text-4xl font-display font-bold text-canine-navy mb-6 mt-12">
+              Peace of Mind
+            </h2>
+            <p className="text-lg text-gray-700 mb-8">
+              We will keep you updated on our App with up coming events, specials and information. Monthly photos and birthday parties will be found on our social media pages.
+            </p>
+
+            <h2 className="text-4xl font-display font-bold text-canine-navy mb-6 mt-12">
+              Our Values
+            </h2>
+            <p className="text-lg text-gray-700 mb-8">
+              Our goal is to give you the peace of mind that when you drop your dogs off, that they return home with happy wagging tails.
             </p>
           </motion.div>
         </div>
