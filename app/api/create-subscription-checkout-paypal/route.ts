@@ -9,50 +9,43 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, dogId, tier, priceId } = await request.json()
+    const {
+      userId,
+      dogSubscriptions,
+      discountCode,
+      discountCodeId,
+      totalAmount,
+      discountAmount,
+      finalAmount
+    } = await request.json()
 
-    if (!userId || !dogId || !tier) {
+    if (!userId || !dogSubscriptions || dogSubscriptions.length === 0) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    // Get user profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('first_name, last_name, email')
-      .eq('id', userId)
-      .maybeSingle()
+    // Calculate final amount (with discount if applicable)
+    const orderAmount = (finalAmount || totalAmount).toFixed(2)
 
-    if (!profile) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // Get dog details
-    const { data: dog } = await supabase
-      .from('dogs')
-      .select('name')
-      .eq('id', dogId)
-      .maybeSingle()
-
-    if (!dog) {
-      return NextResponse.json({ error: 'Dog not found' }, { status: 404 })
-    }
-
-    // Get subscription tier pricing
-    const { data: tierData } = await supabase
-      .from('subscription_tiers')
-      .select('*')
-      .eq('tier_name', tier)
-      .maybeSingle()
-
-    if (!tierData) {
-      return NextResponse.json({ error: 'Tier not found' }, { status: 404 })
-    }
-
-    const amount = tierData.price.toFixed(2)
-    const description = `${tierData.tier_name} Subscription for ${dog.name} - ${tierData.days_per_week} days/week`
+    // Build purchase units with per-dog subscriptions
+    const purchaseUnits = dogSubscriptions.map((sub: any) => ({
+      amount: {
+        currency_code: 'GBP',
+        value: sub.monthlyPrice.toFixed(2),
+      },
+      description: `${sub.tierName} - ${sub.daysIncluded} days/month - ${sub.sessionType === 'full_day' ? 'Full Day' : 'Half Day'}`,
+      custom_id: JSON.stringify({
+        userId,
+        dogId: sub.dogId,
+        tierId: sub.tierId,
+        sessionType: sub.sessionType,
+        type: 'subscription',
+        discountCode: discountCode || '',
+        discountCodeId: discountCodeId || '',
+      }),
+    }))
 
     // Get PayPal access token
     const accessToken = await getPayPalAccessToken()
@@ -71,28 +64,66 @@ export async function POST(request: NextRequest) {
           brand_name: 'Aldenham Doggy Day Care',
           landing_page: 'BILLING',
           user_action: 'PAY_NOW',
-          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/subscriptions?payment_method=paypal&success=true`,
+          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/subscriptions/success-paypal`,
           cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/subscriptions`,
         },
-        purchase_units: [
-          {
-            amount: {
-              currency_code: 'GBP',
-              value: amount,
-            },
-            description: description,
-            custom_id: JSON.stringify({
-              userId,
-              dogId,
-              tier,
-              type: 'subscription',
-            }),
-          },
-        ],
+        purchase_units: purchaseUnits,
       }),
     })
 
     const order = await orderResponse.json()
+
+    if (!order.id) {
+      throw new Error('Failed to create PayPal order')
+    }
+
+    // Store pending subscription data in database
+    for (const dogSub of dogSubscriptions) {
+      await supabase.from('subscriptions').insert({
+        user_id: userId,
+        dog_id: dogSub.dogId,
+        tier_id: dogSub.tierId,
+        session_type: dogSub.sessionType,
+        days_included: dogSub.daysIncluded,
+        days_used: 0,
+        days_remaining: dogSub.daysIncluded,
+        price_per_day: dogSub.pricePerDay,
+        monthly_price: dogSub.monthlyPrice,
+        is_active: false,
+        payment_status: 'pending',
+        paypal_order_id: order.id,
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+    }
+
+    // Record discount code usage if applicable
+    if (discountCodeId) {
+      await supabase.from('discount_code_usage').insert({
+        discount_code_id: discountCodeId,
+        user_id: userId,
+        used_for: 'subscription',
+        original_amount: totalAmount,
+        discount_amount: discountAmount,
+        final_amount: finalAmount,
+      })
+
+      // Increment usage count
+      const { data: discountCodeData } = await supabase
+        .from('discount_codes')
+        .select('current_uses')
+        .eq('id', discountCodeId)
+        .single()
+
+      if (discountCodeData) {
+        await supabase
+          .from('discount_codes')
+          .update({ current_uses: discountCodeData.current_uses + 1 })
+          .eq('id', discountCodeId)
+      }
+    }
+
     const approvalUrl = order.links?.find((link: any) => link.rel === 'approve')?.href
 
     return NextResponse.json({

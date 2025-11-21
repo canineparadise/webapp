@@ -10,7 +10,17 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, dogIds, requestedDate, slotId } = await request.json()
+    const {
+      userId,
+      dogIds,
+      requestedDate,
+      slotId,
+      discountCode,
+      discountCodeId,
+      totalAmount,
+      discountAmount,
+      finalAmount
+    } = await request.json()
 
     // Support both old format (requestedDate) and new format (slotId)
     if (!userId || !dogIds || (!requestedDate && !slotId)) {
@@ -79,8 +89,12 @@ export async function POST(request: NextRequest) {
       ? `Dog Assessment - ${dateDisplay}`
       : `Dog Assessment for ${dogCount} dogs - ${dateDisplay}`
 
-    // Calculate total: £40 per dog
-    const totalAmount = (assessmentFee * dogCount).toFixed(2)
+    // Calculate order amount: use provided finalAmount if discount applied, otherwise calculate from assessmentFee
+    const orderAmount = finalAmount
+      ? finalAmount.toFixed(2)
+      : totalAmount
+        ? totalAmount.toFixed(2)
+        : (assessmentFee * dogCount).toFixed(2)
 
     // Get PayPal access token
     const accessToken = await getPayPalAccessToken()
@@ -110,11 +124,11 @@ export async function POST(request: NextRequest) {
           {
             amount: {
               currency_code: 'GBP',
-              value: totalAmount,
+              value: orderAmount,
               breakdown: {
                 item_total: {
                   currency_code: 'GBP',
-                  value: totalAmount,
+                  value: orderAmount,
                 },
               },
             },
@@ -136,6 +150,11 @@ export async function POST(request: NextRequest) {
               requestedDate: requestedDate || '',
               slotId: slotId || '',
               type: 'assessment',
+              discountCode: discountCode || '',
+              discountCodeId: discountCodeId || '',
+              totalAmount: totalAmount || (assessmentFee * dogCount),
+              discountAmount: discountAmount || 0,
+              finalAmount: finalAmount || (assessmentFee * dogCount),
             }),
           },
         ],
@@ -143,6 +162,36 @@ export async function POST(request: NextRequest) {
     })
 
     const order = await orderResponse.json()
+
+    if (!order.id) {
+      throw new Error('Failed to create PayPal order')
+    }
+
+    // Record discount code usage if applicable
+    if (discountCodeId) {
+      await supabase.from('discount_code_usage').insert({
+        discount_code_id: discountCodeId,
+        user_id: userId,
+        used_for: 'assessment',
+        original_amount: totalAmount || (assessmentFee * dogCount),
+        discount_amount: discountAmount || 0,
+        final_amount: finalAmount || (assessmentFee * dogCount),
+      })
+
+      // Increment usage count
+      const { data: discountCodeData } = await supabase
+        .from('discount_codes')
+        .select('current_uses')
+        .eq('id', discountCodeId)
+        .single()
+
+      if (discountCodeData) {
+        await supabase
+          .from('discount_codes')
+          .update({ current_uses: discountCodeData.current_uses + 1 })
+          .eq('id', discountCodeId)
+      }
+    }
 
     // Find the approval URL
     const approvalUrl = order.links?.find((link: any) => link.rel === 'approve')?.href

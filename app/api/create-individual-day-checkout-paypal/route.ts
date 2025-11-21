@@ -9,7 +9,17 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, dogId, dates, pricePerDay } = await request.json()
+    const {
+      userId,
+      dogId,
+      dates,
+      pricePerDay,
+      discountCode,
+      discountCodeId,
+      totalAmount,
+      discountAmount,
+      finalAmount
+    } = await request.json()
 
     if (!userId || !dogId || !dates || !dates.length || !pricePerDay) {
       return NextResponse.json(
@@ -64,7 +74,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const totalAmount = (pricePerDay * dates.length).toFixed(2)
+    // Calculate order amount (with discount if applicable)
+    const calculatedTotal = pricePerDay * dates.length
+    const orderAmount = (finalAmount || totalAmount || calculatedTotal).toFixed(2)
     const description = `Individual Day Booking for ${dog.name} - ${dates.length} day${dates.length > 1 ? 's' : ''}`
 
     // Get PayPal access token
@@ -91,11 +103,11 @@ export async function POST(request: NextRequest) {
           {
             amount: {
               currency_code: 'GBP',
-              value: totalAmount,
+              value: orderAmount,
               breakdown: {
                 item_total: {
                   currency_code: 'GBP',
-                  value: totalAmount,
+                  value: orderAmount,
                 },
               },
             },
@@ -117,6 +129,11 @@ export async function POST(request: NextRequest) {
               dates: dates.join(','),
               type: 'individual_days',
               pricePerDay: pricePerDay.toString(),
+              discountCode: discountCode || '',
+              discountCodeId: discountCodeId || '',
+              totalAmount: totalAmount || calculatedTotal,
+              discountAmount: discountAmount || 0,
+              finalAmount: finalAmount || calculatedTotal,
             }),
           },
         ],
@@ -124,6 +141,37 @@ export async function POST(request: NextRequest) {
     })
 
     const order = await orderResponse.json()
+
+    if (!order.id) {
+      throw new Error('Failed to create PayPal order')
+    }
+
+    // Record discount code usage if applicable
+    if (discountCodeId) {
+      await supabase.from('discount_code_usage').insert({
+        discount_code_id: discountCodeId,
+        user_id: userId,
+        used_for: 'individual_days',
+        original_amount: totalAmount || calculatedTotal,
+        discount_amount: discountAmount || 0,
+        final_amount: finalAmount || calculatedTotal,
+      })
+
+      // Increment usage count
+      const { data: discountCodeData } = await supabase
+        .from('discount_codes')
+        .select('current_uses')
+        .eq('id', discountCodeId)
+        .single()
+
+      if (discountCodeData) {
+        await supabase
+          .from('discount_codes')
+          .update({ current_uses: discountCodeData.current_uses + 1 })
+          .eq('id', discountCodeId)
+      }
+    }
+
     const approvalUrl = order.links?.find((link: any) => link.rel === 'approve')?.href
 
     return NextResponse.json({
