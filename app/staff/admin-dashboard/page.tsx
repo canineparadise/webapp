@@ -658,8 +658,8 @@ export default function AdminDashboard() {
         .eq('role', 'user')
       setTotalUsers(usersCount || 0)
 
-      // Dogs attending today
-      const { data: todayBookingsData } = await supabase
+      // Dogs attending today - fetch both subscription and individual bookings
+      const { data: todaySubscriptionBookings } = await supabase
         .from('bookings')
         .select(`
           *,
@@ -668,8 +668,19 @@ export default function AdminDashboard() {
         .eq('booking_date', today)
         .eq('status', 'confirmed')
 
-      const bookingsWithDogs = await Promise.all(
-        (todayBookingsData || []).map(async (booking) => {
+      const { data: todayIndividualBookings } = await supabase
+        .from('individual_day_bookings')
+        .select(`
+          *,
+          profiles:user_id (first_name, last_name, phone),
+          dogs!individual_day_bookings_dog_id_fkey (id, name, breed, photo_url, owner_id, owner:profiles!dogs_owner_id_fkey (first_name, last_name, email, phone))
+        `)
+        .eq('booking_date', today)
+        .eq('status', 'confirmed')
+
+      // Process subscription bookings
+      const subscriptionWithDogs = await Promise.all(
+        (todaySubscriptionBookings || []).map(async (booking) => {
           const { data: dogsData } = await supabase
             .from('dogs')
             .select(`
@@ -678,21 +689,31 @@ export default function AdminDashboard() {
             `)
             .in('id', booking.dog_ids)
 
-          return { ...booking, dogs: dogsData || [] }
+          return { ...booking, dogs: dogsData || [], booking_type: 'subscription' }
         })
       )
 
-      setTodayBookings(bookingsWithDogs)
-      const totalDogsToday = bookingsWithDogs.reduce((sum, b) => sum + (b.dogs?.length || 0), 0)
+      // Transform individual bookings
+      const individualWithDogs = (todayIndividualBookings || []).map((booking: any) => ({
+        ...booking,
+        dogs: booking.dogs ? [booking.dogs] : [],
+        booking_type: 'individual',
+        session_type: 'full_day' // Individual bookings are always full day
+      }))
+
+      // Combine both types
+      const allTodayBookings = [...subscriptionWithDogs, ...individualWithDogs]
+      setTodayBookings(allTodayBookings)
+      const totalDogsToday = allTodayBookings.reduce((sum, b) => sum + (b.dogs?.length || 0), 0)
       setDogsToday(totalDogsToday)
 
       // Calculate today's full day vs half day
-      const fullDayToday = bookingsWithDogs.filter(b => b.session_type === 'full_day').reduce((sum, b) => sum + (b.dogs?.length || 0), 0)
-      const halfDayToday = bookingsWithDogs.filter(b => b.session_type === 'half_day').reduce((sum, b) => sum + (b.dogs?.length || 0), 0)
+      const fullDayToday = allTodayBookings.filter(b => b.session_type === 'full_day').reduce((sum, b) => sum + (b.dogs?.length || 0), 0)
+      const halfDayToday = allTodayBookings.filter(b => b.session_type === 'half_day').reduce((sum, b) => sum + (b.dogs?.length || 0), 0)
       setTodayFullDay(fullDayToday)
       setTodayHalfDay(halfDayToday)
 
-      // Calculate weekly stats (next 7 days)
+      // Calculate weekly stats (next 7 days) - include both booking types
       const weeklyData = []
       for (let i = 0; i < 7; i++) {
         const date = new Date()
@@ -700,34 +721,51 @@ export default function AdminDashboard() {
         const dateStr = date.toISOString().split('T')[0]
         const dayName = date.toLocaleDateString('en-GB', { weekday: 'short' })
 
-        const { data: dayBookings } = await supabase
+        // Get subscription bookings
+        const { data: daySubscriptionBookings } = await supabase
           .from('bookings')
           .select('session_type, dog_ids')
           .eq('booking_date', dateStr)
           .eq('status', 'confirmed')
 
-        const fullDay = dayBookings?.filter(b => b.session_type === 'full_day').reduce((sum, b) => sum + (b.dog_ids?.length || 0), 0) || 0
-        const halfDay = dayBookings?.filter(b => b.session_type === 'half_day').reduce((sum, b) => sum + (b.dog_ids?.length || 0), 0) || 0
+        // Get individual bookings
+        const { data: dayIndividualBookings } = await supabase
+          .from('individual_day_bookings')
+          .select('id')
+          .eq('booking_date', dateStr)
+          .eq('status', 'confirmed')
+
+        const subFullDay = daySubscriptionBookings?.filter(b => b.session_type === 'full_day').reduce((sum, b) => sum + (b.dog_ids?.length || 0), 0) || 0
+        const subHalfDay = daySubscriptionBookings?.filter(b => b.session_type === 'half_day').reduce((sum, b) => sum + (b.dog_ids?.length || 0), 0) || 0
+        const indFullDay = dayIndividualBookings?.length || 0 // Each individual booking is 1 dog
 
         weeklyData.push({
           day: dayName,
           date: dateStr,
-          fullDay,
-          halfDay,
-          total: fullDay + halfDay
+          fullDay: subFullDay + indFullDay,
+          halfDay: subHalfDay,
+          total: subFullDay + indFullDay + subHalfDay
         })
       }
       setWeeklyStats(weeklyData)
 
-      // Monthly revenue - Calculate from booking amount (including assessments)
+      // Monthly revenue - Calculate from booking amount (including assessments and individual days)
       try {
-        // Get regular bookings revenue
+        // Get subscription bookings revenue
         const { data: revenueData, error } = await supabase
           .from('bookings')
           .select('amount')
           .gte('booking_date', firstDayOfMonth)
           .lte('booking_date', lastDayOfMonth)
           .in('status', ['confirmed', 'completed'])
+
+        // Get individual day bookings revenue
+        const { data: individualRevenueData } = await supabase
+          .from('individual_day_bookings')
+          .select('price')
+          .gte('booking_date', firstDayOfMonth)
+          .lte('booking_date', lastDayOfMonth)
+          .eq('payment_status', 'paid')
 
         // Get assessment bookings revenue
         const { data: assessmentRevenueData } = await supabase
@@ -738,14 +776,16 @@ export default function AdminDashboard() {
           .lte('booked_at', lastDayOfMonth)
 
         if (!error && revenueData) {
-          const bookingsRev = revenueData.reduce((sum, b) => sum + (b.amount || 0), 0) || 0
+          const subscriptionRev = revenueData.reduce((sum, b) => sum + (b.amount || 0), 0) || 0
+          const individualRev = individualRevenueData?.reduce((sum, b) => sum + (b.price || 0), 0) || 0
+          const bookingsRev = subscriptionRev + individualRev
           // Each assessment is charged at the current assessment fee
           const assessmentsRev = (assessmentRevenueData?.length || 0) * (settings.assessment_fee || 40)
           const totalRevenue = bookingsRev + assessmentsRev
           setMonthlyRevenue(totalRevenue)
           setBookingRevenue(bookingsRev)
           setAssessmentRevenue(assessmentsRev)
-          console.log('📊 Revenue breakdown:', { bookingRevenue: bookingsRev, assessmentRevenue: assessmentsRev, totalRevenue })
+          console.log('📊 Revenue breakdown:', { subscriptionRev, individualRev, bookingRevenue: bookingsRev, assessmentRevenue: assessmentsRev, totalRevenue })
         } else {
           console.log('Revenue query issue:', error?.message)
           setMonthlyRevenue(0)
@@ -1013,20 +1053,34 @@ export default function AdminDashboard() {
 
   const fetchAllBookings = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch subscription bookings
+      const { data: subscriptionBookings, error: subError } = await supabase
         .from('bookings')
         .select(`
           *,
           profiles:user_id (first_name, last_name, phone, email)
         `)
         .order('booking_date', { ascending: false })
-        .limit(500) // Get last 500 bookings for performance
+        .limit(500)
 
-      if (error) throw error
+      if (subError) throw subError
 
-      // Fetch dogs for each booking
-      const bookingsWithDogs = await Promise.all(
-        (data || []).map(async (booking) => {
+      // Fetch individual day bookings
+      const { data: individualBookings, error: indError } = await supabase
+        .from('individual_day_bookings')
+        .select(`
+          *,
+          profiles:user_id (first_name, last_name, phone, email),
+          dogs!individual_day_bookings_dog_id_fkey (id, name, breed, photo_url)
+        `)
+        .order('booking_date', { ascending: false })
+        .limit(500)
+
+      if (indError) throw indError
+
+      // Fetch dogs for subscription bookings
+      const subscriptionWithDogs = await Promise.all(
+        (subscriptionBookings || []).map(async (booking) => {
           const { data: dogsData } = await supabase
             .from('dogs')
             .select('id, name, breed, photo_url')
@@ -1034,13 +1088,40 @@ export default function AdminDashboard() {
 
           return {
             ...booking,
-            dogs: dogsData || []
+            dogs: dogsData || [],
+            booking_type: 'subscription',
+            dog_count: dogsData?.length || 0
           }
         })
       )
 
-      setAllBookings(bookingsWithDogs)
-      setFilteredBookings(bookingsWithDogs)
+      // Transform individual bookings to match subscription format
+      const individualWithDogs = (individualBookings || []).map((booking: any) => ({
+        id: booking.id,
+        booking_date: booking.booking_date,
+        user_id: booking.user_id,
+        profiles: booking.profiles,
+        dogs: booking.dogs ? [booking.dogs] : [],
+        booking_type: 'individual',
+        dog_count: 1,
+        price: booking.price,
+        payment_status: booking.payment_status,
+        payment_method: booking.payment_method,
+        status: booking.status,
+        check_in_time: booking.check_in_time,
+        check_out_time: booking.check_out_time,
+        notes: booking.notes,
+        checked_in: !!booking.check_in_time,
+        checked_out: !!booking.check_out_time
+      }))
+
+      // Combine and sort by date
+      const allBookingsData = [...subscriptionWithDogs, ...individualWithDogs].sort(
+        (a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime()
+      )
+
+      setAllBookings(allBookingsData)
+      setFilteredBookings(allBookingsData)
     } catch (error) {
       console.error('Error fetching all bookings:', error)
       toast.error('Failed to load booking history')
@@ -3298,7 +3379,7 @@ export default function AdminDashboard() {
                         <th className="px-6 py-4 text-left font-semibold">Date</th>
                         <th className="px-6 py-4 text-left font-semibold">Client</th>
                         <th className="px-6 py-4 text-left font-semibold">Dogs</th>
-                        <th className="px-6 py-4 text-left font-semibold">Session Type</th>
+                        <th className="px-6 py-4 text-left font-semibold">Booking Type</th>
                         <th className="px-6 py-4 text-left font-semibold">Status</th>
                         <th className="px-6 py-4 text-left font-semibold">Check-in</th>
                         <th className="px-6 py-4 text-left font-semibold">Check-out</th>
@@ -3343,11 +3424,11 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-6 py-4">
                               <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                booking.session_type === 'full_day'
-                                  ? 'bg-canine-gold/20 text-canine-navy'
-                                  : 'bg-canine-sky text-canine-navy'
+                                booking.booking_type === 'individual'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-canine-gold/20 text-canine-navy'
                               }`}>
-                                {booking.session_type === 'full_day' ? 'Full Day' : 'Half Day'}
+                                {booking.booking_type === 'individual' ? 'Individual Day' : 'Subscription'}
                               </span>
                             </td>
                             <td className="px-6 py-4">
@@ -3364,16 +3445,16 @@ export default function AdminDashboard() {
                               </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">
-                              {booking.checked_in_at
-                                ? new Date(booking.checked_in_at).toLocaleTimeString('en-GB', {
+                              {(booking.checked_in_at || booking.check_in_time)
+                                ? new Date(booking.checked_in_at || booking.check_in_time).toLocaleTimeString('en-GB', {
                                     hour: '2-digit',
                                     minute: '2-digit'
                                   })
                                 : '-'}
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">
-                              {booking.checked_out_at
-                                ? new Date(booking.checked_out_at).toLocaleTimeString('en-GB', {
+                              {(booking.checked_out_at || booking.check_out_time)
+                                ? new Date(booking.checked_out_at || booking.check_out_time).toLocaleTimeString('en-GB', {
                                     hour: '2-digit',
                                     minute: '2-digit'
                                   })
