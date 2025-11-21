@@ -340,6 +340,12 @@ export default function AdminDashboard() {
   const [todayFullDay, setTodayFullDay] = useState(0)
   const [todayHalfDay, setTodayHalfDay] = useState(0)
 
+  // Capacity tracking
+  const [todayCapacity, setTodayCapacity] = useState({
+    small: { current: 0, total: 20, available: 20 },
+    large: { current: 0, total: 30, available: 30 }
+  })
+
   // Schedule tab
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [scheduleBookings, setScheduleBookings] = useState<any[]>([])
@@ -712,6 +718,28 @@ export default function AdminDashboard() {
       const halfDayToday = allTodayBookings.filter(b => b.session_type === 'half_day').reduce((sum, b) => sum + (b.dogs?.length || 0), 0)
       setTodayFullDay(fullDayToday)
       setTodayHalfDay(halfDayToday)
+
+      // Fetch today's capacity for small and large dogs
+      const { data: smallCapacity } = await supabase
+        .rpc('check_daily_capacity', { p_date: today, p_dog_size: 'small' })
+
+      const { data: largeCapacity } = await supabase
+        .rpc('check_daily_capacity', { p_date: today, p_dog_size: 'large' })
+
+      if (smallCapacity && largeCapacity) {
+        setTodayCapacity({
+          small: {
+            current: smallCapacity.current_bookings || 0,
+            total: smallCapacity.total_capacity || settings.daily_capacity_small || 20,
+            available: smallCapacity.available_spots || 0
+          },
+          large: {
+            current: largeCapacity.current_bookings || 0,
+            total: largeCapacity.total_capacity || settings.daily_capacity_large || 30,
+            available: largeCapacity.available_spots || 0
+          }
+        })
+      }
 
       // Calculate weekly stats (next 7 days) - include both booking types
       const weeklyData = []
@@ -2059,6 +2087,49 @@ export default function AdminDashboard() {
     router.push('/login')
   }
 
+  // Check-in/Check-out Handler
+  const handleCheckInOut = async (bookingId: string, bookingType: 'subscription' | 'individual', action: 'check_in' | 'check_out') => {
+    try {
+      const now = new Date().toISOString()
+
+      if (bookingType === 'subscription') {
+        // Handle subscription booking check-in/out
+        const updateData = action === 'check_in'
+          ? { checked_in: true, checked_in_at: now }
+          : { checked_out: true, checked_out_at: now }
+
+        const { error } = await supabase
+          .from('bookings')
+          .update(updateData)
+          .eq('id', bookingId)
+
+        if (error) throw error
+
+        toast.success(action === 'check_in' ? 'Dog(s) checked in successfully! 🐕' : 'Dog(s) checked out successfully! 👋')
+      } else {
+        // Handle individual day booking check-in/out
+        const updateData = action === 'check_in'
+          ? { check_in_time: now }
+          : { check_out_time: now }
+
+        const { error } = await supabase
+          .from('individual_day_bookings')
+          .update(updateData)
+          .eq('id', bookingId)
+
+        if (error) throw error
+
+        toast.success(action === 'check_in' ? 'Dog checked in successfully! 🐕' : 'Dog checked out successfully! 👋')
+      }
+
+      // Refresh today's bookings
+      fetchDashboardData()
+    } catch (error: any) {
+      console.error(`Error during ${action}:`, error)
+      toast.error(error.message || `Failed to ${action.replace('_', ' ')}`)
+    }
+  }
+
   // Staff Schedule & Assignment Handlers
   const handleCreateAssignment = async () => {
     try {
@@ -2572,6 +2643,104 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
+              {/* Today's Capacity Widget */}
+              <div className="bg-white rounded-2xl p-6 shadow-xl border-2 border-canine-gold/20">
+                <h3 className="text-xl font-display font-bold text-canine-navy mb-4 flex items-center gap-2">
+                  <ChartBarIcon className="h-6 w-6 text-canine-gold" />
+                  Today's Capacity
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Small Dogs Capacity */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-gray-700">Small Dogs</h4>
+                      <span className={`text-sm font-bold ${
+                        todayCapacity.small.available === 0
+                          ? 'text-red-600'
+                          : todayCapacity.small.available <= 5
+                          ? 'text-amber-600'
+                          : 'text-green-600'
+                      }`}>
+                        {todayCapacity.small.current}/{todayCapacity.small.total}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                      <div
+                        className={`h-4 rounded-full transition-all duration-500 ${
+                          todayCapacity.small.available === 0
+                            ? 'bg-red-500'
+                            : todayCapacity.small.available <= 5
+                            ? 'bg-amber-500'
+                            : 'bg-green-500'
+                        }`}
+                        style={{ width: `${(todayCapacity.small.current / todayCapacity.small.total) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-semibold">{todayCapacity.small.available}</span> spots available
+                    </p>
+                  </div>
+
+                  {/* Large/Medium Dogs Capacity */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-gray-700">Large/Medium Dogs</h4>
+                      <span className={`text-sm font-bold ${
+                        todayCapacity.large.available === 0
+                          ? 'text-red-600'
+                          : todayCapacity.large.available <= 8
+                          ? 'text-amber-600'
+                          : 'text-green-600'
+                      }`}>
+                        {todayCapacity.large.current}/{todayCapacity.large.total}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                      <div
+                        className={`h-4 rounded-full transition-all duration-500 ${
+                          todayCapacity.large.available === 0
+                            ? 'bg-red-500'
+                            : todayCapacity.large.available <= 8
+                            ? 'bg-amber-500'
+                            : 'bg-green-500'
+                        }`}
+                        style={{ width: `${(todayCapacity.large.current / todayCapacity.large.total) * 100}%` }}
+                      />
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      <span className="font-semibold">{todayCapacity.large.available}</span> spots available
+                    </p>
+                  </div>
+                </div>
+
+                {/* Alert if near capacity */}
+                {(todayCapacity.small.available === 0 || todayCapacity.large.available === 0) && (
+                  <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-red-800">Capacity Full</p>
+                      <p className="text-xs text-red-600">
+                        {todayCapacity.small.available === 0 && 'Small dogs capacity is full. '}
+                        {todayCapacity.large.available === 0 && 'Large/Medium dogs capacity is full.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {(todayCapacity.small.available > 0 && todayCapacity.small.available <= 5) ||
+                 (todayCapacity.large.available > 0 && todayCapacity.large.available <= 8) ? (
+                  <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-amber-800">Near Capacity</p>
+                      <p className="text-xs text-amber-600">
+                        {todayCapacity.small.available <= 5 && `Only ${todayCapacity.small.available} small dog spots left. `}
+                        {todayCapacity.large.available <= 8 && `Only ${todayCapacity.large.available} large/medium dog spots left.`}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
               {/* Quick Actions */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <motion.button
@@ -2755,27 +2924,49 @@ export default function AdminDashboard() {
                           )}
                         </div>
 
-                        {/* Check-in/out times */}
-                        <div className="flex gap-4 text-xs text-gray-600 pt-2 border-t border-gray-100">
-                          {booking.checked_in_at && (
-                            <div>
-                              <span className="text-gray-500">In:</span>
-                              <span className="ml-1 font-semibold text-green-700">
-                                {new Date(booking.checked_in_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          )}
-                          {booking.checked_out_at && (
-                            <div>
-                              <span className="text-gray-500">Out:</span>
-                              <span className="ml-1 font-semibold text-blue-700">
-                                {new Date(booking.checked_out_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            </div>
-                          )}
-                          {!booking.checked_in_at && !booking.checked_out_at && (
-                            <span className="text-gray-400">Not checked in yet</span>
-                          )}
+                        {/* Check-in/out times and action buttons */}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                          <div className="flex gap-4 text-xs text-gray-600">
+                            {(booking.checked_in_at || booking.check_in_time) && (
+                              <div>
+                                <span className="text-gray-500">In:</span>
+                                <span className="ml-1 font-semibold text-green-700">
+                                  {new Date(booking.checked_in_at || booking.check_in_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            )}
+                            {(booking.checked_out_at || booking.check_out_time) && (
+                              <div>
+                                <span className="text-gray-500">Out:</span>
+                                <span className="ml-1 font-semibold text-blue-700">
+                                  {new Date(booking.checked_out_at || booking.check_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            )}
+                            {!(booking.checked_in_at || booking.check_in_time) && !(booking.checked_out_at || booking.check_out_time) && (
+                              <span className="text-gray-400">Not checked in yet</span>
+                            )}
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex gap-2">
+                            {!(booking.checked_in_at || booking.check_in_time) && (
+                              <button
+                                onClick={() => handleCheckInOut(booking.id, booking.booking_type || 'subscription', 'check_in')}
+                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                              >
+                                Check In
+                              </button>
+                            )}
+                            {(booking.checked_in_at || booking.check_in_time) && !(booking.checked_out_at || booking.check_out_time) && (
+                              <button
+                                onClick={() => handleCheckInOut(booking.id, booking.booking_type || 'subscription', 'check_out')}
+                                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                              >
+                                Check Out
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
