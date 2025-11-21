@@ -1247,6 +1247,7 @@ export default function AdminDashboard() {
   const fetchScheduleForDate = async (date: string) => {
     setLoadingSchedule(true)
     try {
+      // Fetch subscription bookings
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select(`
@@ -1256,7 +1257,22 @@ export default function AdminDashboard() {
         .eq('booking_date', date)
         .eq('status', 'confirmed')
 
-      const bookingsWithDogs = await Promise.all(
+      // Fetch individual day bookings
+      const { data: individualBookingsData } = await supabase
+        .from('individual_day_bookings')
+        .select(`
+          *,
+          profiles:user_id (first_name, last_name, email, phone),
+          dogs!individual_day_bookings_dog_id_fkey (
+            id, name, breed, size, photo_url, owner_id,
+            owner:profiles!dogs_owner_id_fkey (first_name, last_name, email, phone, address)
+          )
+        `)
+        .eq('booking_date', date)
+        .eq('status', 'confirmed')
+
+      // Process subscription bookings
+      const subscriptionBookingsWithDogs = await Promise.all(
         (bookingsData || []).map(async (booking) => {
           const { data: dogsData } = await supabase
             .from('dogs')
@@ -1266,11 +1282,45 @@ export default function AdminDashboard() {
             `)
             .in('id', booking.dog_ids)
 
-          return { ...booking, dogs: dogsData || [] }
+          return {
+            ...booking,
+            dogs: dogsData || [],
+            booking_type: 'subscription'
+          }
         })
       )
 
-      setScheduleBookings(bookingsWithDogs)
+      // Transform individual bookings to match format
+      const individualBookingsWithDogs = (individualBookingsData || []).map((booking: any) => ({
+        id: booking.id,
+        booking_date: booking.booking_date,
+        user_id: booking.user_id,
+        profiles: booking.profiles,
+        dogs: booking.dogs ? [booking.dogs] : [],
+        booking_type: 'individual',
+        session_type: 'full_day', // Individual bookings are always full day
+        price: booking.price,
+        payment_status: booking.payment_status,
+        payment_method: booking.payment_method,
+        status: booking.status,
+        check_in_time: booking.check_in_time,
+        check_out_time: booking.check_out_time,
+        checked_in: !!booking.check_in_time,
+        checked_out: !!booking.check_out_time,
+        notes: booking.notes
+      }))
+
+      // Combine both types and sort by session type (full day first)
+      const allBookings = [...subscriptionBookingsWithDogs, ...individualBookingsWithDogs].sort(
+        (a, b) => {
+          // Full day bookings first
+          if (a.session_type === 'full_day' && b.session_type !== 'full_day') return -1
+          if (a.session_type !== 'full_day' && b.session_type === 'full_day') return 1
+          return 0
+        }
+      )
+
+      setScheduleBookings(allBookings)
     } catch (error) {
       console.error('Error fetching schedule:', error)
       toast.error('Failed to load schedule')
@@ -2836,6 +2886,26 @@ export default function AdminDashboard() {
                           ) : (
                             <div className="flex items-center justify-center h-full text-6xl">🐕</div>
                           )}
+                          {/* Booking Type Badge */}
+                          <div className="absolute top-2 right-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              booking.booking_type === 'individual'
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-canine-gold text-white'
+                            }`}>
+                              {booking.booking_type === 'individual' ? 'Individual' : 'Subscription'}
+                            </span>
+                          </div>
+                          {/* Session Type Badge */}
+                          <div className="absolute top-2 left-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              booking.session_type === 'full_day'
+                                ? 'bg-green-500 text-white'
+                                : 'bg-blue-500 text-white'
+                            }`}>
+                              {booking.session_type === 'full_day' ? 'Full Day' : 'Half Day'}
+                            </span>
+                          </div>
                         </div>
                         <div className="p-4">
                           <h3 className="font-bold text-lg text-canine-navy mb-1">{dog.name}</h3>
