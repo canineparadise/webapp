@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Aldenham Doggy Day Care</title>
+  <title>Confirm Email Change</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f2e8;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f2e8; padding: 40px 20px;">
@@ -18,10 +18,10 @@
                    alt="Aldenham Doggy Day Care Logo"
                    style="max-width: 200px; height: auto; margin-bottom: 20px; display: block; margin-left: auto; margin-right: auto;" />
               <h1 style="color: #806e50; margin: 10px 0 0 0; font-size: 28px; font-weight: bold;">
-                Welcome to Aldenham Doggy Day Care! 🐕
+                Email Address Change Request
               </h1>
               <p style="color: #ffffff; margin: 10px 0 0 0; font-size: 16px; opacity: 0.95;">
-                Your dog's home away from home
+                Please confirm your new email
               </p>
             </td>
           </tr>
@@ -34,53 +34,28 @@
               </p>
 
               <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">
-                Thank you for joining Aldenham Doggy Day Care! We're excited to welcome you and your furry friend to our exclusive doggy daycare community.
+                You've requested to change your email address for your Aldenham Doggy Day Care account. Please confirm this change by clicking the button below.
               </p>
 
-              <p style="color: #666666; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                Please confirm your email address to activate your account and get started:
-              </p>
+              <div style="background-color: #f5f2e8; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                <p style="color: #1a3a52; font-size: 15px; margin: 0;">
+                  <strong>New Email:</strong> {{ .Email }}
+                </p>
+              </div>
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 35px 0;">
                 <a href="{{ .ConfirmationURL }}"
                    style="display: inline-block; background-color: #806e50; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: bold; font-size: 18px;">
-                  Confirm My Email
+                  Confirm Email Change
                 </a>
               </div>
 
-              <!-- What's Next Section -->
-              <div style="background-color: #f5f2e8; padding: 25px; border-radius: 8px; margin: 30px 0;">
-                <h2 style="color: #1a3a52; font-size: 20px; margin: 0 0 15px 0;">
-                  What Happens Next? 🎯
-                </h2>
-                <ol style="color: #666666; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                  <li>Confirm your email (click the button above)</li>
-                  <li>Complete your profile and add your dog's details</li>
-                  <li>Book an assessment day (Fridays only)</li>
-                  <li>Choose your monthly subscription package</li>
-                  <li>Start booking your dog's daycare days!</li>
-                </ol>
-              </div>
-
-              <!-- Important Notice -->
+              <!-- Warning -->
               <div style="background-color: #fff9e6; border-left: 4px solid #806e50; padding: 15px; margin: 25px 0;">
                 <p style="color: #866118; font-size: 14px; margin: 0;">
-                  <strong>Important:</strong> This confirmation link expires in 24 hours.
+                  <strong>⚠️ Important:</strong> After confirming, you'll need to use your new email address to log in. This link expires in 24 hours.
                 </p>
-              </div>
-
-              <!-- About Us -->
-              <div style="margin: 30px 0;">
-                <h3 style="color: #1a3a52; font-size: 18px; margin: 0 0 10px 0;">
-                  Why Aldenham Doggy Day Care? 🌟
-                </h3>
-                <ul style="color: #666666; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                  <li>14+ years of experience in dog care</li>
-                  <li>Professional, caring staff</li>
-                  <li>Flexible monthly subscription packages</li>
-                  <li>Daily updates and photos of your dog</li>
-                </ul>
               </div>
 
               <!-- Alternative Link -->

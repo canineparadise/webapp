@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -31,6 +31,21 @@ export default function SignUp() {
     confirmPassword: "",
     agreeToTerms: false,
   });
+
+  // Reset form when component mounts
+  useEffect(() => {
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      agreeToTerms: false,
+    });
+    setEmailSent(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +183,23 @@ export default function SignUp() {
             >
               Go to Login
             </Link>
+
+            <button
+              onClick={() => {
+                setEmailSent(false);
+                setFormData({
+                  firstName: "",
+                  lastName: "",
+                  email: "",
+                  password: "",
+                  confirmPassword: "",
+                  agreeToTerms: false,
+                });
+              }}
+              className="block w-full text-canine-gold py-3 rounded-lg font-semibold hover:bg-canine-cream transition-colors"
+            >
+              Sign Up Another Account
+            </button>
           </div>
         </motion.div>
       </div>
