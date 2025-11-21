@@ -122,6 +122,45 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     } else {
       console.log('Extra days added successfully for subscription:', subscriptionId)
     }
+  } else if (metadata.type === 'individual_days') {
+    // Handle individual day bookings
+    const { dogId, dates, pricePerDay } = metadata
+    const datesArray = dates.split(',')
+
+    // Get dog details
+    const { data: dog } = await supabase
+      .from('dogs')
+      .select('size')
+      .eq('id', dogId)
+      .single()
+
+    if (!dog) {
+      console.error('Dog not found for individual day booking')
+      return
+    }
+
+    // Create individual day bookings
+    const bookings = datesArray.map((date: string) => ({
+      user_id: userId,
+      dog_id: dogId,
+      booking_date: date,
+      dog_size: dog.size,
+      price: parseFloat(pricePerDay),
+      payment_status: 'paid',
+      payment_method: 'stripe',
+      stripe_session_id: session.id,
+      status: 'confirmed'
+    }))
+
+    const { error } = await supabase
+      .from('individual_day_bookings')
+      .insert(bookings)
+
+    if (error) {
+      console.error('Error creating individual day bookings:', error)
+    } else {
+      console.log('Individual day bookings created successfully for user:', userId)
+    }
   }
 }
 

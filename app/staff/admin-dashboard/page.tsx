@@ -376,6 +376,10 @@ export default function AdminDashboard() {
     max_dogs_per_day: 20,
     opening_time: '07:00',
     closing_time: '19:00',
+    individual_day_price: 50,
+    daily_capacity_large: 30,
+    daily_capacity_small: 20,
+    enable_individual_bookings: true,
   })
 
   // Subscription tiers from database
@@ -1459,6 +1463,10 @@ export default function AdminDashboard() {
           max_dogs_per_day: settingsObj.max_dogs_per_day || 40,
           opening_time: settingsObj.business_hours_start || '07:00',
           closing_time: settingsObj.business_hours_end || '19:00',
+          individual_day_price: settingsObj.individual_day_price || 50,
+          daily_capacity_large: settingsObj.daily_capacity_large || 30,
+          daily_capacity_small: settingsObj.daily_capacity_small || 20,
+          enable_individual_bookings: settingsObj.enable_individual_bookings === 'true' || settingsObj.enable_individual_bookings === true,
         })
       }
     } catch (error) {
@@ -1703,6 +1711,10 @@ export default function AdminDashboard() {
         { key: 'max_dogs_per_day', value: settings.max_dogs_per_day.toString(), type: 'number' },
         { key: 'business_hours_start', value: settings.opening_time, type: 'text' },
         { key: 'business_hours_end', value: settings.closing_time, type: 'text' },
+        { key: 'individual_day_price', value: settings.individual_day_price.toString(), type: 'number' },
+        { key: 'daily_capacity_large', value: settings.daily_capacity_large.toString(), type: 'number' },
+        { key: 'daily_capacity_small', value: settings.daily_capacity_small.toString(), type: 'number' },
+        { key: 'enable_individual_bookings', value: settings.enable_individual_bookings.toString(), type: 'boolean' },
       ]
 
       for (const setting of settingsToUpdate) {
@@ -5231,6 +5243,88 @@ export default function AdminDashboard() {
                           onChange={(e) => setSettings({...settings, closing_time: e.target.value})}
                           className="w-full px-4 py-3 rounded-xl border-2 border-canine-gold/30 focus:border-canine-gold outline-none font-semibold text-lg"
                         />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2.25: Pricing & Capacity Management */}
+                <div className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-8 shadow-xl border-2 border-purple-300">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="bg-purple-500 p-3 rounded-xl">
+                      <CurrencyPoundIcon className="h-7 w-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-display font-bold text-canine-navy">Pricing & Capacity</h3>
+                      <p className="text-sm text-gray-600">Configure individual day booking prices and daily capacity limits</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 mb-6 border-2 border-purple-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
+                          <CurrencyPoundIcon className="h-4 w-4 text-canine-gold" />
+                          Individual Day Price (£)
+                        </label>
+                        <input
+                          type="number"
+                          value={settings.individual_day_price}
+                          onChange={(e) => setSettings({...settings, individual_day_price: parseFloat(e.target.value)})}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-canine-gold/30 focus:border-canine-gold outline-none font-semibold text-lg"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Price per individual day booking</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
+                          <UserGroupIcon className="h-4 w-4 text-canine-gold" />
+                          Large/Medium Dog Capacity
+                        </label>
+                        <input
+                          type="number"
+                          value={settings.daily_capacity_large}
+                          onChange={(e) => setSettings({...settings, daily_capacity_large: parseInt(e.target.value)})}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-canine-gold/30 focus:border-canine-gold outline-none font-semibold text-lg"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Daily capacity for large/medium dogs</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
+                          <UserGroupIcon className="h-4 w-4 text-canine-gold" />
+                          Small Dog Capacity
+                        </label>
+                        <input
+                          type="number"
+                          value={settings.daily_capacity_small}
+                          onChange={(e) => setSettings({...settings, daily_capacity_small: parseInt(e.target.value)})}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-canine-gold/30 focus:border-canine-gold outline-none font-semibold text-lg"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Daily capacity for small dogs</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
+                          <CheckCircleIcon className="h-4 w-4 text-canine-gold" />
+                          Enable Individual Bookings
+                        </label>
+                        <select
+                          value={settings.enable_individual_bookings ? 'true' : 'false'}
+                          onChange={(e) => setSettings({...settings, enable_individual_bookings: e.target.value === 'true'})}
+                          className="w-full px-4 py-3 rounded-xl border-2 border-canine-gold/30 focus:border-canine-gold outline-none font-semibold text-lg"
+                        >
+                          <option value="true">Enabled</option>
+                          <option value="false">Disabled</option>
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">Allow customers to book individual days</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <div className="flex items-start gap-3">
+                      <ExclamationCircleIcon className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div className="text-sm text-blue-900">
+                        <p className="font-semibold mb-1">Real-time Capacity Management</p>
+                        <p>The system automatically tracks bookings and prevents overbooking by checking capacity in real-time. Separate capacity limits are maintained for small dogs vs medium/large dogs.</p>
                       </div>
                     </div>
                   </div>

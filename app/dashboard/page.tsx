@@ -18,6 +18,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ArrowTopRightOnSquareIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid'
 
@@ -383,7 +384,7 @@ export default function Dashboard() {
         {/* Main Content Area */}
         <div className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Actions Bar - Fun & Friendly */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
           <button
             onClick={() => setActiveTab('book')}
             disabled={!isApproved}
@@ -429,6 +430,13 @@ export default function Dashboard() {
             <button className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-white to-purple-50 text-canine-navy hover:shadow-lg border border-purple-200/50 transition-all transform hover:scale-105 w-full">
               <CreditCardIcon className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
               <span className="font-semibold text-sm">Subscription</span>
+            </button>
+          </Link>
+
+          <Link href="/dashboard/individual-days">
+            <button className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-white to-amber-50 text-canine-navy hover:shadow-lg border border-amber-200/50 transition-all transform hover:scale-105 w-full">
+              <CalendarDaysIcon className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold text-sm">Individual Days</span>
             </button>
           </Link>
 

@@ -1,0 +1,536 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { motion } from 'framer-motion'
+import { CalendarIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon } from '@heroicons/react/24/outline'
+import { loadStripe } from '@stripe/stripe-js'
+import toast from 'react-hot-toast'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+
+interface Dog {
+  id: string
+  name: string
+  size: 'small' | 'medium' | 'large'
+}
+
+interface CapacityInfo {
+  date: string
+  available_spots: number
+  is_available: boolean
+}
+
+interface Booking {
+  id: string
+  booking_date: string
+  dog_id: string
+  dog_name: string
+  price: number
+  payment_status: string
+  status: string
+}
+
+export default function IndividualDaysPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const supabase = createClientComponentClient()
+
+  const [user, setUser] = useState<any>(null)
+  const [dogs, setDogs] = useState<Dog[]>([])
+  const [selectedDog, setSelectedDog] = useState<string>('')
+  const [selectedDates, setSelectedDates] = useState<string[]>([])
+  const [availabilityMap, setAvailabilityMap] = useState<Map<string, CapacityInfo>>(new Map())
+  const [bookings, setBookings] = useState<Booking[]>([])
+  const [pricePerDay, setPricePerDay] = useState<number>(50)
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
+  const [loading, setLoading] = useState(false)
+  const [checkingAvailability, setCheckingAvailability] = useState(false)
+
+  // Generate next 60 days for calendar
+  const generateCalendarDates = () => {
+    const dates: Date[] = []
+    const today = new Date()
+    for (let i = 0; i < 60; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      dates.push(date)
+    }
+    return dates
+  }
+
+  const calendarDates = generateCalendarDates()
+
+  useEffect(() => {
+    loadUserAndDogs()
+    loadSettings()
+    loadBookings()
+
+    // Handle payment success/cancel
+    const success = searchParams.get('success')
+    const paymentMethodParam = searchParams.get('payment_method')
+
+    if (success === 'true') {
+      toast.success('Booking confirmed! Your payment was successful.')
+      router.replace('/dashboard/individual-days')
+      loadBookings()
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (selectedDog) {
+      checkAvailability()
+    }
+  }, [selectedDog])
+
+  const loadUserAndDogs = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        setUser(user)
+
+        // Load user's dogs
+        const { data: dogsData, error } = await supabase
+          .from('dogs')
+          .select('id, name, size')
+          .eq('user_id', user.id)
+          .eq('is_draft', false)
+
+        if (error) throw error
+        setDogs(dogsData || [])
+      }
+    } catch (error) {
+      console.error('Error loading user and dogs:', error)
+      toast.error('Failed to load your dogs')
+    }
+  }
+
+  const loadSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'individual_day_price')
+        .single()
+
+      if (error) throw error
+      if (data) {
+        setPricePerDay(parseFloat(data.setting_value))
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error)
+    }
+  }
+
+  const loadBookings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('individual_day_bookings')
+        .select(`
+          id,
+          booking_date,
+          dog_id,
+          price,
+          payment_status,
+          status,
+          dogs (name)
+        `)
+        .eq('user_id', user.id)
+        .order('booking_date', { ascending: true })
+
+      if (error) throw error
+
+      const formattedBookings = (data || []).map((booking: any) => ({
+        id: booking.id,
+        booking_date: booking.booking_date,
+        dog_id: booking.dog_id,
+        dog_name: booking.dogs?.name || 'Unknown',
+        price: booking.price,
+        payment_status: booking.payment_status,
+        status: booking.status
+      }))
+
+      setBookings(formattedBookings)
+    } catch (error) {
+      console.error('Error loading bookings:', error)
+    }
+  }
+
+  const checkAvailability = async () => {
+    if (!selectedDog) return
+
+    setCheckingAvailability(true)
+    try {
+      const dog = dogs.find(d => d.id === selectedDog)
+      if (!dog) return
+
+      const startDate = new Date()
+      const endDate = new Date()
+      endDate.setDate(startDate.getDate() + 60)
+
+      const { data, error } = await supabase
+        .rpc('get_date_range_availability', {
+          p_start_date: startDate.toISOString().split('T')[0],
+          p_end_date: endDate.toISOString().split('T')[0],
+          p_dog_size: dog.size
+        })
+
+      if (error) throw error
+
+      const availMap = new Map<string, CapacityInfo>()
+      data.forEach((item: any) => {
+        availMap.set(item.booking_date, {
+          date: item.booking_date,
+          available_spots: item.available_spots,
+          is_available: item.is_available
+        })
+      })
+
+      setAvailabilityMap(availMap)
+    } catch (error) {
+      console.error('Error checking availability:', error)
+      toast.error('Failed to check availability')
+    } finally {
+      setCheckingAvailability(false)
+    }
+  }
+
+  const toggleDateSelection = (dateStr: string) => {
+    const availability = availabilityMap.get(dateStr)
+
+    if (!availability?.is_available) {
+      toast.error('This date is fully booked')
+      return
+    }
+
+    setSelectedDates(prev => {
+      if (prev.includes(dateStr)) {
+        return prev.filter(d => d !== dateStr)
+      } else {
+        return [...prev, dateStr].sort()
+      }
+    })
+  }
+
+  const handleCheckout = async () => {
+    if (!selectedDog || selectedDates.length === 0) {
+      toast.error('Please select a dog and at least one date')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const apiEndpoint = paymentMethod === 'stripe'
+        ? '/api/create-individual-day-checkout'
+        : '/api/create-individual-day-checkout-paypal'
+
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          dogId: selectedDog,
+          dates: selectedDates,
+          pricePerDay: pricePerDay
+        })
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout')
+      }
+
+      if (paymentMethod === 'stripe') {
+        const stripe = await stripePromise
+        if (!stripe) throw new Error('Stripe not loaded')
+
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: data.sessionId
+        })
+
+        if (error) throw error
+      } else {
+        // Redirect to PayPal approval URL
+        if (data.approvalUrl) {
+          window.location.href = data.approvalUrl
+        } else {
+          throw new Error('No approval URL received from PayPal')
+        }
+      }
+    } catch (error: any) {
+      console.error('Checkout error:', error)
+      toast.error(error.message || 'Failed to start checkout')
+      setLoading(false)
+    }
+  }
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
+    })
+  }
+
+  const isDateBooked = (dateStr: string) => {
+    return bookings.some(b =>
+      b.booking_date === dateStr &&
+      b.dog_id === selectedDog &&
+      b.status === 'confirmed'
+    )
+  }
+
+  const totalPrice = selectedDates.length * pricePerDay
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">
+            Book Individual Days
+          </h1>
+          <p className="text-gray-600">
+            Select dates for individual day care at £{pricePerDay} per day
+          </p>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Booking Form */}
+          <div className="lg:col-span-2">
+            {/* Dog Selection */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-xl p-6 shadow-lg mb-6"
+            >
+              <h2 className="text-xl font-semibold text-canine-navy mb-4">
+                Select Your Dog
+              </h2>
+              <select
+                value={selectedDog}
+                onChange={(e) => {
+                  setSelectedDog(e.target.value)
+                  setSelectedDates([])
+                }}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
+              >
+                <option value="">Choose a dog...</option>
+                {dogs.map((dog) => (
+                  <option key={dog.id} value={dog.id}>
+                    {dog.name} ({dog.size})
+                  </option>
+                ))}
+              </select>
+              {dogs.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Please register a dog first to book individual days
+                </p>
+              )}
+            </motion.div>
+
+            {/* Calendar */}
+            {selectedDog && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white rounded-xl p-6 shadow-lg"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-canine-navy">
+                    Select Dates
+                  </h2>
+                  {checkingAvailability && (
+                    <span className="text-sm text-gray-500">
+                      Checking availability...
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-7 gap-2">
+                  {calendarDates.map((date) => {
+                    const dateStr = date.toISOString().split('T')[0]
+                    const availability = availabilityMap.get(dateStr)
+                    const isSelected = selectedDates.includes(dateStr)
+                    const isBooked = isDateBooked(dateStr)
+                    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0))
+                    const isAvailable = availability?.is_available && !isBooked && !isPast
+
+                    return (
+                      <button
+                        key={dateStr}
+                        onClick={() => isAvailable && toggleDateSelection(dateStr)}
+                        disabled={!isAvailable || checkingAvailability}
+                        className={`
+                          p-2 rounded-lg text-sm transition-all
+                          ${isSelected ? 'bg-canine-gold text-white font-semibold' : ''}
+                          ${!isSelected && isAvailable ? 'bg-gray-100 hover:bg-canine-sky text-gray-700' : ''}
+                          ${!isAvailable ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
+                          ${isBooked ? 'bg-blue-100 text-blue-600' : ''}
+                        `}
+                      >
+                        <div className="text-xs">{date.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
+                        <div className="font-semibold">{date.getDate()}</div>
+                        {availability && (
+                          <div className="text-xs mt-1">
+                            {isBooked ? '✓' : availability.available_spots > 0 ? availability.available_spots : '✗'}
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <div className="mt-6 flex gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-canine-gold rounded"></div>
+                    <span>Selected</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gray-100 rounded"></div>
+                    <span>Available</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gray-50 rounded"></div>
+                    <span>Full</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-blue-100 rounded"></div>
+                    <span>Booked</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+
+          {/* Booking Summary */}
+          <div className="lg:col-span-1">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white rounded-xl p-6 shadow-lg sticky top-6"
+            >
+              <h2 className="text-xl font-semibold text-canine-navy mb-4">
+                Booking Summary
+              </h2>
+
+              {selectedDates.length > 0 ? (
+                <>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Selected dates:</span>
+                      <span className="font-semibold">{selectedDates.length}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Price per day:</span>
+                      <span className="font-semibold">£{pricePerDay}</span>
+                    </div>
+                    <div className="border-t pt-2 mt-2">
+                      <div className="flex justify-between">
+                        <span className="font-semibold text-canine-navy">Total:</span>
+                        <span className="font-bold text-xl text-canine-gold">
+                          £{totalPrice}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Payment Method
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setPaymentMethod('stripe')}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          paymentMethod === 'stripe'
+                            ? 'border-canine-gold bg-canine-gold/10'
+                            : 'border-gray-200 hover:border-canine-gold/50'
+                        }`}
+                      >
+                        <CreditCardIcon className="h-6 w-6 mx-auto mb-1" />
+                        <span className="text-xs font-medium">Card</span>
+                      </button>
+                      <button
+                        onClick={() => setPaymentMethod('paypal')}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          paymentMethod === 'paypal'
+                            ? 'border-canine-gold bg-canine-gold/10'
+                            : 'border-gray-200 hover:border-canine-gold/50'
+                        }`}
+                      >
+                        <div className="text-lg font-bold text-[#0070ba] mb-1">PayPal</div>
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleCheckout}
+                    disabled={loading || !selectedDog}
+                    className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Processing...' : `Pay £${totalPrice}`}
+                  </button>
+                </>
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-8">
+                  Select dates to see booking summary
+                </p>
+              )}
+            </motion.div>
+
+            {/* Your Bookings */}
+            {bookings.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-white rounded-xl p-6 shadow-lg mt-6"
+              >
+                <h2 className="text-xl font-semibold text-canine-navy mb-4">
+                  Your Bookings
+                </h2>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {bookings.map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm"
+                    >
+                      <div>
+                        <div className="font-medium">{booking.dog_name}</div>
+                        <div className="text-xs text-gray-500">
+                          {formatDate(booking.booking_date)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-canine-gold">
+                          £{booking.price}
+                        </div>
+                        {booking.status === 'confirmed' && (
+                          <CheckCircleIcon className="h-4 w-4 text-green-600 inline" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
