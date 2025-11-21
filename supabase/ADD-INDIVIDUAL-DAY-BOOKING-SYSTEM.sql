@@ -269,7 +269,7 @@ SELECT check_daily_capacity(CURRENT_DATE, 'large');
 -- Test date range availability
 SELECT * FROM get_date_range_availability(
   CURRENT_DATE,
-  CURRENT_DATE + INTERVAL '7 days',
+  (CURRENT_DATE + INTERVAL '7 days')::DATE,
   'small'
 );
 
