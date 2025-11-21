@@ -1353,7 +1353,7 @@ export default function StaffDashboard() {
 
           {/* Tab Navigation Bar */}
           <div className="border-b-2 border-white/20">
-            <div className="flex items-center space-x-1">
+            <div className="flex items-end space-x-1">
               {/* Today */}
               <button
                 onClick={() => setActiveTab('today')}
