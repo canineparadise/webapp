@@ -13,7 +13,17 @@ export async function POST(request: NextRequest) {
     apiVersion: '2025-08-27.basil',
   })
   try {
-    const { userId, dogId, dates, pricePerDay } = await request.json()
+    const {
+      userId,
+      dogId,
+      dates,
+      pricePerDay,
+      discountCode,
+      discountCodeId,
+      totalAmount,
+      discountAmount,
+      finalAmount
+    } = await request.json()
 
     if (!userId || !dogId || !dates || !dates.length || !pricePerDay) {
       return NextResponse.json(
@@ -68,7 +78,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const totalAmount = pricePerDay * dates.length
+    const calculatedTotal = pricePerDay * dates.length
+    const amountToCharge = finalAmount || calculatedTotal
     const description = `Individual Day Booking for ${dog.name} - ${dates.length} day${dates.length > 1 ? 's' : ''}`
 
     // Create Stripe checkout session
@@ -80,9 +91,11 @@ export async function POST(request: NextRequest) {
             currency: 'gbp',
             product_data: {
               name: 'Individual Day Care',
-              description: description,
+              description: discountCode
+                ? `${description} (Discount: ${discountCode})`
+                : description,
             },
-            unit_amount: Math.round(pricePerDay * 100),
+            unit_amount: Math.round((amountToCharge / dates.length) * 100),
           },
           quantity: dates.length,
         },
@@ -97,8 +110,39 @@ export async function POST(request: NextRequest) {
         dates: dates.join(','),
         type: 'individual_days',
         pricePerDay: pricePerDay.toString(),
+        discountCode: discountCode || '',
+        discountCodeId: discountCodeId || '',
+        totalAmount: totalAmount || calculatedTotal,
+        discountAmount: discountAmount || 0,
+        finalAmount: finalAmount || calculatedTotal,
       },
     })
+
+    // Record discount code usage if applicable
+    if (discountCodeId) {
+      await supabase.from('discount_code_usage').insert({
+        discount_code_id: discountCodeId,
+        user_id: userId,
+        used_for: 'individual_days',
+        original_amount: totalAmount || calculatedTotal,
+        discount_amount: discountAmount || 0,
+        final_amount: finalAmount || calculatedTotal,
+      })
+
+      // Increment usage count
+      const { data: discountCodeData } = await supabase
+        .from('discount_codes')
+        .select('current_uses')
+        .eq('id', discountCodeId)
+        .single()
+
+      if (discountCodeData) {
+        await supabase
+          .from('discount_codes')
+          .update({ current_uses: discountCodeData.current_uses + 1 })
+          .eq('id', discountCodeId)
+      }
+    }
 
     return NextResponse.json({ sessionId: session.id, url: session.url })
   } catch (error: any) {

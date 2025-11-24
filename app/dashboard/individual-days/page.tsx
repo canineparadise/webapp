@@ -48,6 +48,14 @@ function IndividualDaysContent() {
   const [loading, setLoading] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(false)
 
+  // Discount code state
+  const [discountCode, setDiscountCode] = useState('')
+  const [discountCodeId, setDiscountCodeId] = useState<string | null>(null)
+  const [discountAmount, setDiscountAmount] = useState(0)
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | null>(null)
+  const [isValidatingDiscount, setIsValidatingDiscount] = useState(false)
+  const [discountError, setDiscountError] = useState('')
+
   // Generate next 60 days for calendar
   const generateCalendarDates = () => {
     const dates: Date[] = []
@@ -216,6 +224,53 @@ function IndividualDaysContent() {
     })
   }
 
+  const validateDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      setDiscountError('')
+      setDiscountCodeId(null)
+      setDiscountAmount(0)
+      setDiscountType(null)
+      return
+    }
+
+    setIsValidatingDiscount(true)
+    setDiscountError('')
+
+    try {
+      const totalBeforeDiscount = selectedDates.length * pricePerDay
+
+      const { data, error } = await supabase.rpc('validate_discount_code', {
+        p_code: discountCode.trim(),
+        p_user_id: user.id,
+        p_applies_to: 'individual_days',
+        p_amount: totalBeforeDiscount
+      })
+
+      if (error) throw error
+
+      if (!data.is_valid) {
+        setDiscountError(data.message || 'Invalid discount code')
+        setDiscountCodeId(null)
+        setDiscountAmount(0)
+        setDiscountType(null)
+        return
+      }
+
+      setDiscountCodeId(data.discount_code_id)
+      setDiscountAmount(data.discount_amount)
+      setDiscountType(data.discount_type)
+      toast.success(`Discount applied: ${data.discount_type === 'percentage' ? `${data.discount_value}%` : `£${data.discount_value}`}`)
+    } catch (error: any) {
+      console.error('Error validating discount code:', error)
+      setDiscountError('Failed to validate discount code')
+      setDiscountCodeId(null)
+      setDiscountAmount(0)
+      setDiscountType(null)
+    } finally {
+      setIsValidatingDiscount(false)
+    }
+  }
+
   const handleCheckout = async () => {
     if (!selectedDog || selectedDates.length === 0) {
       toast.error('Please select a dog and at least one date')
@@ -228,6 +283,9 @@ function IndividualDaysContent() {
         ? '/api/create-individual-day-checkout'
         : '/api/create-individual-day-checkout-paypal'
 
+      const totalBeforeDiscount = selectedDates.length * pricePerDay
+      const finalAmount = totalBeforeDiscount - discountAmount
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -235,7 +293,12 @@ function IndividualDaysContent() {
           userId: user.id,
           dogId: selectedDog,
           dates: selectedDates,
-          pricePerDay: pricePerDay
+          pricePerDay: pricePerDay,
+          discountCode: discountCode || undefined,
+          discountCodeId: discountCodeId || undefined,
+          totalAmount: totalBeforeDiscount,
+          discountAmount: discountAmount,
+          finalAmount: finalAmount
         })
       })
 
@@ -287,6 +350,7 @@ function IndividualDaysContent() {
   }
 
   const totalPrice = selectedDates.length * pricePerDay
+  const finalPrice = totalPrice - discountAmount
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white py-12">
@@ -438,14 +502,50 @@ function IndividualDaysContent() {
                       <span className="text-gray-600">Price per day:</span>
                       <span className="font-semibold">£{pricePerDay}</span>
                     </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Subtotal:</span>
+                      <span className="font-semibold">£{totalPrice}</span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Discount ({discountCode}):</span>
+                        <span className="font-semibold">-£{discountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="border-t pt-2 mt-2">
                       <div className="flex justify-between">
                         <span className="font-semibold text-canine-navy">Total:</span>
                         <span className="font-bold text-xl text-canine-gold">
-                          £{totalPrice}
+                          £{finalPrice.toFixed(2)}
                         </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Discount Code Input */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Discount Code (Optional)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                        placeholder="Enter code"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent text-sm"
+                      />
+                      <button
+                        onClick={validateDiscountCode}
+                        disabled={isValidatingDiscount || !discountCode.trim()}
+                        className="px-4 py-2 bg-canine-navy text-white rounded-lg hover:bg-canine-navy/90 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      >
+                        {isValidatingDiscount ? '...' : 'Apply'}
+                      </button>
+                    </div>
+                    {discountError && (
+                      <p className="text-xs text-red-600 mt-1">{discountError}</p>
+                    )}
                   </div>
 
                   <div className="mb-4">
@@ -482,7 +582,7 @@ function IndividualDaysContent() {
                     disabled={loading || !selectedDog}
                     className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {loading ? 'Processing...' : `Pay £${totalPrice}`}
+                    {loading ? 'Processing...' : `Pay £${finalPrice.toFixed(2)}`}
                   </button>
                 </>
               ) : (
