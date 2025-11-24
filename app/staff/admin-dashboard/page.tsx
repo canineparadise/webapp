@@ -5517,6 +5517,7 @@ export default function AdminDashboard() {
                       hours: !allOpen,
                       pricing: !allOpen,
                       discounts: !allOpen,
+                      closedDays: !allOpen,
                       sections: !allOpen,
                       tiers: !allOpen
                     })
