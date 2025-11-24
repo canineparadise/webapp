@@ -5681,6 +5681,43 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Section 2.3: Discount Codes Management */}
+                <div className="bg-gradient-to-br from-amber-50 to-white rounded-2xl p-8 shadow-xl border-2 border-amber-300">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="bg-amber-500 p-3 rounded-xl">
+                      <TicketIcon className="h-7 w-7 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-display font-bold text-canine-navy">Discount Codes</h3>
+                      <p className="text-sm text-gray-600">Create and manage promotional discount codes for purchases</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-6 border-2 border-amber-200">
+                    <p className="text-gray-700 mb-4">
+                      Manage voucher codes that customers can use during checkout to receive discounts on subscriptions, extra days, assessments, and individual day bookings.
+                    </p>
+                    <Link
+                      href="/staff/admin-dashboard/discount-codes"
+                      className="inline-flex items-center justify-center gap-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-8 py-4 rounded-xl hover:shadow-lg transition-all font-semibold"
+                    >
+                      <TicketIcon className="h-6 w-6" />
+                      <span>Manage Discount Codes</span>
+                      <ArrowRightIcon className="h-5 w-5" />
+                    </Link>
+                  </div>
+
+                  <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 mt-4">
+                    <div className="flex items-start gap-3">
+                      <ExclamationCircleIcon className="h-5 w-5 text-amber-600 mt-0.5" />
+                      <div className="text-sm text-amber-900">
+                        <p className="font-semibold mb-1">Discount Code Features</p>
+                        <p>Create percentage or fixed amount discounts, set expiration dates, usage limits, and control which purchase types the codes apply to. Codes work with both Stripe and PayPal payments.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Section 2.5: Sections Management */}
                 <div className="bg-gradient-to-br from-green-50 to-white rounded-2xl p-8 shadow-xl border-2 border-green-300">
                   <div className="flex items-center gap-3 mb-6">
