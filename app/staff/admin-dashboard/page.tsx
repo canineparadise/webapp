@@ -1149,11 +1149,9 @@ export default function AdminDashboard() {
         payment_status: booking.payment_status,
         payment_method: booking.payment_method,
         status: booking.status,
-        check_in_time: booking.check_in_time,
-        check_out_time: booking.check_out_time,
         notes: booking.notes,
-        checked_in: !!booking.check_in_time,
-        checked_out: !!booking.check_out_time
+        checked_in: !!booking.checked_in_at,
+        checked_out: !!booking.checked_out_at
       }))
 
       // Combine and sort by date
@@ -1316,10 +1314,8 @@ export default function AdminDashboard() {
         payment_status: booking.payment_status,
         payment_method: booking.payment_method,
         status: booking.status,
-        check_in_time: booking.check_in_time,
-        check_out_time: booking.check_out_time,
-        checked_in: !!booking.check_in_time,
-        checked_out: !!booking.check_out_time,
+        checked_in: !!booking.checked_in_at,
+        checked_out: !!booking.checked_out_at,
         notes: booking.notes
       }))
 
@@ -2170,8 +2166,8 @@ export default function AdminDashboard() {
       } else {
         // Handle individual day booking check-in/out
         const updateData = action === 'check_in'
-          ? { check_in_time: now }
-          : { check_out_time: now }
+          ? { checked_in_at: now, status: 'checked_in' }
+          : { checked_out_at: now, status: 'checked_out' }
 
         const { error } = await supabase
           .from('individual_day_bookings')
