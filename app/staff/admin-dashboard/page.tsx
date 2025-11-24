@@ -385,8 +385,7 @@ export default function AdminDashboard() {
     opening_time: '07:00',
     closing_time: '19:00',
     individual_day_price: 50,
-    daily_capacity_large: 30,
-    daily_capacity_small: 20,
+    daily_dog_limit: 50,
     enable_individual_bookings: true,
   })
 
@@ -732,12 +731,12 @@ export default function AdminDashboard() {
         setTodayCapacity({
           small: {
             current: smallCapacity.current_bookings || 0,
-            total: smallCapacity.total_capacity || settings.daily_capacity_small || 20,
+            total: smallCapacity.total_capacity || settings.daily_dog_limit || 50,
             available: smallCapacity.available_spots || 0
           },
           large: {
             current: largeCapacity.current_bookings || 0,
-            total: largeCapacity.total_capacity || settings.daily_capacity_large || 30,
+            total: largeCapacity.total_capacity || settings.daily_dog_limit || 50,
             available: largeCapacity.available_spots || 0
           }
         })
@@ -1625,8 +1624,7 @@ export default function AdminDashboard() {
           opening_time: settingsObj.business_hours_start || '07:00',
           closing_time: settingsObj.business_hours_end || '19:00',
           individual_day_price: settingsObj.individual_day_price || 50,
-          daily_capacity_large: settingsObj.daily_capacity_large || 30,
-          daily_capacity_small: settingsObj.daily_capacity_small || 20,
+          daily_dog_limit: settingsObj.daily_dog_limit || 50,
           enable_individual_bookings: settingsObj.enable_individual_bookings === 'true' || settingsObj.enable_individual_bookings === true,
         })
       }
@@ -1873,8 +1871,7 @@ export default function AdminDashboard() {
         { key: 'business_hours_start', value: settings.opening_time, type: 'text' },
         { key: 'business_hours_end', value: settings.closing_time, type: 'text' },
         { key: 'individual_day_price', value: settings.individual_day_price.toString(), type: 'number' },
-        { key: 'daily_capacity_large', value: settings.daily_capacity_large.toString(), type: 'number' },
-        { key: 'daily_capacity_small', value: settings.daily_capacity_small.toString(), type: 'number' },
+        { key: 'daily_dog_limit', value: settings.daily_dog_limit.toString(), type: 'number' },
         { key: 'enable_individual_bookings', value: settings.enable_individual_bookings.toString(), type: 'boolean' },
       ]
 
@@ -3700,16 +3697,16 @@ export default function AdminDashboard() {
                               </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">
-                              {(booking.checked_in_at || booking.check_in_time)
-                                ? new Date(booking.checked_in_at || booking.check_in_time).toLocaleTimeString('en-GB', {
+                              {booking.checked_in_at
+                                ? new Date(booking.checked_in_at).toLocaleTimeString('en-GB', {
                                     hour: '2-digit',
                                     minute: '2-digit'
                                   })
                                 : '-'}
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-600">
-                              {(booking.checked_out_at || booking.check_out_time)
-                                ? new Date(booking.checked_out_at || booking.check_out_time).toLocaleTimeString('en-GB', {
+                              {booking.checked_out_at
+                                ? new Date(booking.checked_out_at).toLocaleTimeString('en-GB', {
                                     hour: '2-digit',
                                     minute: '2-digit'
                                   })
@@ -5621,28 +5618,15 @@ export default function AdminDashboard() {
                       <div>
                         <label className="block text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
                           <UserGroupIcon className="h-4 w-4 text-canine-gold" />
-                          Large/Medium Dog Capacity
+                          Daily Dog Limit
                         </label>
                         <input
                           type="number"
-                          value={settings.daily_capacity_large}
-                          onChange={(e) => setSettings({...settings, daily_capacity_large: parseInt(e.target.value)})}
+                          value={settings.daily_dog_limit}
+                          onChange={(e) => setSettings({...settings, daily_dog_limit: parseInt(e.target.value)})}
                           className="w-full px-4 py-3 rounded-xl border-2 border-canine-gold/30 focus:border-canine-gold outline-none font-semibold text-lg"
                         />
-                        <p className="text-xs text-gray-500 mt-1">Daily capacity for large/medium dogs</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
-                          <UserGroupIcon className="h-4 w-4 text-canine-gold" />
-                          Small Dog Capacity
-                        </label>
-                        <input
-                          type="number"
-                          value={settings.daily_capacity_small}
-                          onChange={(e) => setSettings({...settings, daily_capacity_small: parseInt(e.target.value)})}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-canine-gold/30 focus:border-canine-gold outline-none font-semibold text-lg"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Daily capacity for small dogs</p>
+                        <p className="text-xs text-gray-500 mt-1">Maximum total dogs per day (subscriptions + individual bookings)</p>
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
