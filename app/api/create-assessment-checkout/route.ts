@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-08-27.basil',
-})
-
 // Use service role key to bypass RLS in API routes
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +9,10 @@ const supabase = createClient(
 )
 
 export async function POST(request: NextRequest) {
+  // Initialize Stripe lazily to avoid build-time errors
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+    apiVersion: '2025-08-27.basil',
+  })
   try {
     const { userId, dogIds, requestedDate, slotId } = await request.json()
 
