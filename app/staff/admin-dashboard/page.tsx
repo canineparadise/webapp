@@ -1859,6 +1859,8 @@ export default function AdminDashboard() {
     setAddingClosedDay(true)
 
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+
       const { error } = await supabase
         .from('closed_days')
         .insert({
