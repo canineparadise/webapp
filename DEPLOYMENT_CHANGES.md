@@ -90,6 +90,22 @@
 4. **Fixed Stripe API version** - Updated to 2025-08-27.basil (commit 2dd625d)
 5. **Fixed check_in_time errors** - Removed non-existent properties (commits 99e2ac0, 89426f0)
 6. **Fixed booking_type errors** - Removed non-existent property references (commit da1f9c1)
+7. **Replace capacity fields with Daily Dog Limit** - Single unified capacity field (commit ce57f96)
+
+---
+
+## Current Status
+
+✅ **COMPLETED** - Ready for testing on localhost
+- All discount code features working
+- Daily Dog Limit implemented
+- All TypeScript errors fixed
+- Server compiling successfully
+
+⏳ **PENDING** - Future enhancements
+- Business Settings sub-tabs (General, Pricing, Assessment, Discounts, Sections)
+- Closed Days management feature
+- Capacity enforcement logic (ensuring 50 dog limit is respected)
 
 ---
 
