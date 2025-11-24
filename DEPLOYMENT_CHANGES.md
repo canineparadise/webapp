@@ -158,21 +158,27 @@
 8. **Update check_daily_capacity SQL function** - Enforce unified 50 dog limit across subscriptions + individual bookings
 9. **Update dashboard capacity widget** - Display unified 50 dog total instead of separate small/large capacities (commit 9fc267e)
 10. **Add accordion-style collapsible sections to Business Settings** - Better organization with expand/collapse functionality (commit a90cec3)
+11. **Apply discount to Stripe checkout for assessment bookings** - Added full discount support to assessment Stripe route (commit 5f8352c)
+12. **Add discount code support to Individual Day bookings (Stripe)** - Complete discount integration for individual days (commit a9d3063)
 
 ---
 
 ## Current Status
 
-✅ **COMPLETED** - Ready for testing on localhost
-- All discount code features working
-- Daily Dog Limit implemented
-- All TypeScript errors fixed
-- Server compiling successfully
+✅ **COMPLETED** - Ready for deployment to production
+- ✅ All discount code features integrated for ALL payment types:
+  - Assessments (Stripe + PayPal) ✅
+  - Subscriptions (Stripe + PayPal) ✅
+  - Extra Days (Stripe + PayPal) ✅
+  - Individual Days (Stripe + PayPal) ✅
+- ✅ Daily Dog Limit implemented
+- ✅ All TypeScript errors fixed
+- ✅ Server compiling successfully
+- ✅ Changes pushed to GitHub (triggers Vercel deployment)
 
 ⏳ **PENDING** - Future enhancements
 - Business Settings sub-tabs (General, Pricing, Assessment, Discounts, Sections) - Postponed due to complexity
 - Closed Days management feature - Not started
-- ✅ Capacity enforcement logic implemented in `check_daily_capacity` SQL function
 
 ---
 
