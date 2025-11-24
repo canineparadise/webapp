@@ -2999,23 +2999,23 @@ export default function AdminDashboard() {
                         {/* Check-in/out times and action buttons */}
                         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                           <div className="flex gap-4 text-xs text-gray-600">
-                            {(booking.checked_in_at || booking.check_in_time) && (
+                            {booking.checked_in_at && (
                               <div>
                                 <span className="text-gray-500">In:</span>
                                 <span className="ml-1 font-semibold text-green-700">
-                                  {new Date(booking.checked_in_at || booking.check_in_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(booking.checked_in_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
                             )}
-                            {(booking.checked_out_at || booking.check_out_time) && (
+                            {booking.checked_out_at && (
                               <div>
                                 <span className="text-gray-500">Out:</span>
                                 <span className="ml-1 font-semibold text-blue-700">
-                                  {new Date(booking.checked_out_at || booking.check_out_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(booking.checked_out_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
                             )}
-                            {!(booking.checked_in_at || booking.check_in_time) && !(booking.checked_out_at || booking.check_out_time) && (
+                            {!booking.checked_in_at && !booking.checked_out_at && (
                               <span className="text-gray-400">Not checked in yet</span>
                             )}
                           </div>
