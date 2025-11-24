@@ -377,6 +377,20 @@ export default function AdminDashboard() {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>([])
 
+  // Business Settings accordion state - all sections open by default
+  const [openSections, setOpenSections] = useState({
+    assessment: true,
+    hours: true,
+    pricing: true,
+    discounts: true,
+    sections: true,
+    tiers: true
+  })
+
+  const toggleSection = (section: keyof typeof openSections) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+
   // Settings state
   const [settings, setSettings] = useState({
     assessment_fee: 40,
@@ -5401,22 +5415,57 @@ export default function AdminDashboard() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              <h2 className="text-3xl font-display font-bold text-canine-navy mb-8">Business Settings</h2>
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-3xl font-display font-bold text-canine-navy">Business Settings</h2>
+                <button
+                  onClick={() => {
+                    const allOpen = Object.values(openSections).every(v => v)
+                    setOpenSections({
+                      assessment: !allOpen,
+                      hours: !allOpen,
+                      pricing: !allOpen,
+                      discounts: !allOpen,
+                      sections: !allOpen,
+                      tiers: !allOpen
+                    })
+                  }}
+                  className="px-4 py-2 bg-canine-gold text-white rounded-lg hover:bg-canine-light-gold transition-all font-semibold text-sm flex items-center gap-2"
+                >
+                  {Object.values(openSections).every(v => v) ? (
+                    <>
+                      <ChevronUpIcon className="h-4 w-4" />
+                      Collapse All
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDownIcon className="h-4 w-4" />
+                      Expand All
+                    </>
+                  )}
+                </button>
+              </div>
 
               <div className="max-w-5xl mx-auto space-y-6">
 
                 {/* Section 1: Assessment Scheduling */}
                 <div className="bg-gradient-to-br from-blue-50 to-white rounded-2xl p-8 shadow-xl border-2 border-blue-300">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-blue-500 p-3 rounded-xl">
-                      <CalendarDaysIcon className="h-7 w-7 text-white" />
+                  <button
+                    onClick={() => toggleSection('assessment')}
+                    className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-blue-500 p-3 rounded-xl">
+                        <CalendarDaysIcon className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-2xl font-display font-bold text-canine-navy">Assessment Scheduling</h3>
+                        <p className="text-sm text-gray-600">Configure assessment fees and availability</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-display font-bold text-canine-navy">Assessment Scheduling</h3>
-                      <p className="text-sm text-gray-600">Configure assessment fees and availability</p>
-                    </div>
-                  </div>
+                    <ChevronDownIcon className={`h-6 w-6 text-blue-500 transition-transform ${openSections.assessment ? 'rotate-180' : ''}`} />
+                  </button>
 
+                  <div className={`transition-all duration-300 ${openSections.assessment ? 'block' : 'hidden'}`}>
                   <div className="bg-white rounded-xl p-6 mb-6 border-2 border-blue-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
@@ -5510,20 +5559,28 @@ export default function AdminDashboard() {
                       })}
                     </div>
                   </div>
+                  </div>
                 </div>
 
                 {/* Section 2: Business Hours */}
                 <div className="bg-gradient-to-br from-canine-gold/10 to-white rounded-2xl p-8 shadow-xl border-2 border-canine-gold/30">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-canine-gold p-3 rounded-xl">
-                      <ClockIcon className="h-7 w-7 text-white" />
+                  <button
+                    onClick={() => toggleSection('hours')}
+                    className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-canine-gold p-3 rounded-xl">
+                        <ClockIcon className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-2xl font-display font-bold text-canine-navy">Business Hours</h3>
+                        <p className="text-sm text-gray-600">Set your daycare operating hours</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-display font-bold text-canine-navy">Business Hours</h3>
-                      <p className="text-sm text-gray-600">Set your daycare operating hours</p>
-                    </div>
-                  </div>
+                    <ChevronDownIcon className={`h-6 w-6 text-canine-gold transition-transform ${openSections.hours ? 'rotate-180' : ''}`} />
+                  </button>
 
+                  <div className={`transition-all duration-300 ${openSections.hours ? 'block' : 'hidden'}`}>
                   <div className="bg-white rounded-xl p-6 border-2 border-canine-gold/20">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
@@ -5552,20 +5609,28 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+                  </div>
                 </div>
 
                 {/* Section 2.25: Pricing & Capacity Management - Individual Day Price & Daily Capacity */}
                 <div className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-8 shadow-xl border-2 border-purple-300">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-purple-500 p-3 rounded-xl">
-                      <CurrencyPoundIcon className="h-7 w-7 text-white" />
+                  <button
+                    onClick={() => toggleSection('pricing')}
+                    className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-purple-500 p-3 rounded-xl">
+                        <CurrencyPoundIcon className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-2xl font-display font-bold text-canine-navy">Pricing & Capacity</h3>
+                        <p className="text-sm text-gray-600">Configure individual day booking prices and daily capacity limits</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-display font-bold text-canine-navy">Pricing & Capacity</h3>
-                      <p className="text-sm text-gray-600">Configure individual day booking prices and daily capacity limits</p>
-                    </div>
-                  </div>
+                    <ChevronDownIcon className={`h-6 w-6 text-purple-500 transition-transform ${openSections.pricing ? 'rotate-180' : ''}`} />
+                  </button>
 
+                  <div className={`transition-all duration-300 ${openSections.pricing ? 'block' : 'hidden'}`}>
                   <div className="bg-white rounded-xl p-6 mb-6 border-2 border-purple-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
@@ -5621,20 +5686,28 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+                  </div>
                 </div>
 
                 {/* Section 2.3: Discount Codes Management */}
                 <div className="bg-gradient-to-br from-amber-50 to-white rounded-2xl p-8 shadow-xl border-2 border-amber-300">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-amber-500 p-3 rounded-xl">
-                      <TicketIcon className="h-7 w-7 text-white" />
+                  <button
+                    onClick={() => toggleSection('discounts')}
+                    className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-amber-500 p-3 rounded-xl">
+                        <TicketIcon className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-2xl font-display font-bold text-canine-navy">Discount Codes</h3>
+                        <p className="text-sm text-gray-600">Create and manage promotional discount codes for purchases</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-display font-bold text-canine-navy">Discount Codes</h3>
-                      <p className="text-sm text-gray-600">Create and manage promotional discount codes for purchases</p>
-                    </div>
-                  </div>
+                    <ChevronDownIcon className={`h-6 w-6 text-amber-500 transition-transform ${openSections.discounts ? 'rotate-180' : ''}`} />
+                  </button>
 
+                  <div className={`transition-all duration-300 ${openSections.discounts ? 'block' : 'hidden'}`}>
                   <div className="bg-white rounded-xl p-6 border-2 border-amber-200">
                     <p className="text-gray-700 mb-4">
                       Manage voucher codes that customers can use during checkout to receive discounts on subscriptions, extra days, assessments, and individual day bookings.
@@ -5658,20 +5731,28 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+                  </div>
                 </div>
 
                 {/* Section 2.5: Sections Management */}
                 <div className="bg-gradient-to-br from-green-50 to-white rounded-2xl p-8 shadow-xl border-2 border-green-300">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-green-500 p-3 rounded-xl">
-                      <BuildingOfficeIcon className="h-7 w-7 text-white" />
+                  <button
+                    onClick={() => toggleSection('sections')}
+                    className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-500 p-3 rounded-xl">
+                        <BuildingOfficeIcon className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-2xl font-display font-bold text-canine-navy">Sections Management</h3>
+                        <p className="text-sm text-gray-600">Manage roll call sections/areas</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-display font-bold text-canine-navy">Sections Management</h3>
-                      <p className="text-sm text-gray-600">Manage roll call sections/areas</p>
-                    </div>
-                  </div>
+                    <ChevronDownIcon className={`h-6 w-6 text-green-500 transition-transform ${openSections.sections ? 'rotate-180' : ''}`} />
+                  </button>
 
+                  <div className={`transition-all duration-300 ${openSections.sections ? 'block' : 'hidden'}`}>
                   {/* Add New Section */}
                   <div className="bg-white rounded-xl p-6 mb-6 border-2 border-green-200">
                     <h4 className="text-lg font-semibold text-canine-navy mb-4 flex items-center gap-2">
@@ -5771,20 +5852,28 @@ export default function AdminDashboard() {
                       </div>
                     )}
                   </div>
+                  </div>
                 </div>
 
                 {/* Section 3: Subscription Tiers */}
                 <div className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-8 shadow-xl border-2 border-purple-300">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-purple-500 p-3 rounded-xl">
-                      <CreditCardIcon className="h-7 w-7 text-white" />
+                  <button
+                    onClick={() => toggleSection('tiers')}
+                    className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-purple-500 p-3 rounded-xl">
+                        <CreditCardIcon className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-2xl font-display font-bold text-canine-navy">Subscription Tiers Pricing</h3>
+                        <p className="text-sm text-gray-600">Configure monthly prices and extra day rates</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-display font-bold text-canine-navy">Subscription Tiers Pricing</h3>
-                      <p className="text-sm text-gray-600">Configure monthly prices and extra day rates</p>
-                    </div>
-                  </div>
+                    <ChevronDownIcon className={`h-6 w-6 text-purple-500 transition-transform ${openSections.tiers ? 'rotate-180' : ''}`} />
+                  </button>
 
+                  <div className={`transition-all duration-300 ${openSections.tiers ? 'block' : 'hidden'}`}>
                   <p className="text-sm text-gray-600 mb-6 bg-white rounded-lg p-4 border-l-4 border-purple-400">
                     💡 <strong>Tip:</strong> The extra day price is what customers pay when they purchase additional days beyond their subscription allowance.
                   </p>
@@ -5846,6 +5935,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     ))}
+                  </div>
                   </div>
                 </div>
 
