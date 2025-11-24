@@ -734,24 +734,22 @@ export default function AdminDashboard() {
       setTodayFullDay(fullDayToday)
       setTodayHalfDay(halfDayToday)
 
-      // Fetch today's capacity for small and large dogs
-      const { data: smallCapacity } = await supabase
-        .rpc('check_daily_capacity', { p_date: today, p_dog_size: 'small' })
+      // Fetch today's unified capacity (no longer separated by dog size)
+      const { data: capacityData } = await supabase
+        .rpc('check_daily_capacity', { p_date: today, p_dog_size: 'medium' })
 
-      const { data: largeCapacity } = await supabase
-        .rpc('check_daily_capacity', { p_date: today, p_dog_size: 'large' })
-
-      if (smallCapacity && largeCapacity) {
+      if (capacityData) {
+        // Store in the same structure but both small/large will have the same unified data
         setTodayCapacity({
           small: {
-            current: smallCapacity.current_bookings || 0,
-            total: smallCapacity.total_capacity || settings.daily_dog_limit || 50,
-            available: smallCapacity.available_spots || 0
+            current: capacityData.current_bookings || 0,
+            total: capacityData.total_capacity || settings.daily_dog_limit || 50,
+            available: capacityData.available_spots || 0
           },
           large: {
-            current: largeCapacity.current_bookings || 0,
-            total: largeCapacity.total_capacity || settings.daily_dog_limit || 50,
-            available: largeCapacity.available_spots || 0
+            current: 0, // Set to 0 so it doesn't double count
+            total: 0,
+            available: 0
           }
         })
       }
@@ -5480,19 +5478,6 @@ export default function AdminDashboard() {
                           className="w-full px-4 py-3 rounded-xl border-2 border-canine-gold/30 focus:border-canine-gold outline-none font-semibold text-lg"
                         />
                         <p className="text-xs text-gray-500 mt-1">One-time fee per assessment</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
-                          <UserGroupIcon className="h-4 w-4 text-canine-gold" />
-                          Max Dogs Per Day
-                        </label>
-                        <input
-                          type="number"
-                          value={settings.max_dogs_per_day}
-                          onChange={(e) => setSettings({...settings, max_dogs_per_day: parseInt(e.target.value)})}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-canine-gold/30 focus:border-canine-gold outline-none font-semibold text-lg"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Total capacity per day</p>
                       </div>
                     </div>
                   </div>

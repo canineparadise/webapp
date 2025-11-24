@@ -119,6 +119,31 @@
 
 **Location:** Admin Dashboard → Overview tab → Today's Capacity widget
 
+#### 10. Business Settings Accordion Organization
+**File:** `app/staff/admin-dashboard/page.tsx`
+
+**Changes:**
+- Added accordion-style collapsible sections for better organization
+- All sections start expanded by default for easy access
+- Added "Collapse All / Expand All" button at the top
+- Each section header is clickable to expand/collapse
+- Smooth CSS transitions for accordion animation
+- Chevron icons rotate to indicate open/closed state
+
+**Sections with accordion:**
+1. Assessment Scheduling
+2. Business Hours
+3. Pricing & Capacity
+4. Discount Codes
+5. Sections Management
+6. Subscription Tiers Pricing
+
+**Benefits:**
+- Better organization of Business Settings page
+- Users can collapse sections they're not currently working with
+- No JSX compilation issues (uses simple CSS show/hide)
+- Maintains all existing functionality
+
 ---
 
 ## Git Commits Made
@@ -131,7 +156,8 @@
 6. **Fixed booking_type errors** - Removed non-existent property references (commit da1f9c1)
 7. **Replace capacity fields with Daily Dog Limit** - Single unified capacity field (commit ce57f96)
 8. **Update check_daily_capacity SQL function** - Enforce unified 50 dog limit across subscriptions + individual bookings
-9. **Update dashboard capacity widget** - Display unified 50 dog total instead of separate small/large capacities
+9. **Update dashboard capacity widget** - Display unified 50 dog total instead of separate small/large capacities (commit 9fc267e)
+10. **Add accordion-style collapsible sections to Business Settings** - Better organization with expand/collapse functionality (commit a90cec3)
 
 ---
 
@@ -283,7 +309,40 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 - `extra_days_purchases` - Extra days records
 - `assessment_requests` - Assessment bookings
 - `bookings` - Individual day bookings
+- `individual_day_bookings` - Individual day booking records
 
 ### RPC Functions:
 - `validate_discount_code` - Validates code eligibility
 - `calculate_discount_amount` - Calculates discount value
+- `check_daily_capacity` - Checks daily dog capacity
+
+---
+
+## SQL Scripts Required for Deployment
+
+⚠️ **CRITICAL: These SQL scripts MUST be run in Supabase BEFORE deploying frontend changes!**
+
+### 1. Daily Dog Limit Capacity Function
+**File:** `supabase/ADD-INDIVIDUAL-DAY-BOOKING-SYSTEM.sql` (lines 140-188)
+**Why:** Updates the `check_daily_capacity` function to use the unified `daily_dog_limit` setting instead of separate small/large capacities.
+**Status:** ⚠️ NEEDS TO BE RUN IN SUPABASE
+
+### 2. Discount Codes System
+**File:** `supabase/CREATE-DISCOUNT-CODES-SYSTEM.sql`
+**Why:** Creates all discount code tables, functions, and RLS policies
+**Tables Created:**
+- `discount_codes` - Main table for storing discount codes
+- `discount_code_usage` - Tracks who used which codes
+- `extra_days_purchases` - Tracks extra day purchases with discounts
+
+**Functions Created:**
+- `validate_discount_code()` - Validates if a code can be used
+- `calculate_discount_amount()` - Calculates discount value
+
+**Status:** ⚠️ NEEDS TO BE RUN IN SUPABASE
+
+**How to Run:**
+1. Open Supabase Dashboard → SQL Editor
+2. Copy the entire contents of `supabase/CREATE-DISCOUNT-CODES-SYSTEM.sql`
+3. Paste and run the SQL
+4. Verify success by checking if `discount_codes` table exists
