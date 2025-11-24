@@ -53,7 +53,7 @@ export default function DiscountCodesPage() {
     valid_until: '',
     max_uses: '',
     one_time_per_user: true,
-    applies_to: ['subscription', 'extra_days', 'assessment'],
+    applies_to: ['subscription', 'extra_days', 'assessment', 'individual_days'],
     min_purchase_amount: '',
     is_active: true,
   })
@@ -179,7 +179,7 @@ export default function DiscountCodesPage() {
       valid_until: '',
       max_uses: '',
       one_time_per_user: true,
-      applies_to: ['subscription', 'extra_days', 'assessment'],
+      applies_to: ['subscription', 'extra_days', 'assessment', 'individual_days'],
       min_purchase_amount: '',
       is_active: true,
     })
@@ -485,7 +485,7 @@ export default function DiscountCodesPage() {
                       Applies To
                     </label>
                     <div className="space-y-2">
-                      {['subscription', 'extra_days', 'assessment'].map((type) => (
+                      {['subscription', 'extra_days', 'assessment', 'individual_days'].map((type) => (
                         <label key={type} className="flex items-center">
                           <input
                             type="checkbox"
@@ -499,7 +499,7 @@ export default function DiscountCodesPage() {
                             }}
                             className="mr-2 text-canine-gold focus:ring-canine-gold rounded"
                           />
-                          <span className="capitalize">{type.replace('_', ' ')}</span>
+                          <span className="capitalize">{type.replace(/_/g, ' ')}</span>
                         </label>
                       ))}
                     </div>

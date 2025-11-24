@@ -45,11 +45,13 @@ import {
   ChatBubbleLeftRightIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
+  TicketIcon,
 } from '@heroicons/react/24/outline'
 import { ChatBubbleLeftIcon as QuoteIcon } from '@heroicons/react/24/solid'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface Dog {
@@ -4328,7 +4330,7 @@ export default function AdminDashboard() {
               {/* Quick Actions */}
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-lg font-bold text-canine-navy mb-4">Quick Actions</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <button
                     onClick={() => {
                       setEditingAssignment(null)
@@ -4367,6 +4369,13 @@ export default function AdminDashboard() {
                     <PlusCircleIcon className="h-6 w-6" />
                     <span className="font-semibold">Create Staff Task</span>
                   </button>
+                  <Link
+                    href="/staff/admin-dashboard/discount-codes"
+                    className="flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-4 rounded-xl hover:shadow-lg transition-all"
+                  >
+                    <TicketIcon className="h-6 w-6" />
+                    <span className="font-semibold">Manage Discount Codes</span>
+                  </Link>
                 </div>
               </div>
 
