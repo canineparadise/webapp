@@ -2890,12 +2890,8 @@ export default function AdminDashboard() {
                           )}
                           {/* Booking Type Badge */}
                           <div className="absolute top-2 right-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              booking.booking_type === 'individual'
-                                ? 'bg-purple-500 text-white'
-                                : 'bg-canine-gold text-white'
-                            }`}>
-                              {booking.booking_type === 'individual' ? 'Individual' : 'Subscription'}
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-canine-gold text-white">
+                              Booking
                             </span>
                           </div>
                           {/* Session Type Badge */}
@@ -3024,7 +3020,7 @@ export default function AdminDashboard() {
                           <div className="flex gap-2">
                             {!booking.checked_in_at && (
                               <button
-                                onClick={() => handleCheckInOut(booking.id, booking.booking_type || 'subscription', 'check_in')}
+                                onClick={() => handleCheckInOut(booking.id, 'subscription', 'check_in')}
                                 className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors"
                               >
                                 Check In
@@ -3032,7 +3028,7 @@ export default function AdminDashboard() {
                             )}
                             {booking.checked_in_at && !booking.checked_out_at && (
                               <button
-                                onClick={() => handleCheckInOut(booking.id, booking.booking_type || 'subscription', 'check_out')}
+                                onClick={() => handleCheckInOut(booking.id, 'subscription', 'check_out')}
                                 className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
                               >
                                 Check Out
@@ -3686,12 +3682,8 @@ export default function AdminDashboard() {
                               </div>
                             </td>
                             <td className="px-6 py-4">
-                              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                                booking.booking_type === 'individual'
-                                  ? 'bg-purple-100 text-purple-800'
-                                  : 'bg-canine-gold/20 text-canine-navy'
-                              }`}>
-                                {booking.booking_type === 'individual' ? 'Individual Day' : 'Subscription'}
+                              <span className="px-3 py-1 rounded-full text-sm font-semibold bg-canine-gold/20 text-canine-navy">
+                                Booking
                               </span>
                             </td>
                             <td className="px-6 py-4">
