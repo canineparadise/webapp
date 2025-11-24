@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-// Initialize Supabase client with service role key for admin operations
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Force dynamic rendering to avoid build-time env var issues
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
+  // Initialize Supabase client lazily to avoid build-time errors
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+  )
   try {
     const { userEmail, userName, dogName, status, notes } = await request.json()
 
