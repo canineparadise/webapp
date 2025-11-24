@@ -5599,7 +5599,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Section 2.25: Pricing & Capacity Management */}
+                {/* Section 2.25: Pricing & Capacity Management - Individual Day Price & Daily Capacity */}
                 <div className="bg-gradient-to-br from-purple-50 to-white rounded-2xl p-8 shadow-xl border-2 border-purple-300">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-purple-500 p-3 rounded-xl">
