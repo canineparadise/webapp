@@ -14,7 +14,17 @@ export async function POST(request: NextRequest) {
     apiVersion: '2025-08-27.basil',
   })
   try {
-    const { userId, dogIds, requestedDate, slotId } = await request.json()
+    const {
+      userId,
+      dogIds,
+      requestedDate,
+      slotId,
+      discountCode,
+      discountCodeId,
+      totalAmount,
+      discountAmount,
+      finalAmount
+    } = await request.json()
 
     // Support both old format (requestedDate) and new format (slotId)
     if (!userId || !dogIds || (!requestedDate && !slotId)) {
@@ -83,8 +93,9 @@ export async function POST(request: NextRequest) {
       ? `Dog Assessment - ${dateDisplay}`
       : `Dog Assessment for ${dogCount} dogs - ${dateDisplay}`
 
-    // Calculate total: £40 per dog
-    const totalAmount = assessmentFee * dogCount
+    // Calculate amount to charge
+    const calculatedTotal = assessmentFee * dogCount
+    const amountToCharge = finalAmount || calculatedTotal
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -95,12 +106,14 @@ export async function POST(request: NextRequest) {
             currency: 'gbp',
             product_data: {
               name: 'Dog Assessment Day',
-              description: description,
+              description: discountCode
+                ? `${description} (Discount: ${discountCode})`
+                : description,
               images: [], // Can add your logo URL here
             },
-            unit_amount: Math.round(assessmentFee * 100), // Convert to pence (£40 per dog)
+            unit_amount: Math.round(amountToCharge * 100), // Apply discount if provided
           },
-          quantity: dogCount, // Charge for each dog
+          quantity: 1,
         },
       ],
       mode: 'payment',
@@ -118,8 +131,39 @@ export async function POST(request: NextRequest) {
         requestedDate: requestedDate || '',
         slotId: slotId || '',
         type: 'assessment',
+        discountCode: discountCode || '',
+        discountCodeId: discountCodeId || '',
+        totalAmount: totalAmount || calculatedTotal,
+        discountAmount: discountAmount || 0,
+        finalAmount: finalAmount || calculatedTotal,
       },
     })
+
+    // Record discount code usage if applicable
+    if (discountCodeId) {
+      await supabase.from('discount_code_usage').insert({
+        discount_code_id: discountCodeId,
+        user_id: userId,
+        used_for: 'assessment',
+        original_amount: totalAmount || calculatedTotal,
+        discount_amount: discountAmount || 0,
+        final_amount: finalAmount || calculatedTotal,
+      })
+
+      // Increment usage count
+      const { data: discountCodeData } = await supabase
+        .from('discount_codes')
+        .select('current_uses')
+        .eq('id', discountCodeId)
+        .single()
+
+      if (discountCodeData) {
+        await supabase
+          .from('discount_codes')
+          .update({ current_uses: discountCodeData.current_uses + 1 })
+          .eq('id', discountCodeId)
+      }
+    }
 
     return NextResponse.json({ sessionId: session.id, url: session.url })
   } catch (error: any) {
