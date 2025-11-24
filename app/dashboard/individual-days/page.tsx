@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { motion } from 'framer-motion'
@@ -32,7 +32,7 @@ interface Booking {
   status: string
 }
 
-export default function IndividualDaysPage() {
+function IndividualDaysContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClientComponentClient()
@@ -532,5 +532,13 @@ export default function IndividualDaysPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function IndividualDaysPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-canine-cream flex items-center justify-center"><div className="text-canine-navy">Loading...</div></div>}>
+      <IndividualDaysContent />
+    </Suspense>
   )
 }
