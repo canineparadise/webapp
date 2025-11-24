@@ -103,6 +103,22 @@
 
 **Impact:** This is the enforcement mechanism that prevents exceeding 50 dogs per day!
 
+#### 9. Dashboard Capacity Display Widget
+**File:** `app/staff/admin-dashboard/page.tsx`
+
+**Changes:**
+- Updated "Today's Capacity" widget to show unified total instead of separate small/large dog displays
+- Modified lines 2702-2756
+- **BEFORE:** Showed separate "Small Dogs 0/20" and "Large/Medium Dogs 0/30"
+- **AFTER:** Shows single "Total Dogs (All Sizes)" with combined count
+- Updated alert logic:
+  - "Capacity Full" alert when total capacity = 0
+  - "Near Capacity" alert when ≤10 spots remaining (instead of separate small/large thresholds)
+- Progress bar now shows unified capacity percentage
+- All displays now correctly reflect the 50 dog limit regardless of size
+
+**Location:** Admin Dashboard → Overview tab → Today's Capacity widget
+
 ---
 
 ## Git Commits Made
@@ -115,6 +131,7 @@
 6. **Fixed booking_type errors** - Removed non-existent property references (commit da1f9c1)
 7. **Replace capacity fields with Daily Dog Limit** - Single unified capacity field (commit ce57f96)
 8. **Update check_daily_capacity SQL function** - Enforce unified 50 dog limit across subscriptions + individual bookings
+9. **Update dashboard capacity widget** - Display unified 50 dog total instead of separate small/large capacities
 
 ---
 
@@ -127,9 +144,9 @@
 - Server compiling successfully
 
 ⏳ **PENDING** - Future enhancements
-- Business Settings sub-tabs (General, Pricing, Assessment, Discounts, Sections)
-- Closed Days management feature
-- Capacity enforcement logic (ensuring 50 dog limit is respected)
+- Business Settings sub-tabs (General, Pricing, Assessment, Discounts, Sections) - Postponed due to complexity
+- Closed Days management feature - Not started
+- ✅ Capacity enforcement logic implemented in `check_daily_capacity` SQL function
 
 ---
 

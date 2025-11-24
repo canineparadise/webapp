@@ -2692,102 +2692,68 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Today's Capacity Widget */}
+              {/* Today's Capacity Widget - Unified */}
               <div className="bg-white rounded-2xl p-6 shadow-xl border-2 border-canine-gold/20">
                 <h3 className="text-xl font-display font-bold text-canine-navy mb-4 flex items-center gap-2">
                   <ChartBarIcon className="h-6 w-6 text-canine-gold" />
                   Today's Capacity
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Small Dogs Capacity */}
+                <div className="space-y-4">
+                  {/* Unified Total Capacity */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-gray-700">Small Dogs</h4>
-                      <span className={`text-sm font-bold ${
-                        todayCapacity.small.available === 0
+                      <h4 className="font-semibold text-gray-700">Total Dogs (All Sizes)</h4>
+                      <span className={`text-2xl font-bold ${
+                        todayCapacity.small.available + todayCapacity.large.available === 0
                           ? 'text-red-600'
-                          : todayCapacity.small.available <= 5
+                          : todayCapacity.small.available + todayCapacity.large.available <= 10
                           ? 'text-amber-600'
                           : 'text-green-600'
                       }`}>
-                        {todayCapacity.small.current}/{todayCapacity.small.total}
+                        {todayCapacity.small.current + todayCapacity.large.current}/{todayCapacity.small.total + todayCapacity.large.total}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div className="w-full bg-gray-200 rounded-full h-6 overflow-hidden">
                       <div
-                        className={`h-4 rounded-full transition-all duration-500 ${
-                          todayCapacity.small.available === 0
+                        className={`h-6 rounded-full transition-all duration-500 ${
+                          todayCapacity.small.available + todayCapacity.large.available === 0
                             ? 'bg-red-500'
-                            : todayCapacity.small.available <= 5
+                            : todayCapacity.small.available + todayCapacity.large.available <= 10
                             ? 'bg-amber-500'
                             : 'bg-green-500'
                         }`}
-                        style={{ width: `${(todayCapacity.small.current / todayCapacity.small.total) * 100}%` }}
+                        style={{ width: `${((todayCapacity.small.current + todayCapacity.large.current) / (todayCapacity.small.total + todayCapacity.large.total)) * 100}%` }}
                       />
                     </div>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-semibold">{todayCapacity.small.available}</span> spots available
-                    </p>
-                  </div>
-
-                  {/* Large/Medium Dogs Capacity */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-gray-700">Large/Medium Dogs</h4>
-                      <span className={`text-sm font-bold ${
-                        todayCapacity.large.available === 0
-                          ? 'text-red-600'
-                          : todayCapacity.large.available <= 8
-                          ? 'text-amber-600'
-                          : 'text-green-600'
-                      }`}>
-                        {todayCapacity.large.current}/{todayCapacity.large.total}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                      <div
-                        className={`h-4 rounded-full transition-all duration-500 ${
-                          todayCapacity.large.available === 0
-                            ? 'bg-red-500'
-                            : todayCapacity.large.available <= 8
-                            ? 'bg-amber-500'
-                            : 'bg-green-500'
-                        }`}
-                        style={{ width: `${(todayCapacity.large.current / todayCapacity.large.total) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-semibold">{todayCapacity.large.available}</span> spots available
+                    <p className="text-lg text-gray-600 text-center">
+                      <span className="font-bold text-2xl">{todayCapacity.small.available + todayCapacity.large.available}</span> spots available
                     </p>
                   </div>
                 </div>
 
                 {/* Alert if near capacity */}
-                {(todayCapacity.small.available === 0 || todayCapacity.large.available === 0) && (
+                {(todayCapacity.small.available + todayCapacity.large.available === 0) && (
                   <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
                     <ExclamationTriangleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-red-800">Capacity Full</p>
                       <p className="text-xs text-red-600">
-                        {todayCapacity.small.available === 0 && 'Small dogs capacity is full. '}
-                        {todayCapacity.large.available === 0 && 'Large/Medium dogs capacity is full.'}
+                        Daily dog limit has been reached. No more bookings can be accepted for today.
                       </p>
                     </div>
                   </div>
                 )}
-                {(todayCapacity.small.available > 0 && todayCapacity.small.available <= 5) ||
-                 (todayCapacity.large.available > 0 && todayCapacity.large.available <= 8) ? (
+                {(todayCapacity.small.available + todayCapacity.large.available > 0 && todayCapacity.small.available + todayCapacity.large.available <= 10) && (
                   <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
                     <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-amber-800">Near Capacity</p>
                       <p className="text-xs text-amber-600">
-                        {todayCapacity.small.available <= 5 && `Only ${todayCapacity.small.available} small dog spots left. `}
-                        {todayCapacity.large.available <= 8 && `Only ${todayCapacity.large.available} large/medium dog spots left.`}
+                        Only {todayCapacity.small.available + todayCapacity.large.available} spots remaining for today.
                       </p>
                     </div>
                   </div>
-                ) : null}
+                )}
               </div>
 
               {/* Quick Actions */}
