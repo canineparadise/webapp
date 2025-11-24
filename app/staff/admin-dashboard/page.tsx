@@ -383,6 +383,7 @@ export default function AdminDashboard() {
     hours: true,
     pricing: true,
     discounts: true,
+    closedDays: true,
     sections: true,
     tiers: true
   })
@@ -424,6 +425,12 @@ export default function AdminDashboard() {
   const [newSectionName, setNewSectionName] = useState('')
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
   const [editingSectionName, setEditingSectionName] = useState('')
+
+  // Closed days state
+  const [closedDays, setClosedDays] = useState<any[]>([])
+  const [newClosedDate, setNewClosedDate] = useState('')
+  const [newClosedReason, setNewClosedReason] = useState('')
+  const [addingClosedDay, setAddingClosedDay] = useState(false)
 
   // Modal states
   const [showDogModal, setShowDogModal] = useState(false)
@@ -509,6 +516,7 @@ export default function AdminDashboard() {
     fetchSettings()
     fetchRecurringSlots()
     fetchSections()
+    fetchClosedDays()
     fetchLegalAgreements()
     fetchDogMedications()
     fetchIncidents()
@@ -1805,6 +1813,94 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error deleting section:', error)
       toast.error('Failed to delete section')
+    }
+  }
+
+  // Closed Days Management Functions
+  const fetchClosedDays = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('closed_days')
+        .select('*')
+        .gte('closed_date', new Date().toISOString().split('T')[0])
+        .order('closed_date', { ascending: true })
+
+      if (error) throw error
+      setClosedDays(data || [])
+    } catch (error) {
+      console.error('Error fetching closed days:', error)
+      toast.error('Failed to load closed days')
+    }
+  }
+
+  const handleAddClosedDay = async () => {
+    if (!newClosedDate) {
+      toast.error('Please select a date')
+      return
+    }
+
+    // Check if date is in the past
+    const selectedDate = new Date(newClosedDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    if (selectedDate < today) {
+      toast.error('Cannot add closed days in the past')
+      return
+    }
+
+    // Check if date already exists
+    const dateExists = closedDays.some(day => day.closed_date === newClosedDate)
+    if (dateExists) {
+      toast.error('This date is already marked as closed')
+      return
+    }
+
+    setAddingClosedDay(true)
+
+    try {
+      const { error } = await supabase
+        .from('closed_days')
+        .insert({
+          closed_date: newClosedDate,
+          reason: newClosedReason.trim() || null,
+          created_by: user?.id
+        })
+
+      if (error) throw error
+
+      toast.success('Closed day added successfully')
+      setNewClosedDate('')
+      setNewClosedReason('')
+      fetchClosedDays()
+    } catch (error: any) {
+      console.error('Error adding closed day:', error)
+      if (error.code === '23505') {
+        toast.error('This date is already marked as closed')
+      } else {
+        toast.error('Failed to add closed day')
+      }
+    } finally {
+      setAddingClosedDay(false)
+    }
+  }
+
+  const handleDeleteClosedDay = async (id: string) => {
+    if (!confirm('Remove this closed day? Users will be able to book this date again.')) return
+
+    try {
+      const { error } = await supabase
+        .from('closed_days')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      toast.success('Closed day removed')
+      fetchClosedDays()
+    } catch (error) {
+      console.error('Error deleting closed day:', error)
+      toast.error('Failed to remove closed day')
     }
   }
 
@@ -5712,6 +5808,122 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+                  </div>
+                </div>
+
+                {/* Section 2.4: Closed Days Management */}
+                <div className="bg-gradient-to-br from-red-50 to-white rounded-2xl p-8 shadow-xl border-2 border-red-300">
+                  <button
+                    onClick={() => toggleSection('closedDays')}
+                    className="w-full flex items-center justify-between mb-6 hover:opacity-80 transition-opacity"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="bg-red-500 p-3 rounded-xl">
+                        <XCircleIcon className="h-7 w-7 text-white" />
+                      </div>
+                      <div className="text-left">
+                        <h3 className="text-2xl font-display font-bold text-canine-navy">Closed Days</h3>
+                        <p className="text-sm text-gray-600">Manage dates when the business is closed</p>
+                      </div>
+                    </div>
+                    <ChevronDownIcon className={`h-6 w-6 text-red-500 transition-transform ${openSections.closedDays ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <div className={`transition-all duration-300 ${openSections.closedDays ? 'block' : 'hidden'}`}>
+                    {/* Add New Closed Day */}
+                    <div className="bg-white rounded-xl p-6 mb-6 border-2 border-red-200">
+                      <h4 className="text-lg font-semibold text-canine-navy mb-4 flex items-center gap-2">
+                        <PlusIcon className="h-5 w-5 text-red-500" />
+                        Add Closed Day
+                      </h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Date
+                          </label>
+                          <input
+                            type="date"
+                            value={newClosedDate}
+                            onChange={(e) => setNewClosedDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full px-4 py-3 rounded-xl border-2 border-red-300 focus:border-red-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Reason (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={newClosedReason}
+                            onChange={(e) => setNewClosedReason(e.target.value)}
+                            placeholder="e.g., Christmas Day, Staff Training"
+                            className="w-full px-4 py-3 rounded-xl border-2 border-red-300 focus:border-red-500 outline-none"
+                          />
+                        </div>
+                        <button
+                          onClick={handleAddClosedDay}
+                          disabled={!newClosedDate || addingClosedDay}
+                          className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                        >
+                          {addingClosedDay ? 'Adding...' : 'Add Closed Day'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Existing Closed Days List */}
+                    <div className="bg-white rounded-xl p-6 border-2 border-red-200">
+                      <h4 className="text-lg font-semibold text-canine-navy mb-4">Upcoming Closed Days ({closedDays.length})</h4>
+
+                      {closedDays.length === 0 ? (
+                        <div className="text-center py-8">
+                          <CalendarIcon className="h-16 w-16 text-gray-300 mx-auto mb-3" />
+                          <p className="text-gray-500">No closed days scheduled. Add closed days above to prevent bookings on specific dates.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {closedDays.map((closedDay: any) => (
+                            <div
+                              key={closedDay.id}
+                              className="flex items-center justify-between p-4 bg-red-50 rounded-xl border border-red-200"
+                            >
+                              <div className="flex items-center gap-3">
+                                <CalendarIcon className="h-5 w-5 text-red-600" />
+                                <div>
+                                  <p className="font-semibold text-gray-900">
+                                    {new Date(closedDay.closed_date).toLocaleDateString('en-GB', {
+                                      weekday: 'long',
+                                      year: 'numeric',
+                                      month: 'long',
+                                      day: 'numeric'
+                                    })}
+                                  </p>
+                                  {closedDay.reason && (
+                                    <p className="text-sm text-gray-600">{closedDay.reason}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteClosedDay(closedDay.id)}
+                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all text-sm font-semibold"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-red-50 rounded-xl p-4 border border-red-200 mt-4">
+                      <div className="flex items-start gap-3">
+                        <ExclamationCircleIcon className="h-5 w-5 text-red-600 mt-0.5" />
+                        <div className="text-sm text-red-900">
+                          <p className="font-semibold mb-1">Closed Days Information</p>
+                          <p>Dates marked as closed will be automatically blocked on all booking pages (assessments, subscriptions, individual days). Users will not be able to select or book these dates.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

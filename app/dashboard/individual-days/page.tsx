@@ -47,6 +47,7 @@ function IndividualDaysContent() {
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
   const [loading, setLoading] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(false)
+  const [closedDays, setClosedDays] = useState<Set<string>>(new Set())
 
   // Discount code state
   const [discountCode, setDiscountCode] = useState('')
@@ -74,6 +75,7 @@ function IndividualDaysContent() {
     loadUserAndDogs()
     loadSettings()
     loadBookings()
+    loadClosedDays()
 
     // Handle payment success/cancel
     const success = searchParams.get('success')
@@ -128,6 +130,24 @@ function IndividualDaysContent() {
       }
     } catch (error) {
       console.error('Error loading settings:', error)
+    }
+  }
+
+  const loadClosedDays = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const { data, error } = await supabase
+        .from('closed_days')
+        .select('closed_date')
+        .gte('closed_date', today)
+
+      if (error) throw error
+      if (data) {
+        const closedDatesSet = new Set(data.map(d => d.closed_date))
+        setClosedDays(closedDatesSet)
+      }
+    } catch (error) {
+      console.error('Error loading closed days:', error)
     }
   }
 
@@ -430,7 +450,8 @@ function IndividualDaysContent() {
                     const isSelected = selectedDates.includes(dateStr)
                     const isBooked = isDateBooked(dateStr)
                     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0))
-                    const isAvailable = availability?.is_available && !isBooked && !isPast
+                    const isClosed = closedDays.has(dateStr)
+                    const isAvailable = availability?.is_available && !isBooked && !isPast && !isClosed
 
                     return (
                       <button
@@ -441,13 +462,16 @@ function IndividualDaysContent() {
                           p-2 rounded-lg text-sm transition-all
                           ${isSelected ? 'bg-canine-gold text-white font-semibold' : ''}
                           ${!isSelected && isAvailable ? 'bg-gray-100 hover:bg-canine-sky text-gray-700' : ''}
-                          ${!isAvailable ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
+                          ${isClosed ? 'bg-red-100 text-red-600 cursor-not-allowed' : ''}
+                          ${!isAvailable && !isClosed ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
                           ${isBooked ? 'bg-blue-100 text-blue-600' : ''}
                         `}
                       >
                         <div className="text-xs">{date.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
                         <div className="font-semibold">{date.getDate()}</div>
-                        {availability && (
+                        {isClosed ? (
+                          <div className="text-xs mt-1">✗</div>
+                        ) : availability && (
                           <div className="text-xs mt-1">
                             {isBooked ? '✓' : availability.available_spots > 0 ? availability.available_spots : '✗'}
                           </div>
@@ -457,7 +481,7 @@ function IndividualDaysContent() {
                   })}
                 </div>
 
-                <div className="mt-6 flex gap-4 text-sm">
+                <div className="mt-6 flex flex-wrap gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-canine-gold rounded"></div>
                     <span>Selected</span>
@@ -473,6 +497,10 @@ function IndividualDaysContent() {
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 bg-blue-100 rounded"></div>
                     <span>Booked</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-red-100 rounded"></div>
+                    <span>Closed</span>
                   </div>
                 </div>
               </motion.div>
