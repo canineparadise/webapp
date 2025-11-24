@@ -144,50 +144,43 @@ CREATE OR REPLACE FUNCTION check_daily_capacity(
 RETURNS JSON AS $$
 DECLARE
   v_capacity INTEGER;
-  v_current_bookings INTEGER;
+  v_subscription_bookings INTEGER;
+  v_individual_bookings INTEGER;
+  v_total_bookings INTEGER;
   v_available INTEGER;
-  v_size_category TEXT;
 BEGIN
-  -- Determine size category (small dogs separate, medium/large together)
-  IF p_dog_size = 'small' THEN
-    v_size_category := 'small';
+  -- Get unified daily dog limit
+  SELECT COALESCE(setting_value::INTEGER, 50)
+  INTO v_capacity
+  FROM admin_settings
+  WHERE setting_key = 'daily_dog_limit';
 
-    -- Get small dog capacity
-    SELECT COALESCE(setting_value::INTEGER, 20)
-    INTO v_capacity
-    FROM admin_settings
-    WHERE setting_key = 'daily_capacity_small';
-
-  ELSE
-    v_size_category := 'large'; -- medium and large together
-
-    -- Get large/medium dog capacity
-    SELECT COALESCE(setting_value::INTEGER, 30)
-    INTO v_capacity
-    FROM admin_settings
-    WHERE setting_key = 'daily_capacity_large';
-  END IF;
-
-  -- Count current confirmed bookings for this date and size
+  -- Count subscription bookings for this date (confirmed or checked_in)
   SELECT COUNT(*)
-  INTO v_current_bookings
+  INTO v_subscription_bookings
+  FROM bookings
+  WHERE booking_date = p_date
+    AND status IN ('confirmed', 'checked_in', 'checked_out');
+
+  -- Count individual day bookings for this date (confirmed only)
+  SELECT COUNT(*)
+  INTO v_individual_bookings
   FROM individual_day_bookings
   WHERE booking_date = p_date
-    AND status = 'confirmed'
-    AND (
-      (v_size_category = 'small' AND dog_size = 'small')
-      OR
-      (v_size_category = 'large' AND dog_size IN ('medium', 'large'))
-    );
+    AND status = 'confirmed';
+
+  -- Calculate total bookings
+  v_total_bookings := v_subscription_bookings + v_individual_bookings;
 
   -- Calculate available spots
-  v_available := v_capacity - v_current_bookings;
+  v_available := v_capacity - v_total_bookings;
 
   RETURN json_build_object(
     'date', p_date,
-    'size_category', v_size_category,
     'total_capacity', v_capacity,
-    'current_bookings', v_current_bookings,
+    'subscription_bookings', v_subscription_bookings,
+    'individual_bookings', v_individual_bookings,
+    'current_bookings', v_total_bookings,
     'available_spots', v_available,
     'is_available', v_available > 0
   );

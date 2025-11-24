@@ -80,6 +80,29 @@
 
 **Location:** Business Settings → Section 2.25: Pricing & Capacity Management
 
+#### 8. Database Function: check_daily_capacity
+**File:** `supabase/ADD-INDIVIDUAL-DAY-BOOKING-SYSTEM.sql`
+
+**Changes:**
+- Updated `check_daily_capacity` SQL function to use unified capacity approach
+- **CRITICAL CHANGE:** Now enforces single `daily_dog_limit` across ALL dogs
+- Counts BOTH subscription bookings AND individual day bookings together
+- No longer separates by dog size (small/medium/large)
+- Query changes:
+  - Reads `daily_dog_limit` setting (default 50) instead of `daily_capacity_small`/`daily_capacity_large`
+  - Counts from `bookings` table (subscriptions) with status IN ('confirmed', 'checked_in', 'checked_out')
+  - Counts from `individual_day_bookings` table with status = 'confirmed'
+  - Returns total combined count
+- Returns JSON with:
+  - `total_capacity`: The daily dog limit (e.g., 50)
+  - `subscription_bookings`: Count of subscription dogs
+  - `individual_bookings`: Count of individual day dogs
+  - `current_bookings`: Total dogs (subscription + individual)
+  - `available_spots`: Remaining capacity
+  - `is_available`: Boolean (true if spots available)
+
+**Impact:** This is the enforcement mechanism that prevents exceeding 50 dogs per day!
+
 ---
 
 ## Git Commits Made
@@ -91,6 +114,7 @@
 5. **Fixed check_in_time errors** - Removed non-existent properties (commits 99e2ac0, 89426f0)
 6. **Fixed booking_type errors** - Removed non-existent property references (commit da1f9c1)
 7. **Replace capacity fields with Daily Dog Limit** - Single unified capacity field (commit ce57f96)
+8. **Update check_daily_capacity SQL function** - Enforce unified 50 dog limit across subscriptions + individual bookings
 
 ---
 
@@ -145,6 +169,7 @@
 
 ## Deployment Commands
 
+### Frontend Deployment
 ```bash
 # Verify all changes are committed
 git status
@@ -154,6 +179,71 @@ git push origin main
 
 # Monitor deployment at:
 # https://vercel.com/dashboard
+```
+
+### Database Deployment (CRITICAL - MUST BE DONE FIRST!)
+**⚠️ IMPORTANT: Run this SQL in Supabase BEFORE deploying frontend changes!**
+
+The updated `check_daily_capacity` function must be deployed to the database first, otherwise the capacity checking will not work correctly with the new `daily_dog_limit` setting.
+
+**Steps:**
+1. Open Supabase Dashboard → SQL Editor
+2. Copy the updated function from `supabase/ADD-INDIVIDUAL-DAY-BOOKING-SYSTEM.sql` (lines 140-188)
+3. Run the SQL to replace the existing function
+4. Verify it works by testing: `SELECT check_daily_capacity('2025-11-25', 'medium');`
+5. Then deploy the frontend changes
+
+**SQL to run:**
+```sql
+CREATE OR REPLACE FUNCTION check_daily_capacity(
+  p_date DATE,
+  p_dog_size TEXT
+)
+RETURNS JSON AS $$
+DECLARE
+  v_capacity INTEGER;
+  v_subscription_bookings INTEGER;
+  v_individual_bookings INTEGER;
+  v_total_bookings INTEGER;
+  v_available INTEGER;
+BEGIN
+  -- Get unified daily dog limit
+  SELECT COALESCE(setting_value::INTEGER, 50)
+  INTO v_capacity
+  FROM admin_settings
+  WHERE setting_key = 'daily_dog_limit';
+
+  -- Count subscription bookings for this date (confirmed or checked_in)
+  SELECT COUNT(*)
+  INTO v_subscription_bookings
+  FROM bookings
+  WHERE booking_date = p_date
+    AND status IN ('confirmed', 'checked_in', 'checked_out');
+
+  -- Count individual day bookings for this date (confirmed only)
+  SELECT COUNT(*)
+  INTO v_individual_bookings
+  FROM individual_day_bookings
+  WHERE booking_date = p_date
+    AND status = 'confirmed';
+
+  -- Calculate total bookings
+  v_total_bookings := v_subscription_bookings + v_individual_bookings;
+
+  -- Calculate available spots
+  v_available := v_capacity - v_total_bookings;
+
+  RETURN json_build_object(
+    'date', p_date,
+    'total_capacity', v_capacity,
+    'subscription_bookings', v_subscription_bookings,
+    'individual_bookings', v_individual_bookings,
+    'current_bookings', v_total_bookings,
+    'available_spots', v_available,
+    'is_available', v_available > 0
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ---
