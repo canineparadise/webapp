@@ -14,6 +14,7 @@ import {
   XCircleIcon,
   SparklesIcon,
   CurrencyPoundIcon,
+  TicketIcon,
 } from '@heroicons/react/24/outline'
 
 interface AssessmentSlot {
@@ -44,6 +45,11 @@ export default function BookAssessmentSlot() {
   const [selectedDogs, setSelectedDogs] = useState<string[]>([])
   const [existingBooking, setExistingBooking] = useState<any>(null)
   const [assessmentFee, setAssessmentFee] = useState<number>(40) // Default to £40, fetched from database
+
+  // Discount code state
+  const [discountCode, setDiscountCode] = useState('')
+  const [appliedDiscount, setAppliedDiscount] = useState<any>(null)
+  const [validatingCode, setValidatingCode] = useState(false)
 
   useEffect(() => {
     init()
@@ -178,6 +184,67 @@ export default function BookAssessmentSlot() {
     }
   }
 
+  const handleValidateDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      toast.error('Please enter a discount code')
+      return
+    }
+
+    setValidatingCode(true)
+    try {
+      const totalAmount = assessmentFee * selectedDogs.length
+
+      const { data, error } = await supabase
+        .rpc('validate_discount_code', {
+          p_code: discountCode.toUpperCase(),
+          p_user_id: user.id,
+          p_applies_to: 'assessment',
+          p_amount: totalAmount
+        })
+
+      if (error) throw error
+
+      const result = data[0]
+      if (!result.is_valid) {
+        toast.error(result.error_message || 'Invalid discount code')
+        setAppliedDiscount(null)
+        return
+      }
+
+      // Calculate discount amount
+      const { data: discountData } = await supabase
+        .rpc('calculate_discount_amount', {
+          p_original_amount: totalAmount,
+          p_discount_type: result.discount_type,
+          p_discount_value: result.discount_value
+        })
+
+      setAppliedDiscount({
+        code: discountCode.toUpperCase(),
+        discountCodeId: result.discount_code_id,
+        type: result.discount_type,
+        value: result.discount_value,
+        discountAmount: discountData,
+      })
+
+      toast.success(`Discount code applied! -£${discountData.toFixed(2)}`)
+    } catch (error: any) {
+      console.error('Error validating discount code:', error)
+      toast.error(error.message || 'Failed to validate discount code')
+      setAppliedDiscount(null)
+    } finally {
+      setValidatingCode(false)
+    }
+  }
+
+  const calculateTotalPrice = () => {
+    const baseTotal = assessmentFee * selectedDogs.length
+    if (appliedDiscount) {
+      return baseTotal - appliedDiscount.discountAmount
+    }
+    return baseTotal
+  }
+
   const handleBookSlot = async () => {
     if (!selectedSlot) {
       toast.error('Please select a time slot')
@@ -206,7 +273,10 @@ export default function BookAssessmentSlot() {
         return
       }
 
-      // Create Stripe checkout session for £40 assessment payment
+      // Create Stripe checkout session for assessment payment
+      const totalAmount = assessmentFee * selectedDogs.length
+      const finalAmount = calculateTotalPrice()
+
       const response = await fetch('/api/create-assessment-checkout', {
         method: 'POST',
         headers: {
@@ -216,6 +286,11 @@ export default function BookAssessmentSlot() {
           userId: user.id,
           slotId: selectedSlot,
           dogIds: selectedDogs,
+          discountCode: appliedDiscount?.code || null,
+          discountCodeId: appliedDiscount?.discountCodeId || null,
+          totalAmount,
+          discountAmount: appliedDiscount?.discountAmount || 0,
+          finalAmount,
         }),
       })
 
@@ -378,11 +453,93 @@ export default function BookAssessmentSlot() {
           </div>
         </motion.div>
 
+        {/* Discount Code Section */}
+        {selectedDogs.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-2xl shadow-2xl p-8 mb-8"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <TicketIcon className="h-6 w-6 text-canine-gold" />
+              <h2 className="text-2xl font-display font-bold text-canine-navy">
+                Discount Code
+              </h2>
+            </div>
+
+            <div className="flex gap-4">
+              <input
+                type="text"
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                placeholder="Enter discount code"
+                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-canine-gold focus:outline-none"
+              />
+              <button
+                onClick={handleValidateDiscountCode}
+                disabled={validatingCode || !discountCode.trim()}
+                className="px-6 py-3 bg-canine-gold text-white rounded-xl hover:bg-canine-light-gold transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {validatingCode ? 'Validating...' : 'Apply'}
+              </button>
+            </div>
+
+            {appliedDiscount && (
+              <div className="mt-4 p-4 bg-green-50 border-2 border-green-300 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                  <div>
+                    <p className="font-bold text-green-900">Code Applied: {appliedDiscount.code}</p>
+                    <p className="text-sm text-green-700">
+                      {appliedDiscount.type === 'percentage'
+                        ? `${appliedDiscount.value}% off`
+                        : `£${appliedDiscount.value} off`}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setAppliedDiscount(null)
+                    setDiscountCode('')
+                    toast.success('Discount code removed')
+                  }}
+                  className="text-red-600 hover:text-red-800 font-semibold"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+
+            {/* Price Breakdown */}
+            {selectedDogs.length > 0 && (
+              <div className="mt-6 pt-6 border-t-2 border-gray-100">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-gray-700">
+                    <span>Assessment Fee ({selectedDogs.length} dog{selectedDogs.length > 1 ? 's' : ''})</span>
+                    <span>£{(assessmentFee * selectedDogs.length).toFixed(2)}</span>
+                  </div>
+                  {appliedDiscount && (
+                    <div className="flex justify-between text-green-600 font-semibold">
+                      <span>Discount</span>
+                      <span>-£{appliedDiscount.discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-xl font-bold text-canine-navy pt-2 border-t-2 border-gray-200">
+                    <span>Total</span>
+                    <span>£{calculateTotalPrice().toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Available Slots */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
           className="bg-white rounded-2xl shadow-2xl p-8"
         >
           <h2 className="text-2xl font-display font-bold text-canine-navy mb-6">
@@ -456,7 +613,7 @@ export default function BookAssessmentSlot() {
                 ) : (
                   <>
                     <SparklesIcon className="h-6 w-6" />
-                    <span>Proceed to Payment (£{assessmentFee})</span>
+                    <span>Proceed to Payment (£{calculateTotalPrice().toFixed(2)})</span>
                   </>
                 )}
               </button>
