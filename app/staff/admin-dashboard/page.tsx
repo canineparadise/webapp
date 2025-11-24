@@ -3022,7 +3022,7 @@ export default function AdminDashboard() {
 
                           {/* Action Buttons */}
                           <div className="flex gap-2">
-                            {!(booking.checked_in_at || booking.check_in_time) && (
+                            {!booking.checked_in_at && (
                               <button
                                 onClick={() => handleCheckInOut(booking.id, booking.booking_type || 'subscription', 'check_in')}
                                 className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors"
@@ -3030,7 +3030,7 @@ export default function AdminDashboard() {
                                 Check In
                               </button>
                             )}
-                            {(booking.checked_in_at || booking.check_in_time) && !(booking.checked_out_at || booking.check_out_time) && (
+                            {booking.checked_in_at && !booking.checked_out_at && (
                               <button
                                 onClick={() => handleCheckInOut(booking.id, booking.booking_type || 'subscription', 'check_out')}
                                 className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
