@@ -30,9 +30,6 @@ export default function Navbar() {
             <Link href="/about" className="text-canine-navy hover:text-canine-gold transition-colors font-medium">
               About Us
             </Link>
-            <Link href="/team" className="text-canine-navy hover:text-canine-gold transition-colors font-medium">
-              Meet the Team
-            </Link>
             <Link href="/contact" className="text-canine-navy hover:text-canine-gold transition-colors font-medium">
               Contact Us
             </Link>
@@ -80,13 +77,6 @@ export default function Navbar() {
                 onClick={() => setIsOpen(false)}
               >
                 About Us
-              </Link>
-              <Link
-                href="/team"
-                className="block text-canine-navy hover:text-canine-gold transition-colors font-medium"
-                onClick={() => setIsOpen(false)}
-              >
-                Meet the Team
               </Link>
               <Link
                 href="/contact"
