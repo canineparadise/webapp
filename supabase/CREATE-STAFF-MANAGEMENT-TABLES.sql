@@ -119,7 +119,7 @@ CREATE POLICY "Admins can delete tasks"
     )
   );
 
--- Update timestamp trigger function
+-- Update timestamp trigger function (if not already exists)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -128,15 +128,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Add triggers
-DROP TRIGGER IF EXISTS update_staff_assignments_updated_at ON staff_assignments;
-CREATE TRIGGER update_staff_assignments_updated_at
-  BEFORE UPDATE ON staff_assignments
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+-- Add triggers (only if tables exist)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staff_assignments') THEN
+    DROP TRIGGER IF EXISTS update_staff_assignments_updated_at ON staff_assignments;
+    CREATE TRIGGER update_staff_assignments_updated_at
+      BEFORE UPDATE ON staff_assignments
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
 
-DROP TRIGGER IF EXISTS update_staff_tasks_updated_at ON staff_tasks;
-CREATE TRIGGER update_staff_tasks_updated_at
-  BEFORE UPDATE ON staff_tasks
-  FOR EACH ROW
-  EXECUTE FUNCTION update_updated_at_column();
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staff_tasks') THEN
+    DROP TRIGGER IF EXISTS update_staff_tasks_updated_at ON staff_tasks;
+    CREATE TRIGGER update_staff_tasks_updated_at
+      BEFORE UPDATE ON staff_tasks
+      FOR EACH ROW
+      EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
