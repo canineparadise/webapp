@@ -15,6 +15,7 @@ import {
   ExclamationTriangleIcon,
   SparklesIcon,
   CurrencyPoundIcon,
+  TicketIcon,
 } from '@heroicons/react/24/outline'
 import { CalendarDaysIcon as CalendarSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid'
 
@@ -30,6 +31,11 @@ export default function ScheduleAssessment() {
   const [existingAssessment, setExistingAssessment] = useState<any>(null)
   const [assessmentFee, setAssessmentFee] = useState<number>(40) // Default to £40, fetched from database
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
+
+  // Discount code state
+  const [discountCode, setDiscountCode] = useState('')
+  const [appliedDiscount, setAppliedDiscount] = useState<any>(null)
+  const [validatingCode, setValidatingCode] = useState(false)
 
   useEffect(() => {
     init()
@@ -164,6 +170,64 @@ export default function ScheduleAssessment() {
     }
   }
 
+  const handleValidateDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      toast.error('Please enter a discount code')
+      return
+    }
+
+    setValidatingCode(true)
+
+    try {
+      // Validate the discount code
+      const { data: result, error } = await supabase
+        .rpc('validate_discount_code', {
+          p_code: discountCode.toUpperCase(),
+          p_purchase_type: 'assessment'
+        })
+
+      if (error) throw error
+
+      if (!result.is_valid) {
+        toast.error(result.error_message || 'Invalid discount code')
+        setAppliedDiscount(null)
+        return
+      }
+
+      // Calculate discount amount
+      const baseTotal = assessmentFee * selectedDogIds.length
+      const { data: discountData } = await supabase
+        .rpc('calculate_discount_amount', {
+          p_amount: baseTotal,
+          p_discount_type: result.discount_type,
+          p_discount_value: result.discount_value
+        })
+
+      setAppliedDiscount({
+        code: discountCode.toUpperCase(),
+        discountCodeId: result.discount_code_id,
+        type: result.discount_type,
+        value: result.discount_value,
+        discountAmount: discountData || 0
+      })
+
+      toast.success(`Code applied! £${discountData?.toFixed(2) || 0} discount`)
+    } catch (error: any) {
+      console.error('Error validating discount code:', error)
+      toast.error(error.message || 'Failed to validate discount code')
+    } finally {
+      setValidatingCode(false)
+    }
+  }
+
+  const calculateTotalPrice = () => {
+    const baseTotal = assessmentFee * selectedDogIds.length
+    if (appliedDiscount) {
+      return Math.max(0, baseTotal - appliedDiscount.discountAmount)
+    }
+    return baseTotal
+  }
+
   const handleBookAssessment = async () => {
     if (!selectedSlot) {
       toast.error('Please select an assessment time slot')
@@ -222,6 +286,8 @@ export default function ScheduleAssessment() {
           assessmentDate: slot.assessment_date,
           startTime: slot.start_time,
           endTime: slot.end_time,
+          discountCode: appliedDiscount?.code || null,
+          discountCodeId: appliedDiscount?.discountCodeId || null,
         }),
       })
 
@@ -629,6 +695,85 @@ export default function ScheduleAssessment() {
                     </div>
                   </div>
 
+                  {/* Discount Code Section */}
+                  <div className="mb-6 bg-white rounded-xl p-6 shadow-lg">
+                    <div className="flex items-center gap-2 mb-4">
+                      <TicketIcon className="h-6 w-6 text-canine-gold" />
+                      <h3 className="text-lg font-bold text-gray-900">Discount Code</h3>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={discountCode}
+                        onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                        placeholder="Enter discount code"
+                        className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-canine-gold focus:outline-none"
+                        disabled={appliedDiscount !== null}
+                      />
+                      {appliedDiscount ? (
+                        <button
+                          onClick={() => {
+                            setAppliedDiscount(null)
+                            setDiscountCode('')
+                            toast.success('Discount code removed')
+                          }}
+                          className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-bold"
+                        >
+                          Remove
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleValidateDiscountCode}
+                          disabled={validatingCode || !discountCode.trim()}
+                          className="px-6 py-3 bg-canine-gold text-white rounded-xl hover:bg-canine-light-gold transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {validatingCode ? 'Validating...' : 'Apply'}
+                        </button>
+                      )}
+                    </div>
+
+                    {appliedDiscount && (
+                      <div className="mt-4 p-4 bg-green-50 border-2 border-green-300 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircleIcon className="h-6 w-6 text-green-600" />
+                          <div>
+                            <p className="font-bold text-green-900">Code Applied: {appliedDiscount.code}</p>
+                            <p className="text-sm text-green-700">
+                              {appliedDiscount.type === 'percentage'
+                                ? `${appliedDiscount.value}% off`
+                                : `£${appliedDiscount.value} off`}
+                              {' - '}
+                              <strong>£{appliedDiscount.discountAmount.toFixed(2)} discount</strong>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Price Breakdown */}
+                    {selectedDogIds.length > 0 && (
+                      <div className="mt-4 pt-4 border-t-2 border-gray-100">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-gray-700">
+                            <span>Assessment Fee ({selectedDogIds.length} dog{selectedDogIds.length > 1 ? 's' : ''})</span>
+                            <span>£{(assessmentFee * selectedDogIds.length).toFixed(2)}</span>
+                          </div>
+                          {appliedDiscount && (
+                            <div className="flex justify-between text-green-600 font-semibold">
+                              <span>Discount</span>
+                              <span>-£{appliedDiscount.discountAmount.toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between text-xl font-bold text-canine-navy pt-2 border-t-2 border-gray-200">
+                            <span>Total</span>
+                            <span>£{calculateTotalPrice().toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Payment Method Selection */}
                   <div className="mb-6 bg-white rounded-xl p-6 shadow-lg">
                     <h3 className="text-lg font-bold text-gray-900 mb-4">Choose Payment Method</h3>
@@ -697,7 +842,7 @@ export default function ScheduleAssessment() {
                       ) : (
                         <>
                           <CheckCircleIcon className="h-6 w-6" />
-                          Proceed to Checkout (£{assessmentFee * selectedDogIds.length})
+                          Proceed to Checkout (£{calculateTotalPrice().toFixed(2)})
                         </>
                       )}
                     </span>
