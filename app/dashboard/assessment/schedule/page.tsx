@@ -179,11 +179,15 @@ export default function ScheduleAssessment() {
     setValidatingCode(true)
 
     try {
+      const baseTotal = assessmentFee * selectedDogIds.length
+
       // Validate the discount code
       const { data: result, error } = await supabase
         .rpc('validate_discount_code', {
           p_code: discountCode.toUpperCase(),
-          p_purchase_type: 'assessment'
+          p_user_id: user.id,
+          p_applies_to: 'assessment',
+          p_amount: baseTotal
         })
 
       if (error) throw error
@@ -195,10 +199,9 @@ export default function ScheduleAssessment() {
       }
 
       // Calculate discount amount
-      const baseTotal = assessmentFee * selectedDogIds.length
       const { data: discountData } = await supabase
         .rpc('calculate_discount_amount', {
-          p_amount: baseTotal,
+          p_original_amount: baseTotal,
           p_discount_type: result.discount_type,
           p_discount_value: result.discount_value
         })
