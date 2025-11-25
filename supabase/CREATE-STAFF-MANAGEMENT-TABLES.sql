@@ -1,5 +1,9 @@
+-- Drop existing tables if they exist (this will cascade to triggers)
+DROP TABLE IF EXISTS staff_tasks CASCADE;
+DROP TABLE IF EXISTS staff_assignments CASCADE;
+
 -- Staff Assignments Table
-CREATE TABLE IF NOT EXISTS staff_assignments (
+CREATE TABLE staff_assignments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   assignment_date DATE NOT NULL,
   staff_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -15,7 +19,7 @@ CREATE TABLE IF NOT EXISTS staff_assignments (
 );
 
 -- Staff Tasks Table
-CREATE TABLE IF NOT EXISTS staff_tasks (
+CREATE TABLE staff_tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_date DATE NOT NULL,
   assigned_to_staff_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -30,13 +34,13 @@ CREATE TABLE IF NOT EXISTS staff_tasks (
 );
 
 -- Indexes for better performance
-CREATE INDEX IF NOT EXISTS idx_staff_assignments_date ON staff_assignments(assignment_date);
-CREATE INDEX IF NOT EXISTS idx_staff_assignments_staff_id ON staff_assignments(staff_id);
-CREATE INDEX IF NOT EXISTS idx_staff_assignments_status ON staff_assignments(status);
+CREATE INDEX idx_staff_assignments_date ON staff_assignments(assignment_date);
+CREATE INDEX idx_staff_assignments_staff_id ON staff_assignments(staff_id);
+CREATE INDEX idx_staff_assignments_status ON staff_assignments(status);
 
-CREATE INDEX IF NOT EXISTS idx_staff_tasks_date ON staff_tasks(task_date);
-CREATE INDEX IF NOT EXISTS idx_staff_tasks_staff_id ON staff_tasks(assigned_to_staff_id);
-CREATE INDEX IF NOT EXISTS idx_staff_tasks_status ON staff_tasks(task_status);
+CREATE INDEX idx_staff_tasks_date ON staff_tasks(task_date);
+CREATE INDEX idx_staff_tasks_staff_id ON staff_tasks(assigned_to_staff_id);
+CREATE INDEX idx_staff_tasks_status ON staff_tasks(task_status);
 
 -- Enable Row Level Security
 ALTER TABLE staff_assignments ENABLE ROW LEVEL SECURITY;
@@ -129,14 +133,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Add triggers for staff_assignments
-DROP TRIGGER IF EXISTS update_staff_assignments_updated_at ON staff_assignments;
 CREATE TRIGGER update_staff_assignments_updated_at
   BEFORE UPDATE ON staff_assignments
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
 -- Add triggers for staff_tasks
-DROP TRIGGER IF EXISTS update_staff_tasks_updated_at ON staff_tasks;
 CREATE TRIGGER update_staff_tasks_updated_at
   BEFORE UPDATE ON staff_tasks
   FOR EACH ROW
