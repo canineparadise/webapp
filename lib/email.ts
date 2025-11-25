@@ -1,0 +1,282 @@
+import nodemailer from 'nodemailer'
+
+// Create reusable transporter
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: parseInt(process.env.EMAIL_PORT || '465'),
+  secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+})
+
+// Verify connection configuration
+export async function verifyEmailConnection() {
+  try {
+    await transporter.verify()
+    console.log('Email server is ready to send messages')
+    return true
+  } catch (error) {
+    console.error('Email server connection error:', error)
+    return false
+  }
+}
+
+interface EmailOptions {
+  to: string
+  subject: string
+  html: string
+  text?: string
+}
+
+export async function sendEmail({ to, subject, html, text }: EmailOptions) {
+  try {
+    const info = await transporter.sendMail({
+      from: `${process.env.EMAIL_FROM_NAME} <${process.env.EMAIL_FROM}>`,
+      to,
+      subject,
+      html,
+      text: text || html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+    })
+
+    console.log('Email sent:', info.messageId)
+    return { success: true, messageId: info.messageId }
+  } catch (error) {
+    console.error('Error sending email:', error)
+    return { success: false, error }
+  }
+}
+
+// Assessment confirmation email
+export async function sendAssessmentConfirmation({
+  userEmail,
+  userName,
+  dogNames,
+  assessmentDate,
+  startTime,
+  endTime,
+  amountPaid,
+}: {
+  userEmail: string
+  userName: string
+  dogNames: string[]
+  assessmentDate: string
+  startTime: string
+  endTime: string
+  amountPaid: number
+}) {
+  const formattedDate = new Date(assessmentDate).toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+
+  const dogsText = dogNames.length === 1
+    ? dogNames[0]
+    : dogNames.length === 2
+    ? `${dogNames[0]} and ${dogNames[1]}`
+    : `${dogNames.slice(0, -1).join(', ')}, and ${dogNames[dogNames.length - 1]}`
+
+  const subject = `Assessment Confirmed - ${formattedDate}`
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          .button { display: inline-block; background: #a68756; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+          h1 { margin: 0; font-size: 28px; }
+          h2 { color: #1a3a52; margin-top: 0; }
+          .highlight { color: #a68756; font-weight: bold; }
+          ul { padding-left: 20px; }
+          li { margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🐾 Assessment Confirmed!</h1>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>Great news! Your assessment booking has been confirmed and payment received.</p>
+
+            <div class="details-box">
+              <h2>📅 Assessment Details</h2>
+              <p><strong>Date:</strong> ${formattedDate}</p>
+              <p><strong>Time:</strong> ${startTime.slice(0, 5)} - ${endTime.slice(0, 5)}</p>
+              <p><strong>Dog${dogNames.length > 1 ? 's' : ''}:</strong> ${dogsText}</p>
+              <p><strong>Amount Paid:</strong> <span class="highlight">£${amountPaid.toFixed(2)}</span></p>
+            </div>
+
+            <h2>What to Bring</h2>
+            <ul>
+              <li>Your dog's vaccination records (if not already provided)</li>
+              <li>Any medication your dog requires</li>
+              <li>Your dog's favourite treats (optional)</li>
+              <li>A positive attitude! 🐕</li>
+            </ul>
+
+            <h2>What Happens Next?</h2>
+            <p>We'll send you a reminder 12 hours before your assessment. During the assessment, we'll:</p>
+            <ul>
+              <li>Get to know your dog's personality and behavior</li>
+              <li>Introduce them to our facilities and staff</li>
+              <li>Assess their compatibility with our daycare environment</li>
+              <li>Answer any questions you may have</li>
+            </ul>
+
+            <p>After a successful assessment, you'll be able to book daycare sessions and subscriptions through your client portal.</p>
+
+            <p><strong>Our Address:</strong><br>
+            Aldenham Doggy Day Care<br>
+            [Your Full Address Here]</p>
+
+            <p>If you have any questions or need to reschedule, please contact us at admin@aldenhamdoggydaycare.com or call [Your Phone Number].</p>
+
+            <p>We can't wait to meet ${dogsText}! 🐾</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>This is an automated confirmation email from Aldenham Doggy Day Care.</p>
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}
+
+// Subscription confirmation email
+export async function sendSubscriptionConfirmation({
+  userEmail,
+  userName,
+  subscriptions,
+  totalAmount,
+  nextBillingDate,
+}: {
+  userEmail: string
+  userName: string
+  subscriptions: Array<{
+    dogName: string
+    tierName: string
+    daysPerMonth: number
+    pricePerMonth: number
+  }>
+  totalAmount: number
+  nextBillingDate: string
+}) {
+  const subject = 'Subscription Activated - Welcome to Aldenham Doggy Day Care!'
+
+  const subscriptionRows = subscriptions.map(sub => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;"><strong>${sub.dogName}</strong></td>
+      <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${sub.tierName}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">${sub.daysPerMonth} days</td>
+      <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: right;">£${sub.pricePerMonth.toFixed(2)}/month</td>
+    </tr>
+  `).join('')
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          h1 { margin: 0; font-size: 28px; }
+          h2 { color: #1a3a52; margin-top: 0; }
+          .highlight { color: #a68756; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 Welcome to the Pack!</h1>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>Congratulations! Your subscription has been activated. We're thrilled to welcome you and your furry friend(s) to Aldenham Doggy Day Care!</p>
+
+            <div class="details-box">
+              <h2>📋 Subscription Summary</h2>
+              <table>
+                <thead>
+                  <tr style="background: #f0f0f0;">
+                    <th style="padding: 10px; text-align: left;">Dog</th>
+                    <th style="padding: 10px; text-align: left;">Tier</th>
+                    <th style="padding: 10px; text-align: left;">Days</th>
+                    <th style="padding: 10px; text-align: right;">Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${subscriptionRows}
+                </tbody>
+                <tfoot>
+                  <tr style="background: #f5f2e8; font-weight: bold;">
+                    <td colspan="3" style="padding: 15px;">Total Monthly Cost</td>
+                    <td style="padding: 15px; text-align: right;"><span class="highlight">£${totalAmount.toFixed(2)}</span></td>
+                  </tr>
+                </tfoot>
+              </table>
+              <p><strong>Next Billing Date:</strong> ${new Date(nextBillingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            </div>
+
+            <h2>How to Book Your Days</h2>
+            <ol>
+              <li>Log into your client portal</li>
+              <li>Navigate to "Book Days"</li>
+              <li>Select available dates for your subscription days</li>
+              <li>Confirm your bookings</li>
+            </ol>
+
+            <p><strong>Important:</strong> You have ${subscriptions.reduce((sum, sub) => sum + sub.daysPerMonth, 0)} days per month across all subscriptions. Make sure to book them before the end of each month!</p>
+
+            <p>If you have any questions, please don't hesitate to contact us at admin@aldenhamdoggydaycare.com</p>
+
+            <p>Looking forward to seeing your dog(s) soon! 🐾</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}
