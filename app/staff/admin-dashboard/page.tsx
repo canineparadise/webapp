@@ -4100,13 +4100,10 @@ export default function AdminDashboard() {
                       // Find legal agreement for this user
                       const agreement = legalAgreements.find(a => a.user_id === user.id)
 
-                      // Check if all waivers are signed
+                      // Check if essential waivers are signed (terms and injury waiver are required)
                       const allWaiversSigned = agreement ? (
                         agreement.terms_agreed &&
-                        agreement.injury_waiver_agreed &&
-                        agreement.photo_permission_agreed &&
-                        agreement.recurring_billing_agreed &&
-                        agreement.password_policy_agreed
+                        agreement.injury_waiver_agreed
                       ) : false
 
                       // Find ALL user's dogs (not just approved ones) for compliance check
@@ -4118,8 +4115,9 @@ export default function AdminDashboard() {
                       // Check if ALL dogs are vaccinated
                       const allVaccinated = userDogs.length > 0 && userDogs.every(dog => dog.vaccinated === true)
 
-                      // Check if ANY dog has completed assessment (check both assessment_completed and assessment_date)
-                      const hasAssessment = userDogs.some(dog => dog.assessment_completed === true || (dog.assessment_date && dog.assessment_date !== null))
+                      // Check if ANY dog has COMPLETED assessment (only check assessment_completed, NOT assessment_date)
+                      // assessment_date just means it's booked, not completed
+                      const hasAssessment = userDogs.some(dog => dog.assessment_completed === true)
 
                       // Check subscription status
                       const hasActiveSubscription = user.subscription_status && user.subscription_status !== 'None'
@@ -4430,13 +4428,6 @@ export default function AdminDashboard() {
                     <PlusCircleIcon className="h-6 w-6" />
                     <span className="font-semibold">Create Staff Task</span>
                   </button>
-                  <Link
-                    href="/staff/admin-dashboard/discount-codes"
-                    className="flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-4 rounded-xl hover:shadow-lg transition-all"
-                  >
-                    <TicketIcon className="h-6 w-6" />
-                    <span className="font-semibold">Manage Discount Codes</span>
-                  </Link>
                 </div>
               </div>
 
