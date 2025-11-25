@@ -100,6 +100,22 @@ export default function SignUp() {
 
       if (authError) throw authError;
 
+      // Send welcome email
+      if (authData.user) {
+        try {
+          await fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: authData.user.id,
+            }),
+          })
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError)
+          // Don't fail signup if email fails
+        }
+      }
+
       setEmailSent(true);
       toast.success(
         "Success! Please check your email to confirm your account.",

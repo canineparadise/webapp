@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { CheckCircleIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,67 @@ function SuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [countdown, setCountdown] = useState(5)
+  const [emailSent, setEmailSent] = useState(false)
+
+  useEffect(() => {
+    const sendConfirmationEmail = async () => {
+      const sessionId = searchParams.get('session_id')
+      if (!sessionId || emailSent) return
+
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) return
+
+        // Get user's active subscriptions (just created)
+        const { data: subscriptions } = await supabase
+          .from('subscriptions')
+          .select(`
+            *,
+            dogs:dog_id (
+              id,
+              name
+            ),
+            subscription_tiers:tier_id (
+              name,
+              days_per_week,
+              price_per_month
+            )
+          `)
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(5) // Get recently created subscriptions
+
+        if (!subscriptions || subscriptions.length === 0) return
+
+        // Calculate total amount
+        const totalAmount = subscriptions.reduce((sum, sub) => sum + parseFloat(sub.monthly_price), 0)
+
+        // Get subscription IDs
+        const subscriptionIds = subscriptions.map(sub => sub.id)
+
+        // Send confirmation email
+        await fetch('/api/send-subscription-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            subscriptionIds,
+            totalAmount,
+          }),
+        })
+
+        setEmailSent(true)
+      } catch (error) {
+        console.error('Failed to send confirmation email:', error)
+        // Don't fail the success page if email fails
+      }
+    }
+
+    sendConfirmationEmail()
+  }, [searchParams, emailSent])
 
   useEffect(() => {
     const timer = setInterval(() => {

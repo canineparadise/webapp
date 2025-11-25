@@ -2673,8 +2673,8 @@ export default function AdminDashboard() {
                                   : 'text-white hover:bg-white/20'
                               }`}
                             >
-                              <item.icon className="h-5 w-5" />
-                              <span>{item.name}</span>
+                              <item.icon className="h-5 w-5 flex-shrink-0" />
+                              <span className="text-left">{item.name}</span>
                               {'badge' in item && item.badge !== undefined && item.badge > 0 && (
                                 <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
                                   {item.badge}
