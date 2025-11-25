@@ -280,3 +280,179 @@ export async function sendSubscriptionConfirmation({
     html,
   })
 }
+
+// Individual day booking confirmation email
+export async function sendIndividualDayConfirmation({
+  userEmail,
+  userName,
+  dogName,
+  bookingDates,
+  totalAmount,
+}: {
+  userEmail: string
+  userName: string
+  dogName: string
+  bookingDates: string[]
+  totalAmount: number
+}) {
+  const subject = 'Day Booking Confirmed - See You Soon!'
+
+  const datesList = bookingDates.map(date => {
+    const formatted = new Date(date).toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+    return `<li style="margin: 8px 0;">${formatted}</li>`
+  }).join('')
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          h1 { margin: 0; font-size: 28px; }
+          h2 { color: #1a3a52; }
+          .highlight { color: #a68756; font-weight: bold; }
+          ul { padding-left: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 Booking Confirmed!</h1>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>Great news! Your daycare booking for <strong>${dogName}</strong> has been confirmed.</p>
+
+            <div class="details-box">
+              <h2>📅 Booked Dates</h2>
+              <ul style="list-style: none; padding: 0;">
+                ${datesList}
+              </ul>
+              <p style="margin-top: 15px;"><strong>Total Paid:</strong> <span class="highlight">£${totalAmount.toFixed(2)}</span></p>
+            </div>
+
+            <h2>What to Remember</h2>
+            <ul>
+              <li>Drop-off: 7:00 AM - 10:00 AM</li>
+              <li>Pick-up: 3:00 PM - 7:00 PM</li>
+              <li>Bring any required medication</li>
+              <li>Make sure ${dogName} has had breakfast before drop-off</li>
+            </ul>
+
+            <p>We're excited to see ${dogName}! If you need to make any changes to your booking, please contact us as soon as possible.</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}
+
+// Welcome email for new users
+export async function sendWelcomeEmail({
+  userEmail,
+  userName,
+}: {
+  userEmail: string
+  userName: string
+}) {
+  const subject = 'Welcome to Aldenham Doggy Day Care! 🐾'
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          h1 { margin: 0; font-size: 28px; }
+          h2 { color: #1a3a52; }
+          .cta-button { display: inline-block; background: #a68756; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+          ul { padding-left: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Welcome to the Pack! 🐕</h1>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>Thank you for choosing Aldenham Doggy Day Care! We're thrilled to have you and your furry friend(s) join our community.</p>
+
+            <h2>Getting Started</h2>
+            <p>Here's what to do next:</p>
+
+            <ol>
+              <li><strong>Add Your Dog(s)</strong> - Log into your portal and add your dog's details, including photos and vaccination records</li>
+              <li><strong>Book an Assessment</strong> - All new dogs need an assessment day before joining regular daycare</li>
+              <li><strong>Choose Your Plan</strong> - After a successful assessment, select from our flexible subscription tiers or book individual days</li>
+            </ol>
+
+            <div class="details-box">
+              <h2>What We Offer</h2>
+              <ul>
+                <li>🏃 Supervised play sessions</li>
+                <li>🌳 Outdoor and indoor activities</li>
+                <li>💼 Flexible subscription tiers (1-5 days/week)</li>
+                <li>📸 Regular photo updates</li>
+                <li>👨‍⚕️ Experienced and caring staff</li>
+              </ul>
+            </div>
+
+            <p style="text-align: center;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL}/dashboard" class="cta-button">Go to Your Dashboard</a>
+            </p>
+
+            <p>If you have any questions, don't hesitate to reach out to us at admin@aldenhamdoggydaycare.com or call us directly.</p>
+
+            <p>We can't wait to meet your four-legged family member!</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}
