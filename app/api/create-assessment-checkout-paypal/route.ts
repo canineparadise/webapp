@@ -90,9 +90,9 @@ export async function POST(request: NextRequest) {
       : `Dog Assessment for ${dogCount} dogs - ${dateDisplay}`
 
     // Calculate order amount: use provided finalAmount if discount applied, otherwise calculate from assessmentFee
-    const orderAmount = finalAmount
+    const orderAmount = (finalAmount !== undefined && finalAmount !== null)
       ? finalAmount.toFixed(2)
-      : totalAmount
+      : (totalAmount !== undefined && totalAmount !== null)
         ? totalAmount.toFixed(2)
         : (assessmentFee * dogCount).toFixed(2)
 

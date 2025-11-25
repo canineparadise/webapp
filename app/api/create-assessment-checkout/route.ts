@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate amount to charge
     const calculatedTotal = assessmentFee * dogCount
-    const amountToCharge = finalAmount || calculatedTotal
+    const amountToCharge = finalAmount !== undefined && finalAmount !== null ? finalAmount : calculatedTotal
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
