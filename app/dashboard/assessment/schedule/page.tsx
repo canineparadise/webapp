@@ -279,6 +279,9 @@ export default function ScheduleAssessment() {
         ? '/api/create-assessment-checkout'
         : '/api/create-assessment-checkout-paypal'
 
+      const baseTotal = assessmentFee * selectedDogIds.length
+      const finalTotal = calculateTotalPrice()
+
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -293,6 +296,9 @@ export default function ScheduleAssessment() {
           endTime: slot.end_time,
           discountCode: appliedDiscount?.code || null,
           discountCodeId: appliedDiscount?.discountCodeId || null,
+          totalAmount: baseTotal,
+          discountAmount: appliedDiscount?.discountAmount || 0,
+          finalAmount: finalTotal,
         }),
       })
 
