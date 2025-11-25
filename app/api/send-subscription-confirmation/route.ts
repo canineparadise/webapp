@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     const formattedSubscriptions = subscriptions.map(sub => ({
       dogName: sub.dogs.name,
       tierName: sub.subscription_tiers.name,
-      daysPerWeek: sub.subscription_tiers.days_per_week,
+      daysPerMonth: sub.subscription_tiers.days_per_week, // This represents days per month in the tier
       pricePerMonth: sub.subscription_tiers.price_per_month,
     }))
 
