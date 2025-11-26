@@ -337,12 +337,41 @@ function IndividualDaysContent() {
 
     setLoading(true)
     try {
+      const totalBeforeDiscount = selectedDates.length * pricePerDay
+      const finalAmount = totalBeforeDiscount - discountAmount
+
+      // If 100% discount (free), create booking directly without payment
+      if (finalAmount <= 0) {
+        const response = await fetch('/api/create-free-individual-day-booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            dogId: selectedDog,
+            dates: selectedDates,
+            pricePerDay: pricePerDay,
+            discountCode: discountCode || undefined,
+            discountCodeId: discountCodeId || undefined,
+            totalAmount: totalBeforeDiscount,
+            discountAmount: discountAmount,
+          })
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create free booking')
+        }
+
+        toast.success('Booking confirmed! Your discount covered the full cost.')
+        router.push('/dashboard/individual-days?success=true')
+        return
+      }
+
+      // Otherwise, proceed with payment
       const apiEndpoint = paymentMethod === 'stripe'
         ? '/api/create-individual-day-checkout'
         : '/api/create-individual-day-checkout-paypal'
-
-      const totalBeforeDiscount = selectedDates.length * pricePerDay
-      const finalAmount = totalBeforeDiscount - discountAmount
 
       const response = await fetch(apiEndpoint, {
         method: 'POST',
