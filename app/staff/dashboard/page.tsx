@@ -347,14 +347,24 @@ export default function StaffDashboard() {
   const fetchTodayData = async () => {
     setLoading(true)
     try {
-      // Get today's bookings
-      const { data: bookingsData } = await supabase
-        .from('bookings')
-        .select('dog_ids')
-        .eq('booking_date', currentDate)
-        .eq('status', 'confirmed')
+      // Get today's bookings from both tables
+      const [{ data: bookingsData }, { data: individualDayBookingsData }] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select('dog_ids')
+          .eq('booking_date', currentDate)
+          .eq('status', 'confirmed'),
+        supabase
+          .from('individual_day_bookings')
+          .select('dog_id')
+          .eq('booking_date', currentDate)
+          .eq('status', 'confirmed')
+      ])
 
-      const todayDogIds = bookingsData?.flatMap(b => b.dog_ids) || []
+      const subscriptionDogIds = bookingsData?.flatMap(b => b.dog_ids) || []
+      const individualDayDogIds = individualDayBookingsData?.map(b => b.dog_id) || []
+      const todayDogIds = [...new Set([...subscriptionDogIds, ...individualDayDogIds])] // Remove duplicates
+
       setTotalDogsToday(todayDogIds.length)
 
       if (todayDogIds.length === 0) {
@@ -375,18 +385,26 @@ export default function StaffDashboard() {
         `)
         .in('id', todayDogIds)
 
-      // Get bookings with check-in/out times
-      const { data: bookingsWithTimes } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('booking_date', currentDate)
-        .eq('status', 'confirmed')
+      // Get bookings with check-in/out times from both tables
+      const [{ data: bookingsWithTimes }, { data: individualBookingsWithTimes }] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select('*')
+          .eq('booking_date', currentDate)
+          .eq('status', 'confirmed'),
+        supabase
+          .from('individual_day_bookings')
+          .select('*')
+          .eq('booking_date', currentDate)
+          .eq('status', 'confirmed')
+      ])
 
       // Organize dogs by check-in/out status
       const notCheckedIn: DogWithBooking[] = []
       const checkedIn: DogWithBooking[] = []
       const checkedOut: DogWithBooking[] = []
 
+      // Process subscription bookings
       bookingsWithTimes?.forEach(booking => {
         booking.dog_ids.forEach((dogId: string) => {
           const dog = dogsData?.find(d => d.id === dogId)
@@ -407,6 +425,27 @@ export default function StaffDashboard() {
             }
           }
         })
+      })
+
+      // Process individual day bookings
+      individualBookingsWithTimes?.forEach(booking => {
+        const dog = dogsData?.find(d => d.id === booking.dog_id)
+        if (dog) {
+          const dogWithBooking: DogWithBooking = {
+            ...dog,
+            booking_id: booking.id,
+            check_in_time: booking.check_in_time,
+            check_out_time: booking.check_out_time
+          }
+
+          if (booking.check_out_time) {
+            checkedOut.push(dogWithBooking)
+          } else if (booking.check_in_time) {
+            checkedIn.push(dogWithBooking)
+          } else {
+            notCheckedIn.push(dogWithBooking)
+          }
+        }
       })
 
       setTodayDogs({ notCheckedIn, checkedIn, checkedOut })
