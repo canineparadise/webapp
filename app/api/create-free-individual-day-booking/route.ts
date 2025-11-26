@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       dog_id: dogId,
       booking_date: date,
       price: 0, // Free due to 100% discount
-      payment_status: 'free',
+      payment_status: 'paid', // Mark as paid since discount covered full cost
       status: 'confirmed',
       created_at: new Date().toISOString(),
     }))
