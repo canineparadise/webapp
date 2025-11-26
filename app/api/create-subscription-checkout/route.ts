@@ -62,15 +62,9 @@ export async function POST(request: Request) {
 
     // Add discount if applicable
     if (discountCode && discountAmount > 0) {
-      // Create a Stripe coupon for this discount
-      const coupon = await stripe.coupons.create({
-        amount_off: Math.round(discountAmount * 100), // Convert to pence
-        currency: 'gbp',
-        duration: 'once',
-        name: `Discount Code: ${discountCode}`,
-      })
-
-      sessionParams.discounts = [{ coupon: coupon.id }]
+      // Use the pre-created Stripe coupon directly (e.g., FIRST50)
+      // This assumes the discount code matches the Stripe coupon ID
+      sessionParams.discounts = [{ coupon: discountCode.toUpperCase() }]
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams)
