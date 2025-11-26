@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { motion } from 'framer-motion'
-import { CalendarIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon } from '@heroicons/react/24/outline'
+import { CalendarIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { loadStripe } from '@stripe/stripe-js'
 import toast from 'react-hot-toast'
 
@@ -100,12 +100,13 @@ function IndividualDaysContent() {
       if (user) {
         setUser(user)
 
-        // Load user's dogs
+        // Load user's dogs (only approved dogs)
         const { data: dogsData, error } = await supabase
           .from('dogs')
           .select('id, name, size')
           .eq('user_id', user.id)
           .eq('is_draft', false)
+          .eq('is_approved', true)
 
         if (error) throw error
         setDogs(dogsData || [])
@@ -381,6 +382,13 @@ function IndividualDaysContent() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-2 text-canine-navy hover:text-canine-gold transition-colors mb-4"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+            <span>Back to Dashboard</span>
+          </button>
           <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">
             Book Individual Days
           </h1>
