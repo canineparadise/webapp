@@ -467,7 +467,8 @@ function IndividualDaysContent() {
                     const isBooked = isDateBooked(dateStr)
                     const isPast = date < new Date(new Date().setHours(0, 0, 0, 0))
                     const isClosed = closedDays.has(dateStr)
-                    const isAvailable = availability?.is_available && !isBooked && !isPast && !isClosed
+                    const isWeekend = date.getDay() === 0 || date.getDay() === 6
+                    const isAvailable = availability?.is_available && !isBooked && !isPast && !isClosed && !isWeekend
 
                     return (
                       <button
@@ -479,7 +480,8 @@ function IndividualDaysContent() {
                           ${isSelected ? 'bg-canine-gold text-white font-semibold' : ''}
                           ${!isSelected && isAvailable ? 'bg-gray-100 hover:bg-canine-sky text-gray-700' : ''}
                           ${isClosed ? 'bg-red-100 text-red-600 cursor-not-allowed' : ''}
-                          ${!isAvailable && !isClosed ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
+                          ${isWeekend ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : ''}
+                          ${!isAvailable && !isClosed && !isWeekend ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
                           ${isBooked ? 'bg-blue-100 text-blue-600' : ''}
                         `}
                       >
@@ -487,9 +489,11 @@ function IndividualDaysContent() {
                         <div className="font-semibold">{date.getDate()}</div>
                         {isClosed ? (
                           <div className="text-xs mt-1">✗</div>
+                        ) : isWeekend ? (
+                          <div className="text-xs mt-1">Closed</div>
                         ) : availability && (
                           <div className="text-xs mt-1">
-                            {isBooked ? '✓' : availability.available_spots > 0 ? availability.available_spots : '✗'}
+                            {isBooked ? '✓' : availability.is_available ? '✓' : '✗'}
                           </div>
                         )}
                       </button>
