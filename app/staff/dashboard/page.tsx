@@ -624,15 +624,18 @@ export default function StaffDashboard() {
 
   const fetchPendingApprovals = async () => {
     try {
+      const today = new Date().toISOString().split('T')[0]
+
       const { data: dogsData } = await supabase
         .from('dogs')
         .select(`
           *,
           owner:profiles!dogs_owner_id_fkey (first_name, last_name, phone, email)
         `)
-        .eq('assessment_completed', true)
-        .or('is_approved.is.null,is_approved.eq.false')
-        .order('created_at', { ascending: false })
+        .not('assessment_date', 'is', null)
+        .lte('assessment_date', today)
+        .eq('assessment_completed', false)
+        .order('assessment_date', { ascending: true })
 
       setPendingApprovals(dogsData || [])
     } catch (error) {
@@ -921,6 +924,7 @@ export default function StaffDashboard() {
         .from('dogs')
         .update({
           is_approved: true,
+          assessment_completed: true,
           approved_by: staffId,
           approved_at: new Date().toISOString(),
           assessment_notes: approvalNotes,
@@ -953,6 +957,7 @@ export default function StaffDashboard() {
         .from('dogs')
         .update({
           is_approved: false,
+          assessment_completed: true,
           assessment_notes: declineNotes
         })
         .eq('id', selectedDog.id)

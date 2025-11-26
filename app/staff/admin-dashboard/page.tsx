@@ -936,10 +936,10 @@ export default function AdminDashboard() {
             .select('*', { count: 'exact', head: true })
             .eq('owner_id', user.id)
 
-          // Check subscription status - uses is_active boolean and tier text column
+          // Check subscription status - uses is_active boolean and tier_id
           const { data: subscription, error: subError } = await supabase
             .from('subscriptions')
-            .select('*')
+            .select('tier_id, tier')
             .eq('user_id', user.id)
             .eq('is_active', true)
             .maybeSingle()
@@ -950,8 +950,8 @@ export default function AdminDashboard() {
 
           let subscriptionStatus = 'None'
           if (subscription) {
-            // Get the tier name from the tier text column
-            subscriptionStatus = subscription.tier || 'Active'
+            // Get the tier name from the tier text column if available, otherwise use tier_id
+            subscriptionStatus = subscription.tier || subscription.tier_id || 'Active'
           }
 
           return {
@@ -1928,15 +1928,30 @@ export default function AdminDashboard() {
       const targetDate = date || assignmentDate
       const { data, error } = await supabase
         .from('staff_assignments')
-        .select(`
-          *,
-          profiles:staff_id (first_name, last_name, email, phone)
-        `)
+        .select('*')
         .eq('assignment_date', targetDate)
         .order('shift_start', { ascending: true })
 
       if (error) throw error
-      setStaffAssignments(data || [])
+
+      // Fetch profiles for all staff members
+      if (data && data.length > 0) {
+        const staffIds = data.map(a => a.staff_id)
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email, phone')
+          .in('id', staffIds)
+
+        // Merge profiles into assignments
+        const assignmentsWithProfiles = data.map(assignment => ({
+          ...assignment,
+          profiles: profilesData?.find(p => p.id === assignment.staff_id)
+        }))
+
+        setStaffAssignments(assignmentsWithProfiles)
+      } else {
+        setStaffAssignments([])
+      }
     } catch (error) {
       console.error('Error fetching staff assignments:', error)
       toast.error('Failed to load staff assignments')
@@ -1948,15 +1963,30 @@ export default function AdminDashboard() {
       const targetDate = date || assignmentDate
       const { data, error } = await supabase
         .from('staff_tasks')
-        .select(`
-          *,
-          profiles:assigned_to_staff_id (first_name, last_name, email, phone)
-        `)
+        .select('*')
         .eq('task_date', targetDate)
         .order('priority', { ascending: false })
 
       if (error) throw error
-      setStaffTasks(data || [])
+
+      // Fetch profiles for all assigned staff members
+      if (data && data.length > 0) {
+        const staffIds = data.map(t => t.assigned_to_staff_id)
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email, phone')
+          .in('id', staffIds)
+
+        // Merge profiles into tasks
+        const tasksWithProfiles = data.map(task => ({
+          ...task,
+          profiles: profilesData?.find(p => p.id === task.assigned_to_staff_id)
+        }))
+
+        setStaffTasks(tasksWithProfiles)
+      } else {
+        setStaffTasks([])
+      }
     } catch (error) {
       console.error('Error fetching staff tasks:', error)
       toast.error('Failed to load staff tasks')
