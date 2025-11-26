@@ -1009,8 +1009,8 @@ export default function AdminDashboard() {
 
           let subscriptionStatus = 'None'
           if (subscription) {
-            // Get the tier name from the tier text column if available, otherwise use tier_id
-            subscriptionStatus = subscription.tier || subscription.tier_id || 'Active'
+            // Active subscription found - show tier_id or just 'Active'
+            subscriptionStatus = subscription.tier_id || 'Active'
           }
 
           return {
