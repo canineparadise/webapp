@@ -8,6 +8,10 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // Log which key is being used (without exposing the actual key)
+    const usingServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    console.log('🔑 Using service role key:', usingServiceRole)
+
     const body = await request.json()
     console.log('📥 Received free subscription request:', JSON.stringify(body, null, 2))
 
