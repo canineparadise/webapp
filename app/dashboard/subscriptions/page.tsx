@@ -269,6 +269,32 @@ export default function SubscribeDogsPage() {
 
     setPurchasing(true)
     try {
+      const finalAmount = calculateFinalAmount()
+
+      // If final amount is 0, create subscriptions directly without payment
+      if (finalAmount === 0) {
+        const response = await fetch('/api/create-free-subscription', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            dogSubscriptions: selectedDogs,
+            discountCode: appliedDiscount?.code || null,
+            discountCodeId: appliedDiscount?.discountCodeId || null,
+            totalAmount: calculateTotal(),
+            discountAmount: appliedDiscount?.discountAmount || 0,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to create subscription')
+        }
+
+        toast.success('Subscription created successfully!')
+        router.push('/dashboard/subscriptions/success?free=true')
+        return
+      }
+
       const apiEndpoint = paymentMethod === 'stripe'
         ? '/api/create-subscription-checkout'
         : '/api/create-subscription-checkout-paypal'
@@ -284,7 +310,7 @@ export default function SubscribeDogsPage() {
           discountCodeId: appliedDiscount?.discountCodeId || null,
           totalAmount: calculateTotal(),
           discountAmount: appliedDiscount?.discountAmount || 0,
-          finalAmount: calculateFinalAmount(),
+          finalAmount: finalAmount,
         }),
       })
 

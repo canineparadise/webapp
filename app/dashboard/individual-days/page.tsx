@@ -108,6 +108,9 @@ function IndividualDaysContent() {
           .eq('is_draft', false)
           .eq('is_approved', true)
 
+        console.log('Individual days - Loading dogs for user:', user.id)
+        console.log('Individual days - Dogs query result:', { dogsData, error })
+
         if (error) throw error
         setDogs(dogsData || [])
       }
