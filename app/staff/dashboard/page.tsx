@@ -52,6 +52,8 @@ interface Dog {
   photo_permission?: boolean
   feeding_schedule?: string
   assessment_date?: string
+  assessment_time?: string
+  assessment_end_time?: string
   assessment_completed?: boolean
   assessment_notes?: string
   assessment_video_url?: string
