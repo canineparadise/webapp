@@ -126,7 +126,7 @@ export default function SubscribeDogsPage() {
         .from('subscriptions')
         .select(`
           *,
-          subscription_tiers(*)
+          subscription_tiers:tier_id(*)
         `)
         .eq('user_id', user.id)
         .eq('is_active', true)
