@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       stripe_customer_id: null,
       current_period_start: new Date().toISOString(),
       current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Date only
     }))
 
     console.log('📤 Inserting subscriptions:', JSON.stringify(subscriptions, null, 2))
