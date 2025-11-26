@@ -103,6 +103,13 @@ function IndividualDaysContent() {
     }
   }, [selectedDog])
 
+  // Recalculate discount when dates change
+  useEffect(() => {
+    if (discountCodeId && discountType) {
+      validateDiscountCode()
+    }
+  }, [selectedDates.length])
+
   const loadUserAndDogs = async () => {
     console.log('=== loadUserAndDogs CALLED ===')
     try {
@@ -298,10 +305,19 @@ function IndividualDaysContent() {
         return
       }
 
+      // Calculate actual discount amount based on type
+      let calculatedDiscountAmount = 0
+      if (result.discount_type === 'percentage') {
+        calculatedDiscountAmount = (totalBeforeDiscount * result.discount_value) / 100
+      } else {
+        // fixed amount
+        calculatedDiscountAmount = result.discount_value
+      }
+
       setDiscountCodeId(result.discount_code_id)
-      setDiscountAmount(result.discount_value)
+      setDiscountAmount(calculatedDiscountAmount)
       setDiscountType(result.discount_type)
-      toast.success(`Discount applied: ${result.discount_type === 'percentage' ? `${result.discount_value}%` : `£${result.discount_value}`}`)
+      toast.success(`Discount applied: ${result.discount_type === 'percentage' ? `${result.discount_value}%` : `£${result.discount_value}`} off`)
     } catch (error: any) {
       console.error('Error validating discount code:', error)
       setDiscountError('Failed to validate discount code')
