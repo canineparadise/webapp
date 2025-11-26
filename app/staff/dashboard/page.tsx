@@ -940,6 +940,17 @@ export default function StaffDashboard() {
         throw error
       }
 
+      // Update user's profile approval status
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ approval_status: 'approved' })
+        .eq('id', selectedDog.owner_id)
+
+      if (profileError) {
+        console.error('Failed to update profile approval status:', profileError)
+        // Don't fail the approval if profile update fails
+      }
+
       // Send approval email to owner
       try {
         await fetch('/api/send-approval-email', {
