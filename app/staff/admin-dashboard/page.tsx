@@ -331,7 +331,7 @@ interface StaffTask {
   }
 }
 
-type TabType = 'dashboard' | 'checkin' | 'schedule' | 'dogs_today' | 'assessments' | 'all_dogs' | 'all_clients' | 'all_bookings' | 'staff_users' | 'staff_activity' | 'staff_performance' | 'staff_schedule' | 'legal' | 'medications' | 'incidents' | 'documents' | 'transactions' | 'monthly_revenue' | 'subscriptions' | 'cancellations' | 'business_settings' | 'playgroups' | 'pricing' | 'newsletter'
+type TabType = 'dashboard' | 'checkin' | 'schedule' | 'dogs_today' | 'assessments' | 'all_dogs' | 'all_clients' | 'all_bookings' | 'staff_users' | 'staff_activity' | 'staff_performance' | 'staff_schedule' | 'legal' | 'medications' | 'incidents' | 'documents' | 'transactions' | 'monthly_revenue' | 'subscriptions' | 'cancellations' | 'business_settings' | 'playgroups' | 'pricing' | 'discounts' | 'newsletter'
 
 export default function AdminDashboard() {
   const router = useRouter()
