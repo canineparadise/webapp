@@ -104,7 +104,7 @@ function IndividualDaysContent() {
         const { data: dogsData, error } = await supabase
           .from('dogs')
           .select('id, name, size')
-          .eq('user_id', user.id)
+          .eq('owner_id', user.id)
           .eq('is_draft', false)
           .eq('is_approved', true)
 
