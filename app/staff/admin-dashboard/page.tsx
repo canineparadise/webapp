@@ -998,7 +998,7 @@ export default function AdminDashboard() {
           // Check subscription status - uses is_active boolean and tier_id
           const { data: subscription, error: subError } = await supabase
             .from('subscriptions')
-            .select('tier_id, tier')
+            .select('tier_id')
             .eq('user_id', user.id)
             .eq('is_active', true)
             .maybeSingle()

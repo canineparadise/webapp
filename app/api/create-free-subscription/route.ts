@@ -22,13 +22,19 @@ export async function POST(request: NextRequest) {
       user_id: userId,
       dog_id: dogSub.dogId,
       tier_id: dogSub.tierId,
-      tier: dogSub.tierName,
+      session_type: dogSub.sessionType || 'full_day',
+      days_included: dogSub.daysIncluded || 0,
+      days_used: 0,
+      days_remaining: dogSub.daysIncluded || 0,
+      price_per_day: dogSub.pricePerDay || 0,
       monthly_price: dogSub.monthlyPrice || 0,
       is_active: true,
-      start_date: new Date().toISOString(),
-      payment_status: 'free',
+      payment_status: 'paid',
       stripe_subscription_id: null,
-      session_type: dogSub.sessionType || 'full_day',
+      stripe_customer_id: null,
+      current_period_start: new Date().toISOString(),
+      current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     }))
 
     const { data: createdSubscriptions, error: subError } = await supabase
@@ -43,10 +49,28 @@ export async function POST(request: NextRequest) {
 
     // If discount code was used, record the usage
     if (discountCodeId) {
-      await supabase.rpc('use_discount_code', {
-        p_discount_code_id: discountCodeId,
-        p_user_id: userId,
+      await supabase.from('discount_code_usage').insert({
+        discount_code_id: discountCodeId,
+        user_id: userId,
+        used_for: 'subscription',
+        original_amount: totalAmount,
+        discount_amount: discountAmount,
+        final_amount: 0,
       })
+
+      // Increment usage count
+      const { data: discountCodeData } = await supabase
+        .from('discount_codes')
+        .select('current_uses')
+        .eq('id', discountCodeId)
+        .single()
+
+      if (discountCodeData) {
+        await supabase
+          .from('discount_codes')
+          .update({ current_uses: discountCodeData.current_uses + 1 })
+          .eq('id', discountCodeId)
+      }
     }
 
     return NextResponse.json({
