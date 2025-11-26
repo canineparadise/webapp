@@ -8,9 +8,13 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, dogSubscriptions, discountCode, discountCodeId, totalAmount, discountAmount } = await request.json()
+    const body = await request.json()
+    console.log('📥 Received free subscription request:', JSON.stringify(body, null, 2))
+
+    const { userId, dogSubscriptions, discountCode, discountCodeId, totalAmount, discountAmount } = body
 
     if (!userId || !dogSubscriptions || !Array.isArray(dogSubscriptions) || dogSubscriptions.length === 0) {
+      console.error('❌ Validation failed:', { userId, dogSubscriptions })
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -37,15 +41,19 @@ export async function POST(request: NextRequest) {
       next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     }))
 
+    console.log('📤 Inserting subscriptions:', JSON.stringify(subscriptions, null, 2))
+
     const { data: createdSubscriptions, error: subError } = await supabase
       .from('subscriptions')
       .insert(subscriptions)
       .select()
 
     if (subError) {
-      console.error('Error creating subscriptions:', subError)
+      console.error('❌ Error creating subscriptions:', subError)
       throw subError
     }
+
+    console.log('✅ Successfully created subscriptions:', createdSubscriptions)
 
     // If discount code was used, record the usage
     if (discountCodeId) {
