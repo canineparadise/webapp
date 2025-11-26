@@ -1165,8 +1165,8 @@ export default function AdminDashboard() {
         .from('discount_code_usage')
         .select(`
           *,
-          discount_codes (code, discount_type, discount_value),
-          profiles (first_name, last_name, email)
+          discount_codes:discount_code_id (code, discount_type, discount_value),
+          profiles:user_id (first_name, last_name, email)
         `)
         .order('created_at', { ascending: false })
 
