@@ -31,7 +31,7 @@ export default function Dashboard() {
   const [legalAgreements, setLegalAgreements] = useState<any>(null)
   const [subscription, setSubscription] = useState<any>(null)
   const [upcomingBookings, setUpcomingBookings] = useState<any[]>([])
-  const [activeTab, setActiveTab] = useState<'book' | 'dogs' | 'bookings' | 'documents'>('book')
+  const [activeTab, setActiveTab] = useState<'dogs' | 'bookings' | 'documents'>('dogs')
   const [selectedDates, setSelectedDates] = useState<string[]>([])
   const [selectedDogs, setSelectedDogs] = useState<string[]>([])
   const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -301,8 +301,7 @@ export default function Dashboard() {
     { id: 3, label: 'Add your dogs', completed: hasAddedDogs },
     { id: 4, label: 'Book assessment', completed: hasBookedAssessment },
     { id: 5, label: 'Get approved by staff', completed: isApproved },
-    { id: 6, label: 'Choose a subscription', completed: hasSubscription },
-    { id: 7, label: 'Book your first daycare days', completed: hasBookedDays },
+    { id: 6, label: 'Book your first daycare days', completed: hasBookedDays },
   ]
 
   const allStepsCompleted = checklistSteps.every(step => step.completed)
@@ -403,22 +402,7 @@ export default function Dashboard() {
         {/* Main Content Area */}
         <div className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Actions Bar - Fun & Friendly */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
-          <button
-            onClick={() => setActiveTab('book')}
-            disabled={!isApproved}
-            className={`group flex flex-col items-center justify-center p-6 rounded-2xl transition-all transform hover:scale-105 ${
-              !isApproved
-                ? 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 cursor-not-allowed'
-                : activeTab === 'book'
-                ? 'bg-gradient-to-br from-canine-gold to-canine-light-gold text-white shadow-xl shadow-canine-gold/30'
-                : 'bg-gradient-to-br from-white to-blue-50 text-canine-navy hover:shadow-lg border border-canine-gold/20'
-            }`}
-          >
-            <CalendarIcon className={`h-8 w-8 mb-2 ${!isApproved ? '' : 'group-hover:scale-110 transition-transform'}`} />
-            <span className="font-semibold text-sm">Book Days</span>
-          </button>
-
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
           <Link href="/dashboard/assessment/schedule">
             <button className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-white to-teal-50 text-canine-navy hover:shadow-lg border border-teal-200/50 transition-all transform hover:scale-105 w-full">
               <ClockIcon className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
@@ -619,14 +603,11 @@ export default function Dashboard() {
             ) : (
               <div>
                 <p className="text-gray-600 mb-4">No upcoming visits</p>
-                {canBookDays && (
-                  <button
-                    onClick={() => setActiveTab('book')}
-                    className="w-full bg-canine-gold text-white py-2 rounded-lg hover:bg-opacity-90 transition-colors text-sm font-medium"
-                  >
-                    Book Now
+                <Link href="/dashboard/individual-days">
+                  <button className="w-full bg-canine-gold text-white py-2 rounded-lg hover:bg-opacity-90 transition-colors text-sm font-medium">
+                    Book Days
                   </button>
-                )}
+                </Link>
               </div>
             )}
           </div>
@@ -637,16 +618,6 @@ export default function Dashboard() {
           {/* Tabs */}
           <div className="border-b border-gray-200">
             <div className="flex">
-              <button
-                onClick={() => setActiveTab('book')}
-                className={`flex-1 py-4 px-6 text-sm font-semibold transition-colors ${
-                  activeTab === 'book'
-                    ? 'text-canine-gold border-b-2 border-canine-gold'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Book Days
-              </button>
               <button
                 onClick={() => setActiveTab('dogs')}
                 className={`flex-1 py-4 px-6 text-sm font-semibold transition-colors ${
@@ -682,296 +653,6 @@ export default function Dashboard() {
 
           {/* Tab Content */}
           <div className="p-6">
-            {/* Book Days Tab */}
-            {activeTab === 'book' && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-canine-navy mb-2">Book Daycare Days</h2>
-                  <p className="text-gray-600">Select dates and dogs to book your daycare visits</p>
-                </div>
-
-                {!canBookDays ? (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
-                    <h3 className="font-semibold text-amber-900 mb-2">Unable to Book</h3>
-                    {!isApproved && (
-                      <p className="text-amber-800 mb-4">Your account is pending approval. We'll notify you once approved!</p>
-                    )}
-                    {isApproved && !hasApprovedDogs && (
-                      <p className="text-amber-800 mb-4">You need at least one approved dog to book daycare.</p>
-                    )}
-                    {hasApprovedDogs && !subscription && (
-                      <>
-                        <p className="text-amber-800 mb-4">You need an active subscription to book days.</p>
-                        <Link href="/dashboard/subscriptions">
-                          <button className="bg-canine-gold text-white px-6 py-2 rounded-lg hover:bg-opacity-90 transition-colors font-medium">
-                            View Subscriptions
-                          </button>
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid lg:grid-cols-2 gap-6">
-                    {/* Calendar */}
-                    <div>
-                      <div className="flex items-center justify-between mb-4 bg-canine-navy text-white rounded-lg p-3">
-                        <button onClick={previousMonth} className="p-1 hover:bg-white/10 rounded">
-                          <ChevronLeftIcon className="h-5 w-5" />
-                        </button>
-                        <h4 className="text-lg font-bold">{monthName}</h4>
-                        <button onClick={nextMonth} className="p-1 hover:bg-white/10 rounded">
-                          <ChevronRightIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-7 gap-2 mb-2">
-                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                          <div key={day} className="text-center font-semibold text-gray-600 text-sm py-2">
-                            {day}
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-7 gap-2">
-                        {Array.from({ length: startingDayOfWeek }).map((_, i) => (
-                          <div key={`empty-${i}`}></div>
-                        ))}
-                        {Array.from({ length: daysInMonth }).map((_, i) => {
-                          const day = i + 1
-                          const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-                          const dateStatus = getDateStatus(dateString)
-                          const isSelected = selectedDates.includes(dateString)
-                          const isBooked = bookedDates.includes(dateString)
-                          const isPast = dateStatus === 'past'
-                          const isWeekend = dateStatus === 'weekend'
-                          const isAvailableDate = dateStatus === 'available'
-
-                          let buttonClass = 'aspect-square rounded-lg flex items-center justify-center text-sm font-semibold transition-all '
-
-                          if (isSelected) {
-                            buttonClass += 'bg-canine-gold text-white'
-                          } else if (isBooked) {
-                            buttonClass += 'bg-blue-100 text-blue-600 border-2 border-blue-300'
-                          } else if (isPast) {
-                            buttonClass += 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          } else if (isWeekend) {
-                            buttonClass += 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          } else if (isAvailableDate) {
-                            buttonClass += 'bg-green-50 hover:bg-green-100 text-gray-700 border border-green-200 cursor-pointer'
-                          }
-
-                          return (
-                            <button
-                              key={day}
-                              type="button"
-                              onClick={() => canBookDays && isAvailableDate && !isBooked && toggleDate(dateString)}
-                              disabled={!canBookDays || !isAvailableDate || isBooked}
-                              className={buttonClass}
-                            >
-                              {day}
-                            </button>
-                          )
-                        })}
-                      </div>
-
-                      <div className="flex flex-wrap gap-3 text-xs mt-4 p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded bg-canine-gold"></div>
-                          <span>Selected</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded bg-blue-100 border-2 border-blue-300"></div>
-                          <span>Booked</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded bg-green-50 border border-green-200"></div>
-                          <span>Available</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 rounded bg-gray-100"></div>
-                          <span>Unavailable</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Booking Details */}
-                    <div className="space-y-6">
-                      {/* Days Summary */}
-                      {subscription && (
-                        <div className="bg-canine-sky rounded-lg p-4">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-gray-700 font-medium">Days Remaining</span>
-                            <span className="text-2xl font-bold text-canine-navy">{subscription.days_remaining}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-700 font-medium">Days Selected</span>
-                            <span className="text-2xl font-bold text-canine-gold">{selectedDates.length}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Dog Selection */}
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-3">Select Dogs</h3>
-                        <div className="space-y-2">
-                          {dogs.filter(dog => dog.is_approved).map(dog => (
-                            <label
-                              key={dog.id}
-                              className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedDogs.includes(dog.id)}
-                                onChange={() => toggleDog(dog.id)}
-                                className="h-5 w-5 text-canine-gold focus:ring-canine-gold rounded"
-                              />
-                              {dog.photo_url ? (
-                                <img
-                                  src={dog.photo_url}
-                                  alt={dog.name}
-                                  className="h-10 w-10 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="h-10 w-10 rounded-full bg-canine-gold/20 flex items-center justify-center">
-                                  <span className="text-sm font-semibold text-canine-gold">
-                                    {dog.name[0]}
-                                  </span>
-                                </div>
-                              )}
-                              <div className="flex-1">
-                                <p className="font-semibold text-gray-900">{dog.name}</p>
-                                <p className="text-xs text-gray-600">{dog.breed}</p>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Booking Summary & Options */}
-                      {selectedDates.length > 0 && selectedDogs.length > 0 && (
-                        <div className="space-y-6">
-                          {/* Session Type Display (Not Editable) */}
-                          <div className="bg-canine-sky border border-blue-200 rounded-lg p-4">
-                            <h3 className="font-semibold text-gray-900 mb-2">Your Session Type</h3>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-bold text-canine-navy">
-                                  {sessionType === 'full_day' ? 'Full Day' : 'Half Day'}
-                                </p>
-                                <p className="text-xs text-gray-600 mt-1">
-                                  {sessionType === 'full_day' ? '7:00 AM - 7:00 PM' : '10:00 AM - 2:00 PM'}
-                                </p>
-                              </div>
-                              <span className="text-sm font-semibold text-canine-gold">
-                                Included in subscription
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Meal Options */}
-                          <div>
-                            <h3 className="font-semibold text-gray-900 mb-3">Meal Preferences</h3>
-                            <div className="space-y-3">
-                              <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                                mealOption === 'provided'
-                                  ? 'border-canine-gold bg-amber-50'
-                                  : 'border-gray-200 hover:border-gray-300'
-                              }`}>
-                                <input
-                                  type="radio"
-                                  name="mealOption"
-                                  value="provided"
-                                  checked={mealOption === 'provided'}
-                                  onChange={() => setMealOption('provided')}
-                                  className="mt-1 text-canine-gold focus:ring-canine-gold"
-                                />
-                                <div className="flex-1">
-                                  <span className="font-bold text-canine-navy">Meals Provided by Aldenham Doggy Day Care</span>
-                                  <p className="text-xs text-gray-600 mt-1">We'll provide nutritious meals for your dog(s)</p>
-                                </div>
-                              </label>
-
-                              <label className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                                mealOption === 'own'
-                                  ? 'border-canine-gold bg-amber-50'
-                                  : 'border-gray-200 hover:border-gray-300'
-                              }`}>
-                                <input
-                                  type="radio"
-                                  name="mealOption"
-                                  value="own"
-                                  checked={mealOption === 'own'}
-                                  onChange={() => setMealOption('own')}
-                                  className="mt-1 text-canine-gold focus:ring-canine-gold"
-                                />
-                                <div className="flex-1">
-                                  <span className="font-bold text-canine-navy">I'll Provide Own Food</span>
-                                  <p className="text-xs text-gray-600 mt-1">Bring food in clearly marked portions</p>
-                                </div>
-                              </label>
-                            </div>
-
-                            {mealOption === 'own' && (
-                              <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p className="text-sm text-blue-900 font-medium mb-1">Important Reminder:</p>
-                                <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
-                                  <li>Pack food in clearly labeled containers</li>
-                                  <li>Include your dog's name on each container</li>
-                                  <li>Provide appropriate portions for the session</li>
-                                  <li>Include any feeding instructions in special notes below</li>
-                                </ul>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Special Notes */}
-                          <div>
-                            <h3 className="font-semibold text-gray-900 mb-3">Special Notes for the Team</h3>
-                            <textarea
-                              value={specialNotes}
-                              onChange={(e) => setSpecialNotes(e.target.value)}
-                              placeholder="Any special instructions, feeding schedules, behavioral notes, or other information the team should know..."
-                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-canine-gold resize-none"
-                              rows={4}
-                            />
-                          </div>
-
-                          {/* Booking Summary */}
-                          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-gray-700 font-medium">Booking Summary</span>
-                              <span className="text-sm text-gray-600">
-                                {selectedDates.length} day(s) × {selectedDogs.length} dog(s)
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="text-gray-600">From your subscription</span>
-                              <span className="text-xl font-bold text-canine-navy">No charge</span>
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={handleBooking}
-                            disabled={submitting}
-                            className="w-full bg-canine-gold text-white py-4 rounded-lg font-bold hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {submitting ? 'Booking...' : `Confirm Booking (${selectedDates.length} day${selectedDates.length !== 1 ? 's' : ''})`}
-                          </button>
-                        </div>
-                      )}
-
-                      {selectedDates.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
-                          <CalendarIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                          <p>Select dates on the calendar to start booking</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* My Dogs Tab */}
             {activeTab === 'dogs' && (
               <div className="space-y-6">
