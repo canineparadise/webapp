@@ -513,25 +513,41 @@ export default function StaffDashboard() {
       const endDate = new Date(currentDate)
       endDate.setDate(endDate.getDate() + 6)
 
-      const { data: bookingsData } = await supabase
-        .from('bookings')
-        .select(`
-          booking_date,
-          dog_ids,
-          status
-        `)
-        .gte('booking_date', currentDate)
-        .lte('booking_date', endDate.toISOString().split('T')[0])
-        .eq('status', 'confirmed')
-        .order('booking_date', { ascending: true })
+      // Query both subscription bookings and individual day bookings
+      const [{ data: bookingsData }, { data: individualDayBookingsData }] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select(`
+            booking_date,
+            dog_ids,
+            status
+          `)
+          .gte('booking_date', currentDate)
+          .lte('booking_date', endDate.toISOString().split('T')[0])
+          .eq('status', 'confirmed')
+          .order('booking_date', { ascending: true }),
+        supabase
+          .from('individual_day_bookings')
+          .select(`
+            booking_date,
+            dog_id,
+            status
+          `)
+          .gte('booking_date', currentDate)
+          .lte('booking_date', endDate.toISOString().split('T')[0])
+          .eq('status', 'confirmed')
+          .order('booking_date', { ascending: true })
+      ])
 
-      if (!bookingsData) {
+      if (!bookingsData && !individualDayBookingsData) {
         setWeeklySchedule([])
         return
       }
 
-      // Get all unique dog IDs from the week
-      const allDogIds = Array.from(new Set(bookingsData.flatMap(b => b.dog_ids)))
+      // Get all unique dog IDs from the week (from both sources)
+      const subscriptionDogIds = bookingsData?.flatMap(b => b.dog_ids) || []
+      const individualDayDogIds = individualDayBookingsData?.map(b => b.dog_id) || []
+      const allDogIds = Array.from(new Set([...subscriptionDogIds, ...individualDayDogIds]))
 
       // Fetch dog details
       const { data: dogsData } = await supabase
@@ -548,7 +564,8 @@ export default function StaffDashboard() {
       // Group bookings by date
       const scheduleMap = new Map<string, WeeklyBooking>()
 
-      bookingsData.forEach(booking => {
+      // Process subscription bookings
+      bookingsData?.forEach(booking => {
         const existing: WeeklyBooking = scheduleMap.get(booking.booking_date) || {
           date: booking.booking_date,
           dog_count: 0,
@@ -567,6 +584,29 @@ export default function StaffDashboard() {
             })
           }
         })
+
+        existing.dog_count = existing.dogs.length
+        scheduleMap.set(booking.booking_date, existing)
+      })
+
+      // Process individual day bookings
+      individualDayBookingsData?.forEach(booking => {
+        const existing: WeeklyBooking = scheduleMap.get(booking.booking_date) || {
+          date: booking.booking_date,
+          dog_count: 0,
+          dogs: []
+        }
+
+        const dog = dogsData?.find(d => d.id === booking.dog_id)
+        if (dog && !existing.dogs.some(d => d.name === dog.name)) {
+          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+          existing.dogs.push({
+            name: dog.name,
+            breed: dog.breed,
+            owner_name: `${owner?.first_name || ''} ${owner?.last_name || ''}`.trim(),
+            photo_url: dog.photo_url
+          })
+        }
 
         existing.dog_count = existing.dogs.length
         scheduleMap.set(booking.booking_date, existing)
