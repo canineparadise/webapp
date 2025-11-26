@@ -932,7 +932,29 @@ export default function StaffDashboard() {
         })
         .eq('id', selectedDog.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error details:', error)
+        console.error('Error message:', error.message)
+        console.error('Error code:', error.code)
+        console.error('Error details:', error.details)
+        throw error
+      }
+
+      // Send approval email to owner
+      try {
+        await fetch('/api/send-approval-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: selectedDog.owner_id,
+            dogName: selectedDog.name,
+            assessmentNotes: approvalNotes
+          })
+        })
+      } catch (emailError) {
+        console.error('Failed to send approval email:', emailError)
+        // Don't fail the approval if email fails
+      }
 
       toast.success(`${selectedDog.name} has been approved!`)
       setShowApprovalModal(false)
