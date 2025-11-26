@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import { CalendarIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { loadStripe } from '@stripe/stripe-js'
@@ -35,7 +35,6 @@ interface Booking {
 function IndividualDaysContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClientComponentClient()
 
   const [user, setUser] = useState<any>(null)
   const [dogs, setDogs] = useState<Dog[]>([])
@@ -95,12 +94,15 @@ function IndividualDaysContent() {
   }, [selectedDog])
 
   const loadUserAndDogs = async () => {
+    console.log('=== loadUserAndDogs CALLED ===')
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      console.log('Got user:', user?.id)
       if (user) {
         setUser(user)
 
         // Load user's dogs (only approved dogs)
+        console.log('Fetching dogs for user:', user.id)
         const { data: dogsData, error } = await supabase
           .from('dogs')
           .select('id, name, size')
@@ -113,6 +115,9 @@ function IndividualDaysContent() {
 
         if (error) throw error
         setDogs(dogsData || [])
+        console.log('Set dogs state to:', dogsData)
+      } else {
+        console.log('NO USER FOUND')
       }
     } catch (error) {
       console.error('Error loading user and dogs:', error)
