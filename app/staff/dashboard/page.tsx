@@ -363,7 +363,7 @@ export default function StaffDashboard() {
 
       const subscriptionDogIds = bookingsData?.flatMap(b => b.dog_ids) || []
       const individualDayDogIds = individualDayBookingsData?.map(b => b.dog_id) || []
-      const todayDogIds = [...new Set([...subscriptionDogIds, ...individualDayDogIds])] // Remove duplicates
+      const todayDogIds = Array.from(new Set([...subscriptionDogIds, ...individualDayDogIds])) // Remove duplicates
 
       setTotalDogsToday(todayDogIds.length)
 
