@@ -545,6 +545,7 @@ export default function AdminDashboard() {
     fetchFinancialTransactions()
     fetchAllBookings()
     fetchStaffActivityLog()
+    fetchDiscountUsages()
   }, [])
 
   useEffect(() => {
