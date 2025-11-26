@@ -225,6 +225,27 @@ interface FinancialTransaction {
   }
 }
 
+interface DiscountUsage {
+  id: string
+  discount_code_id: string
+  user_id: string
+  used_for: string
+  original_amount: number
+  discount_amount: number
+  final_amount: number
+  created_at: string
+  discount_codes?: {
+    code: string
+    discount_type: string
+    discount_value: number
+  }
+  profiles?: {
+    first_name: string
+    last_name: string
+    email: string
+  }
+}
+
 interface StaffActivityLog {
   id: string
   staff_id: string
@@ -376,6 +397,7 @@ export default function AdminDashboard() {
   const [dogMedications, setDogMedications] = useState<DogMedication[]>([])
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>([])
+  const [discountUsages, setDiscountUsages] = useState<DiscountUsage[]>([])
 
   // Business Settings accordion state - all sections open by default
   const [openSections, setOpenSections] = useState({
@@ -632,6 +654,7 @@ export default function AdminDashboard() {
       items: [
         { id: 'business_settings', name: 'Business Settings', icon: BuildingOfficeIcon },
         { id: 'pricing', name: 'Pricing Tiers', icon: BanknotesIcon },
+        { id: 'discounts', name: 'Discount Usage', icon: TicketIcon },
         { id: 'transactions', name: 'Transactions', icon: CurrencyPoundIcon },
         { id: 'monthly_revenue', name: 'Monthly Revenue', icon: ChartBarIcon },
         { id: 'subscriptions', name: 'Subscriptions', icon: CreditCardIcon },
@@ -808,28 +831,63 @@ export default function AdminDashboard() {
           .lte('booking_date', lastDayOfMonth)
           .in('status', ['confirmed', 'completed'])
 
-        // Get individual day bookings revenue
+        // Get individual day bookings revenue - only count non-free bookings
         const { data: individualRevenueData } = await supabase
           .from('individual_day_bookings')
           .select('price')
           .gte('booking_date', firstDayOfMonth)
           .lte('booking_date', lastDayOfMonth)
           .eq('payment_status', 'paid')
+          .gt('price', 0) // Exclude 100% discount (free) bookings
 
-        // Get assessment bookings revenue
+        // Get assessment bookings with discount info
         const { data: assessmentRevenueData } = await supabase
           .from('assessment_bookings')
-          .select('slot_id, booked_at')
+          .select('id, slot_id, booked_at, user_id')
           .eq('booking_status', 'confirmed')
           .gte('booked_at', firstDayOfMonth)
           .lte('booked_at', lastDayOfMonth)
 
+        // Get discount usage for all bookings this month
+        const { data: discountUsageData } = await supabase
+          .from('discount_code_usage')
+          .select('used_for, final_amount, user_id, created_at')
+          .gte('created_at', firstDayOfMonth)
+          .lte('created_at', lastDayOfMonth)
+
         if (!error && revenueData) {
+          // Subscription revenue - use amount from bookings table (already includes Stripe discount)
+          // For extra accuracy, we could also verify against discount_code_usage but Stripe handles this
           const subscriptionRev = revenueData.reduce((sum, b) => sum + (b.amount || 0), 0) || 0
+
+          // Individual day revenue from paid bookings (already excludes free ones with price > 0 filter)
           const individualRev = individualRevenueData?.reduce((sum, b) => sum + (b.price || 0), 0) || 0
+
           const bookingsRev = subscriptionRev + individualRev
-          // Each assessment is charged at the current assessment fee
-          const assessmentsRev = (assessmentRevenueData?.length || 0) * (settings.assessment_fee || 40)
+
+          // Calculate assessment revenue with discounts
+          let assessmentsRev = 0
+          if (assessmentRevenueData) {
+            for (const assessment of assessmentRevenueData) {
+              // Check if this assessment had a discount applied
+              const discount = discountUsageData?.find(d =>
+                d.used_for === 'assessment' &&
+                d.user_id === assessment.user_id &&
+                new Date(d.created_at).toDateString() === new Date(assessment.booked_at).toDateString()
+              )
+
+              if (discount) {
+                // Use final amount after discount (excluding 100% discount which is £0)
+                if (discount.final_amount > 0) {
+                  assessmentsRev += discount.final_amount
+                }
+              } else {
+                // No discount, use full assessment fee
+                assessmentsRev += (settings.assessment_fee || 40)
+              }
+            }
+          }
+
           const totalRevenue = bookingsRev + assessmentsRev
           setMonthlyRevenue(totalRevenue)
           setBookingRevenue(bookingsRev)
@@ -1097,6 +1155,26 @@ export default function AdminDashboard() {
       setFinancialTransactions(allTransactions)
     } catch (error) {
       console.error('Error fetching financial transactions:', error)
+    }
+  }
+
+  const fetchDiscountUsages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('discount_code_usage')
+        .select(`
+          *,
+          discount_codes (code, discount_type, discount_value),
+          profiles (first_name, last_name, email)
+        `)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      setDiscountUsages(data || [])
+    } catch (error) {
+      console.error('Error fetching discount usages:', error)
+      toast.error('Failed to load discount usage data')
     }
   }
 
@@ -4819,6 +4897,130 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-2xl p-12 text-center">
                   <CurrencyPoundIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-600">No transactions found</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* DISCOUNT USAGE TAB */}
+          {activeTab === 'discounts' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-canine-navy">Discount Usage</h2>
+                  <p className="text-gray-600">Track all discount code usage and savings</p>
+                </div>
+                <button
+                  onClick={fetchDiscountUsages}
+                  className="px-4 py-2 bg-canine-gold text-white rounded-lg hover:bg-canine-light-gold"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-purple-200">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Discounts Used</h3>
+                  <p className="text-3xl font-bold text-purple-600">{discountUsages.length}</p>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-green-200">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Savings</h3>
+                  <p className="text-3xl font-bold text-green-600">
+                    £{discountUsages.reduce((sum, usage) => sum + usage.discount_amount, 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-blue-200">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Original Amount</h3>
+                  <p className="text-3xl font-bold text-blue-600">
+                    £{discountUsages.reduce((sum, usage) => sum + usage.original_amount, 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-canine-gold/30">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Revenue After Discounts</h3>
+                  <p className="text-3xl font-bold text-canine-navy">
+                    £{discountUsages.reduce((sum, usage) => sum + usage.final_amount, 0).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Discount Usage Table */}
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-canine-navy text-white">
+                    <tr>
+                      <th className="px-6 py-4 text-left">Date</th>
+                      <th className="px-6 py-4 text-left">User</th>
+                      <th className="px-6 py-4 text-left">Code</th>
+                      <th className="px-6 py-4 text-left">Type</th>
+                      <th className="px-6 py-4 text-left">Used For</th>
+                      <th className="px-6 py-4 text-right">Original Amount</th>
+                      <th className="px-6 py-4 text-right">Discount</th>
+                      <th className="px-6 py-4 text-right">Final Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {discountUsages.map((usage) => {
+                      const discountCode = Array.isArray(usage.discount_codes)
+                        ? usage.discount_codes[0]
+                        : usage.discount_codes
+                      const profile = Array.isArray(usage.profiles)
+                        ? usage.profiles[0]
+                        : usage.profiles
+
+                      return (
+                        <tr key={usage.id} className="border-b hover:bg-canine-cream">
+                          <td className="px-6 py-4 text-sm">
+                            {new Date(usage.created_at).toLocaleDateString('en-GB')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div>
+                              <p className="font-semibold">{profile?.first_name} {profile?.last_name}</p>
+                              <p className="text-xs text-gray-500">{profile?.email}</p>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
+                              {discountCode?.code}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="text-sm">
+                              {discountCode?.discount_type === 'percentage'
+                                ? `${discountCode.discount_value}%`
+                                : `£${discountCode?.discount_value}`}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 capitalize">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              usage.used_for === 'assessment' ? 'bg-teal-100 text-teal-700' :
+                              usage.used_for === 'subscription' ? 'bg-blue-100 text-blue-700' :
+                              usage.used_for === 'individual_days' ? 'bg-amber-100 text-amber-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {usage.used_for.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            £{usage.original_amount.toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 text-right text-green-600 font-semibold">
+                            -£{usage.discount_amount.toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 text-right font-bold text-canine-navy">
+                            £{usage.final_amount.toFixed(2)}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {discountUsages.length === 0 && (
+                <div className="bg-white rounded-2xl p-12 text-center">
+                  <TicketIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">No discount codes have been used yet</p>
                 </div>
               )}
             </div>
