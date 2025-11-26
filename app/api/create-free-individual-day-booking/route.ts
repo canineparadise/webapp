@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { sendIndividualDayConfirmation } from '@/lib/email'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -105,6 +106,29 @@ export async function POST(request: NextRequest) {
           .from('discount_codes')
           .update({ current_uses: discountCodeData.current_uses + 1 })
           .eq('id', discountCodeId)
+      }
+    }
+
+    // Get user profile for email
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', userId)
+      .single()
+
+    // Send confirmation email
+    if (profile && profile.email) {
+      try {
+        await sendIndividualDayConfirmation({
+          userEmail: profile.email,
+          userName: profile.first_name || 'Valued Customer',
+          dogName: dog.name,
+          bookingDates: dates,
+          totalAmount: 0, // Free booking
+        })
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError)
+        // Don't fail the booking if email fails
       }
     }
 
