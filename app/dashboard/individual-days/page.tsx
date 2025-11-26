@@ -56,7 +56,7 @@ function IndividualDaysContent() {
   const [isValidatingDiscount, setIsValidatingDiscount] = useState(false)
   const [discountError, setDiscountError] = useState('')
 
-  // Generate next 60 days for calendar
+  // Generate next 60 days for calendar grouped by month
   const generateCalendarDates = () => {
     const dates: Date[] = []
     const today = new Date()
@@ -69,6 +69,16 @@ function IndividualDaysContent() {
   }
 
   const calendarDates = generateCalendarDates()
+
+  // Group dates by month
+  const datesByMonth = calendarDates.reduce((acc, date) => {
+    const monthKey = `${date.getFullYear()}-${date.getMonth()}`
+    if (!acc[monthKey]) {
+      acc[monthKey] = []
+    }
+    acc[monthKey].push(date)
+    return acc
+  }, {} as Record<string, Date[]>)
 
   useEffect(() => {
     loadUserAndDogs()
@@ -277,18 +287,21 @@ function IndividualDaysContent() {
 
       if (error) throw error
 
-      if (!data.is_valid) {
-        setDiscountError(data.message || 'Invalid discount code')
+      // RPC returns a single row, but might be in an array
+      const result = Array.isArray(data) ? data[0] : data
+
+      if (!result.is_valid) {
+        setDiscountError(result.error_message || 'Invalid discount code')
         setDiscountCodeId(null)
         setDiscountAmount(0)
         setDiscountType(null)
         return
       }
 
-      setDiscountCodeId(data.discount_code_id)
-      setDiscountAmount(data.discount_amount)
-      setDiscountType(data.discount_type)
-      toast.success(`Discount applied: ${data.discount_type === 'percentage' ? `${data.discount_value}%` : `£${data.discount_value}`}`)
+      setDiscountCodeId(result.discount_code_id)
+      setDiscountAmount(result.discount_value)
+      setDiscountType(result.discount_type)
+      toast.success(`Discount applied: ${result.discount_type === 'percentage' ? `${result.discount_value}%` : `£${result.discount_value}`}`)
     } catch (error: any) {
       console.error('Error validating discount code:', error)
       setDiscountError('Failed to validate discount code')
@@ -448,7 +461,7 @@ function IndividualDaysContent() {
                 transition={{ delay: 0.2 }}
                 className="bg-white rounded-xl p-6 shadow-lg"
               >
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-semibold text-canine-navy">
                     Select Dates
                   </h2>
@@ -459,44 +472,75 @@ function IndividualDaysContent() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-7 gap-2">
-                  {calendarDates.map((date) => {
-                    const dateStr = date.toISOString().split('T')[0]
-                    const availability = availabilityMap.get(dateStr)
-                    const isSelected = selectedDates.includes(dateStr)
-                    const isBooked = isDateBooked(dateStr)
-                    const isPast = date < new Date(new Date().setHours(0, 0, 0, 0))
-                    const isClosed = closedDays.has(dateStr)
-                    const isWeekend = date.getDay() === 0 || date.getDay() === 6
-                    const isAvailable = availability?.is_available && !isBooked && !isPast && !isClosed && !isWeekend
+                {/* Render each month separately */}
+                <div className="space-y-8">
+                  {Object.entries(datesByMonth).map(([monthKey, monthDates]) => {
+                    const firstDate = monthDates[0]
+                    const monthName = firstDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
 
                     return (
-                      <button
-                        key={dateStr}
-                        onClick={() => isAvailable && toggleDateSelection(dateStr)}
-                        disabled={!isAvailable || checkingAvailability}
-                        className={`
-                          p-2 rounded-lg text-sm transition-all
-                          ${isSelected ? 'bg-canine-gold text-white font-semibold' : ''}
-                          ${!isSelected && isAvailable ? 'bg-gray-100 hover:bg-canine-sky text-gray-700' : ''}
-                          ${isClosed ? 'bg-red-100 text-red-600 cursor-not-allowed' : ''}
-                          ${isWeekend ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : ''}
-                          ${!isAvailable && !isClosed && !isWeekend ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
-                          ${isBooked ? 'bg-blue-100 text-blue-600' : ''}
-                        `}
-                      >
-                        <div className="text-xs">{date.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
-                        <div className="font-semibold">{date.getDate()}</div>
-                        {isClosed ? (
-                          <div className="text-xs mt-1">✗</div>
-                        ) : isWeekend ? (
-                          <div className="text-xs mt-1">Closed</div>
-                        ) : availability && (
-                          <div className="text-xs mt-1">
-                            {isBooked ? '✓' : availability.is_available ? '✓' : '✗'}
-                          </div>
-                        )}
-                      </button>
+                      <div key={monthKey}>
+                        {/* Month Header */}
+                        <h3 className="text-lg font-semibold text-canine-navy mb-3 border-b pb-2">
+                          {monthName}
+                        </h3>
+
+                        {/* Day headers */}
+                        <div className="grid grid-cols-7 gap-2 mb-2">
+                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                            <div key={day} className="text-xs font-semibold text-gray-500 text-center">
+                              {day}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Calendar grid */}
+                        <div className="grid grid-cols-7 gap-2">
+                          {/* Add empty cells for days before the first date of the month */}
+                          {monthDates[0].getDate() === 1 && Array.from({ length: (monthDates[0].getDay() + 6) % 7 }).map((_, i) => (
+                            <div key={`empty-${i}`} />
+                          ))}
+
+                          {monthDates.map((date) => {
+                            const dateStr = date.toISOString().split('T')[0]
+                            const availability = availabilityMap.get(dateStr)
+                            const isSelected = selectedDates.includes(dateStr)
+                            const isBooked = isDateBooked(dateStr)
+                            const isPast = date < new Date(new Date().setHours(0, 0, 0, 0))
+                            const isClosed = closedDays.has(dateStr)
+                            const isWeekend = date.getDay() === 0 || date.getDay() === 6
+                            const isAvailable = availability?.is_available && !isBooked && !isPast && !isClosed && !isWeekend
+
+                            return (
+                              <button
+                                key={dateStr}
+                                onClick={() => isAvailable && toggleDateSelection(dateStr)}
+                                disabled={!isAvailable || checkingAvailability}
+                                className={`
+                                  p-2 rounded-lg text-sm transition-all
+                                  ${isSelected ? 'bg-canine-gold text-white font-semibold' : ''}
+                                  ${!isSelected && isAvailable ? 'bg-gray-100 hover:bg-canine-sky text-gray-700' : ''}
+                                  ${isClosed ? 'bg-red-100 text-red-600 cursor-not-allowed' : ''}
+                                  ${isWeekend ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : ''}
+                                  ${!isAvailable && !isClosed && !isWeekend ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''}
+                                  ${isBooked ? 'bg-blue-100 text-blue-600' : ''}
+                                `}
+                              >
+                                <div className="font-semibold">{date.getDate()}</div>
+                                {isClosed ? (
+                                  <div className="text-xs mt-1">✗</div>
+                                ) : isWeekend ? (
+                                  <div className="text-xs mt-1">Closed</div>
+                                ) : availability && (
+                                  <div className="text-xs mt-1">
+                                    {isBooked ? '✓' : availability.is_available ? '✓' : '✗'}
+                                  </div>
+                                )}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
