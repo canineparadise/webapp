@@ -2396,6 +2396,11 @@ export default function StaffDashboard() {
                                   <p className="text-lg font-bold">
                                     {dog.assessment_date ? new Date(dog.assessment_date).toLocaleDateString() : 'Not scheduled'}
                                   </p>
+                                  {dog.assessment_time && dog.assessment_end_time && (
+                                    <p className="text-sm mt-1">
+                                      {dog.assessment_time.slice(0, 5)} - {dog.assessment_end_time.slice(0, 5)}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             </div>
