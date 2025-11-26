@@ -287,7 +287,9 @@ export default function SubscribeDogsPage() {
         })
 
         if (!response.ok) {
-          throw new Error('Failed to create subscription')
+          const errorData = await response.json()
+          console.error('Subscription creation failed:', errorData)
+          throw new Error(errorData.error || 'Failed to create subscription')
         }
 
         toast.success('Subscription created successfully!')

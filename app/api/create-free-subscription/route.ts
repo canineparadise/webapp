@@ -90,9 +90,14 @@ export async function POST(request: NextRequest) {
       subscriptions: createdSubscriptions,
     })
   } catch (error: any) {
-    console.error('Error creating free subscription:', error)
+    console.error('❌ Error creating free subscription:', error)
+    console.error('❌ Error details:', JSON.stringify(error, null, 2))
     return NextResponse.json(
-      { error: error.message || 'Failed to create subscription' },
+      {
+        error: error.message || 'Failed to create subscription',
+        details: error.details || error.hint || null,
+        code: error.code || null
+      },
       { status: 500 }
     )
   }
