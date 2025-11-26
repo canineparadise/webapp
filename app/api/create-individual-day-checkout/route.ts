@@ -95,9 +95,9 @@ export async function POST(request: NextRequest) {
                 ? `${description} (Discount: ${discountCode})`
                 : description,
             },
-            unit_amount: Math.round((amountToCharge / dates.length) * 100),
+            unit_amount: Math.round(amountToCharge * 100),
           },
-          quantity: dates.length,
+          quantity: 1,
         },
       ],
       mode: 'payment',
