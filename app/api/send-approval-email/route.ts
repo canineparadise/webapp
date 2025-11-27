@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sendDogApprovalEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,37 +12,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Replace with actual email service (SendGrid, Resend, etc.)
-    // For now, just log and return success
-    console.log('📧 Approval Email:', {
-      to: ownerEmail,
-      subject: `${dogName} has been approved for Aldenham Doggy Day Care!`,
-      body: `
-        Hi ${ownerName},
-
-        Great news! ${dogName} has successfully completed the assessment and has been approved to join Aldenham Doggy Day Care Daycare!
-
-        You can now book daycare sessions for ${dogName} through your dashboard.
-
-        We're excited to welcome ${dogName} to our pack!
-
-        Best regards,
-        The Aldenham Doggy Day Care Team
-      `
+    // Send email using nodemailer
+    const result = await sendDogApprovalEmail({
+      userEmail: ownerEmail,
+      userName: ownerName,
+      dogName,
     })
 
-    // In production, you would send the email here:
-    // await sendEmail({
-    //   to: ownerEmail,
-    //   subject: `${dogName} has been approved for Aldenham Doggy Day Care!`,
-    //   html: emailTemplate
-    // })
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
+    if (result.success) {
+      return NextResponse.json({ success: true, messageId: result.messageId })
+    } else {
+      throw new Error('Failed to send email')
+    }
+  } catch (error: any) {
     console.error('Error sending approval email:', error)
     return NextResponse.json(
-      { error: 'Failed to send email' },
+      { error: error.message || 'Failed to send approval email' },
       { status: 500 }
     )
   }

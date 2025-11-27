@@ -456,3 +456,218 @@ export async function sendWelcomeEmail({
     html,
   })
 }
+
+// Dog registration confirmation email
+export async function sendDogRegistrationEmail({
+  userEmail,
+  userName,
+  dogName,
+  requiresAssessment,
+}: {
+  userEmail: string
+  userName: string
+  dogName: string
+  requiresAssessment: boolean
+}) {
+  const subject = `${dogName} has been added to your account!`
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          h1 { margin: 0; font-size: 28px; }
+          h2 { color: #1a3a52; }
+          .highlight { color: #a68756; font-weight: bold; }
+          .cta-button { display: inline-block; background: #a68756; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+          .warning-box { background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107; }
+          .success-box { background: #d4edda; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🐾 Dog Added Successfully!</h1>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>Great news! <strong>${dogName}</strong> has been successfully added to your Aldenham Doggy Day Care account.</p>
+
+            ${requiresAssessment ? `
+              <div class="warning-box">
+                <h2 style="margin-top: 0; color: #856404;">📋 Next Step: Book an Assessment</h2>
+                <p style="margin-bottom: 0;">Before ${dogName} can attend regular daycare, they need to complete an assessment. This helps us ensure ${dogName} is comfortable in our environment and gets along well with other dogs.</p>
+              </div>
+
+              <h2>How to Book an Assessment</h2>
+              <ol>
+                <li>Log into your dashboard</li>
+                <li>Navigate to "Book Assessment"</li>
+                <li>Select an available time slot</li>
+                <li>Complete the booking and payment</li>
+              </ol>
+
+              <p style="text-align: center;">
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/assessment/schedule" class="cta-button">Book Assessment Now</a>
+              </p>
+
+              <h2>What Happens During the Assessment?</h2>
+              <ul>
+                <li>Meet our experienced staff</li>
+                <li>Tour of our facilities</li>
+                <li>Supervised introduction to other dogs</li>
+                <li>Behavioral evaluation in a safe environment</li>
+              </ul>
+
+              <p><strong>Assessment Fee:</strong> £40 (one-time fee)</p>
+            ` : `
+              <div class="success-box">
+                <h2 style="margin-top: 0; color: #155724;">✅ Welcome Back!</h2>
+                <p style="margin-bottom: 0;">You've marked ${dogName} as an existing dog who has already completed an assessment. Our team will review and approve ${dogName}'s profile shortly.</p>
+              </div>
+
+              <h2>What's Next?</h2>
+              <p>Once our team approves ${dogName}'s profile, you'll be able to:</p>
+              <ul>
+                <li>Book daycare sessions</li>
+                <li>Purchase subscription plans</li>
+                <li>Schedule individual days</li>
+                <li>View ${dogName}'s activity updates</li>
+              </ul>
+
+              <p>You'll receive an email notification once ${dogName} has been approved!</p>
+            `}
+
+            <div class="details-box">
+              <h2>What to Bring</h2>
+              <ul>
+                <li>Up-to-date vaccination records</li>
+                <li>Any required medications</li>
+                <li>Emergency contact information</li>
+              </ul>
+            </div>
+
+            <p>If you have any questions about ${dogName}'s registration or the assessment process, please don't hesitate to contact us at admin@aldenhamdoggydaycare.com</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}
+
+// Dog approval notification email
+export async function sendDogApprovalEmail({
+  userEmail,
+  userName,
+  dogName,
+}: {
+  userEmail: string
+  userName: string
+  dogName: string
+}) {
+  const subject = `${dogName} has been approved! 🎉`
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          h1 { margin: 0; font-size: 28px; }
+          h2 { color: #1a3a52; }
+          .cta-button { display: inline-block; background: #a68756; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+          ul { padding-left: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 ${dogName} is Approved!</h1>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>Fantastic news! <strong>${dogName}</strong> has been approved to join Aldenham Doggy Day Care! We're so excited to welcome ${dogName} to our pack!</p>
+
+            <div class="details-box">
+              <h2>You Can Now:</h2>
+              <ul>
+                <li>📅 Book daycare sessions for ${dogName}</li>
+                <li>💳 Purchase subscription plans (1-5 days per week)</li>
+                <li>📆 Schedule individual days</li>
+                <li>📸 Receive photo updates during daycare</li>
+              </ul>
+            </div>
+
+            <h2>How to Book Daycare</h2>
+            <ol>
+              <li>Log into your client portal</li>
+              <li>Choose between subscriptions or individual days</li>
+              <li>Select your preferred dates</li>
+              <li>Complete your booking</li>
+            </ol>
+
+            <p style="text-align: center;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL}/dashboard" class="cta-button">Book Daycare Now</a>
+            </p>
+
+            <h2>Drop-off & Pick-up Times</h2>
+            <ul>
+              <li><strong>Drop-off:</strong> 7:00 AM - 10:00 AM</li>
+              <li><strong>Pick-up:</strong> 3:00 PM - 7:00 PM</li>
+            </ul>
+
+            <h2>What to Bring</h2>
+            <ul>
+              <li>Any required medications</li>
+              <li>Special dietary requirements (if any)</li>
+              <li>A positive attitude! 🐕</li>
+            </ul>
+
+            <p>We can't wait to see ${dogName} soon! If you have any questions, please contact us at admin@aldenhamdoggydaycare.com</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}

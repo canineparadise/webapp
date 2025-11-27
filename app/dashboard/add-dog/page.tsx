@@ -851,6 +851,22 @@ export default function AddDogPage() {
 
       toast.success(`${formData.name} has been added to your pack! 🐕`)
 
+      // Send dog registration confirmation email
+      try {
+        await fetch('/api/send-dog-registration-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            dogName: formData.name,
+            requiresAssessment: !formData.assessment_completed,
+          }),
+        })
+      } catch (emailError) {
+        console.error('Failed to send registration email:', emailError)
+        // Don't block the user flow if email fails
+      }
+
       // Check if user needs to sign agreements
       const { data: agreements } = await supabase
         .from('legal_agreements')
