@@ -120,13 +120,12 @@ export default function AddDogPage() {
       // Clear localStorage for a fresh start
       localStorage.removeItem('dogFormDraft')
       localStorage.removeItem('dogFormSection')
-      localStorage.removeItem('dogFormPhoto')
+      // Note: We don't store photos in localStorage anymore due to size limits
       toast.success('Starting fresh dog profile')
     } else {
       // Load from localStorage ONLY if not a new request
       const savedFormData = localStorage.getItem('dogFormDraft')
       const savedSection = localStorage.getItem('dogFormSection')
-      const savedPhoto = localStorage.getItem('dogFormPhoto')
 
       if (savedFormData) {
         const parsed = JSON.parse(savedFormData)
@@ -141,7 +140,7 @@ export default function AddDogPage() {
 
         setFormData(parsed)
         if (savedSection) setCurrentSection(parseInt(savedSection))
-        if (savedPhoto) setPhotoPreview(savedPhoto)
+        // Note: Photo preview is loaded from database draft, not localStorage
         toast.success('Loaded your saved progress')
       }
     }
@@ -555,10 +554,10 @@ export default function AddDogPage() {
         if (error) throw error
         setLastSavedSection(currentSection)
 
-        // Save to localStorage for ALL form data
+        // Save to localStorage for ALL form data (except photo - too large)
         localStorage.setItem('dogFormDraft', JSON.stringify(formData))
         localStorage.setItem('dogFormSection', (currentSection + 1).toString())
-        if (photoPreview) localStorage.setItem('dogFormPhoto', photoPreview)
+        // Note: Photo is saved in database draft, not localStorage due to size limits
 
         toast.success('✓ Progress saved! You can continue anytime.')
 
