@@ -349,11 +349,11 @@ export default function StaffDashboard() {
   const fetchTodayData = async () => {
     setLoading(true)
     try {
-      // Get today's bookings from both tables
+      // Get today's bookings from both tables (OLD SCHEMA: bookings has dog_id singular, not dog_ids array)
       const [{ data: bookingsData }, { data: individualDayBookingsData }] = await Promise.all([
         supabase
           .from('bookings')
-          .select('dog_ids')
+          .select('dog_id')
           .eq('booking_date', currentDate)
           .eq('status', 'confirmed'),
         supabase
@@ -363,7 +363,7 @@ export default function StaffDashboard() {
           .eq('status', 'confirmed')
       ])
 
-      const subscriptionDogIds = bookingsData?.flatMap(b => b.dog_ids) || []
+      const subscriptionDogIds = bookingsData?.map(b => b.dog_id) || []
       const individualDayDogIds = individualDayBookingsData?.map(b => b.dog_id) || []
       const todayDogIds = Array.from(new Set([...subscriptionDogIds, ...individualDayDogIds])) // Remove duplicates
 
@@ -406,27 +406,25 @@ export default function StaffDashboard() {
       const checkedIn: DogWithBooking[] = []
       const checkedOut: DogWithBooking[] = []
 
-      // Process subscription bookings
+      // Process subscription bookings (OLD SCHEMA: one booking per dog, not dog_ids array)
       bookingsWithTimes?.forEach(booking => {
-        booking.dog_ids.forEach((dogId: string) => {
-          const dog = dogsData?.find(d => d.id === dogId)
-          if (dog) {
-            const dogWithBooking: DogWithBooking = {
-              ...dog,
-              booking_id: booking.id,
-              check_in_time: booking.check_in_time,
-              check_out_time: booking.check_out_time
-            }
-
-            if (booking.check_out_time) {
-              checkedOut.push(dogWithBooking)
-            } else if (booking.check_in_time) {
-              checkedIn.push(dogWithBooking)
-            } else {
-              notCheckedIn.push(dogWithBooking)
-            }
+        const dog = dogsData?.find(d => d.id === booking.dog_id)
+        if (dog) {
+          const dogWithBooking: DogWithBooking = {
+            ...dog,
+            booking_id: booking.id,
+            check_in_time: booking.check_in_time,
+            check_out_time: booking.check_out_time
           }
-        })
+
+          if (booking.check_out_time) {
+            checkedOut.push(dogWithBooking)
+          } else if (booking.check_in_time) {
+            checkedIn.push(dogWithBooking)
+          } else {
+            notCheckedIn.push(dogWithBooking)
+          }
+        }
       })
 
       // Process individual day bookings
@@ -515,13 +513,13 @@ export default function StaffDashboard() {
       const endDate = new Date(currentDate)
       endDate.setDate(endDate.getDate() + 6)
 
-      // Query both subscription bookings and individual day bookings
+      // Query both subscription bookings and individual day bookings (OLD SCHEMA: dog_id not dog_ids)
       const [{ data: bookingsData }, { data: individualDayBookingsData }] = await Promise.all([
         supabase
           .from('bookings')
           .select(`
             booking_date,
-            dog_ids,
+            dog_id,
             status
           `)
           .gte('booking_date', currentDate)
@@ -547,7 +545,7 @@ export default function StaffDashboard() {
       }
 
       // Get all unique dog IDs from the week (from both sources)
-      const subscriptionDogIds = bookingsData?.flatMap(b => b.dog_ids) || []
+      const subscriptionDogIds = bookingsData?.map(b => b.dog_id) || []
       const individualDayDogIds = individualDayBookingsData?.map(b => b.dog_id) || []
       const allDogIds = Array.from(new Set([...subscriptionDogIds, ...individualDayDogIds]))
 
@@ -566,7 +564,7 @@ export default function StaffDashboard() {
       // Group bookings by date
       const scheduleMap = new Map<string, WeeklyBooking>()
 
-      // Process subscription bookings
+      // Process subscription bookings (OLD SCHEMA: one booking per dog)
       bookingsData?.forEach(booking => {
         const existing: WeeklyBooking = scheduleMap.get(booking.booking_date) || {
           date: booking.booking_date,
@@ -574,18 +572,16 @@ export default function StaffDashboard() {
           dogs: []
         }
 
-        booking.dog_ids.forEach((dogId: string) => {
-          const dog = dogsData?.find(d => d.id === dogId)
-          if (dog && !existing.dogs.some(d => d.name === dog.name)) {
-            const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
-            existing.dogs.push({
-              name: dog.name,
-              breed: dog.breed,
-              owner_name: `${owner?.first_name || ''} ${owner?.last_name || ''}`.trim(),
-              photo_url: dog.photo_url
-            })
-          }
-        })
+        const dog = dogsData?.find(d => d.id === booking.dog_id)
+        if (dog && !existing.dogs.some(d => d.name === dog.name)) {
+          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+          existing.dogs.push({
+            name: dog.name,
+            breed: dog.breed,
+            owner_name: `${owner?.first_name || ''} ${owner?.last_name || ''}`.trim(),
+            photo_url: dog.photo_url
+          })
+        }
 
         existing.dog_count = existing.dogs.length
         scheduleMap.set(booking.booking_date, existing)
