@@ -166,6 +166,7 @@ export default function ScheduleAssessment() {
   const fetchAvailableSlots = async () => {
     try {
       // Fetch all available assessment slots from admin configuration
+      // 1 user per slot - check if booked_by_user_id is null
       const { data: slots, error } = await supabase
         .from('assessment_slots')
         .select(`
@@ -173,23 +174,19 @@ export default function ScheduleAssessment() {
           assessment_date,
           start_time,
           end_time,
-          max_dogs,
-          booked_count,
+          booked_by_user_id,
           is_available
         `)
         .gte('assessment_date', new Date().toISOString().split('T')[0])
         .eq('is_available', true)
+        .is('booked_by_user_id', null)
         .order('assessment_date', { ascending: true })
         .order('start_time', { ascending: true })
 
       if (error) throw error
 
-      // Filter slots that aren't full
-      const availableSlots = (slots || []).filter(
-        slot => slot.booked_count < slot.max_dogs
-      )
-
-      setAvailableSlots(availableSlots)
+      // Only show slots that haven't been booked (booked_by_user_id is null)
+      setAvailableSlots(slots || [])
     } catch (error) {
       console.error('Error fetching slots:', error)
       toast.error('Failed to load available assessment slots')
@@ -270,7 +267,7 @@ export default function ScheduleAssessment() {
                     <span>{slot.start_time.slice(0, 5)}</span>
                   </div>
                   <div className="text-[10px] mt-0.5">
-                    {slot.max_dogs - slot.booked_count} spots
+                    Available
                   </div>
                 </button>
               ))}
