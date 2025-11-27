@@ -63,12 +63,18 @@ export default function AssessmentSlots() {
   const [recurringTemplates, setRecurringTemplates] = useState<RecurringTemplate[]>([])
   const [generatedSlots, setGeneratedSlots] = useState<GeneratedSlot[]>([])
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showManualSlotModal, setShowManualSlotModal] = useState(false)
   const [generating, setGenerating] = useState(false)
 
   // Form state for new recurring template
   const [selectedDayOfWeek, setSelectedDayOfWeek] = useState(5) // Default to Friday
   const [startTime, setStartTime] = useState('10:00')
   const [endTime, setEndTime] = useState('12:00')
+
+  // Form state for manual slot creation
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split('T')[0])
+  const [manualStartTime, setManualStartTime] = useState('10:00')
+  const [manualEndTime, setManualEndTime] = useState('12:00')
 
   useEffect(() => {
     checkAdminAuth()
@@ -239,9 +245,9 @@ export default function AssessmentSlots() {
   const generateSlotsFromTemplates = async () => {
     setGenerating(true)
     try {
-      // Call the SQL function to generate slots for next 4 weeks
+      // Call the SQL function to generate slots for next 52 weeks (1 year)
       const { data, error } = await supabase.rpc('generate_assessment_slots_from_recurring', {
-        weeks_ahead: 4
+        weeks_ahead: 52
       })
 
       if (error) throw error
@@ -249,7 +255,7 @@ export default function AssessmentSlots() {
       const slotsCreated = data || 0
 
       if (slotsCreated > 0) {
-        toast.success(`Generated ${slotsCreated} new assessment slot(s) for the next 4 weeks`)
+        toast.success(`Generated ${slotsCreated} new assessment slot(s) for the next year`)
       } else {
         toast.success('All slots are up to date')
       }
@@ -284,6 +290,53 @@ export default function AssessmentSlots() {
     }
   }
 
+  const handleCreateManualSlot = async () => {
+    // Validation
+    if (manualStartTime >= manualEndTime) {
+      toast.error('End time must be after start time')
+      return
+    }
+
+    const selectedDate = new Date(manualDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    if (selectedDate < today) {
+      toast.error('Cannot create slots for past dates')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('assessment_slots')
+        .insert({
+          assessment_date: manualDate,
+          start_time: manualStartTime,
+          end_time: manualEndTime,
+          is_available: true,
+          booked_by_user_id: null,
+          max_dogs: 1,
+          booked_count: 0,
+        })
+
+      if (error) throw error
+
+      toast.success('Manual slot created successfully')
+
+      // Reset form and close modal
+      setShowManualSlotModal(false)
+      setManualDate(new Date().toISOString().split('T')[0])
+      setManualStartTime('10:00')
+      setManualEndTime('12:00')
+
+      // Refresh slots
+      await fetchGeneratedSlots()
+    } catch (error) {
+      console.error('Error creating manual slot:', error)
+      toast.error('Failed to create manual slot')
+    }
+  }
+
   const groupSlotsByDate = () => {
     const grouped: Record<string, GeneratedSlot[]> = {}
     generatedSlots.forEach(slot => {
@@ -311,9 +364,16 @@ export default function AssessmentSlots() {
               <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">
                 Assessment Slot Management
               </h1>
-              <p className="text-gray-600">Create recurring templates and auto-generate assessment slots (1 user per slot)</p>
+              <p className="text-gray-600">Create manual slots for specific dates OR recurring templates (1 user per slot)</p>
             </div>
             <div className="flex gap-3">
+              <button
+                onClick={() => setShowManualSlotModal(true)}
+                className="flex items-center px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-semibold"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Add Manual Slot
+              </button>
               <button
                 onClick={generateSlotsFromTemplates}
                 disabled={generating}
@@ -355,7 +415,7 @@ export default function AssessmentSlots() {
                     Recurring Schedule Templates
                   </h2>
                   <p className="text-sm text-gray-600">
-                    These templates automatically generate assessment slots for the next 4 weeks (1 user per slot)
+                    These templates automatically generate assessment slots for the next year (1 user per slot)
                   </p>
                 </div>
               </div>
@@ -449,7 +509,7 @@ export default function AssessmentSlots() {
                     Auto-Generated Assessment Slots
                   </h2>
                   <p className="text-sm text-gray-600">
-                    Read-only view of slots generated from recurring templates (next 4 weeks, 1 user per slot)
+                    View all upcoming assessment slots (manual + auto-generated, 1 user per slot)
                   </p>
                 </div>
               </div>
@@ -554,6 +614,122 @@ export default function AssessmentSlots() {
           </>
         )}
 
+        {/* Create Manual Slot Modal */}
+        <AnimatePresence>
+          {showManualSlotModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowManualSlotModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full"
+              >
+                <h2 className="text-3xl font-display font-bold text-canine-navy mb-6">
+                  Create Manual Slot
+                </h2>
+
+                <div className="space-y-5">
+                  {/* Date Selection */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={manualDate}
+                      onChange={(e) => setManualDate(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-canine-gold outline-none"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Select any date to create a one-time assessment slot
+                    </p>
+                  </div>
+
+                  {/* Start Time */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Start Time
+                    </label>
+                    <input
+                      type="time"
+                      value={manualStartTime}
+                      onChange={(e) => setManualStartTime(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-canine-gold outline-none"
+                    />
+                  </div>
+
+                  {/* End Time */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      End Time
+                    </label>
+                    <input
+                      type="time"
+                      value={manualEndTime}
+                      onChange={(e) => setManualEndTime(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-canine-gold outline-none"
+                    />
+                  </div>
+
+                  {/* Info Banner */}
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <UserIcon className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-blue-900 mb-1">
+                          1 User Per Slot
+                        </p>
+                        <p className="text-xs text-blue-700">
+                          Each time slot can be booked by exactly one user, regardless of how many dogs they bring for assessment.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4">
+                    <p className="text-sm font-semibold text-green-900 mb-2">Slot Preview:</p>
+                    <p className="text-sm text-green-800">
+                      <span className="font-bold">{new Date(manualDate).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                      {' '}from <span className="font-bold">{manualStartTime}</span> to <span className="font-bold">{manualEndTime}</span>
+                      {' '}<span className="font-bold">(1 user per slot)</span>
+                    </p>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center space-x-4 pt-4">
+                    <button
+                      onClick={handleCreateManualSlot}
+                      className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-semibold"
+                    >
+                      Create Slot
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowManualSlotModal(false)
+                        setManualDate(new Date().toISOString().split('T')[0])
+                        setManualStartTime('10:00')
+                        setManualEndTime('12:00')
+                      }}
+                      className="flex-1 px-6 py-3 bg-gray-300 text-gray-700 rounded-xl hover:bg-gray-400 transition-colors font-semibold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Create Recurring Template Modal */}
         <AnimatePresence>
           {showCreateModal && (
@@ -593,7 +769,7 @@ export default function AssessmentSlots() {
                       ))}
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
-                      Slots will be automatically generated every {DAYS_OF_WEEK.find(d => d.value === selectedDayOfWeek)?.label}
+                      Slots will be automatically generated every {DAYS_OF_WEEK.find(d => d.value === selectedDayOfWeek)?.label} for the next year
                     </p>
                   </div>
 
