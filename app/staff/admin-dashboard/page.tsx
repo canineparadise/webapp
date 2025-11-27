@@ -3384,7 +3384,18 @@ export default function AdminDashboard() {
                               )}
                             </div>
                             <div>
-                              <h3 className="text-2xl font-bold">{dog.name}</h3>
+                              <div className="flex items-center gap-3">
+                                <h3 className="text-2xl font-bold">{dog.name}</h3>
+                                {dog.assessment_completed ? (
+                                  <span className="bg-green-500 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                                    ✓ Existing Dog
+                                  </span>
+                                ) : (
+                                  <span className="bg-amber-500 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                                    New Dog
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-white/90">{dog.breed}</p>
                               {dog.assessment_date && (
                                 <p className="text-sm text-white/80 mt-1">
@@ -5820,68 +5831,6 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Day-by-Day Time Slots */}
-                  <div className="bg-white rounded-xl p-6 border-2 border-blue-200">
-                    <div className="flex items-center gap-2 mb-4">
-                      <ClockIcon className="h-5 w-5 text-blue-500" />
-                      <h4 className="text-lg font-semibold text-canine-navy">Weekly Time Slots</h4>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-6">Configure specific time slots for each day of the week (1 assessment per slot)</p>
-
-                    <div className="space-y-3">
-                      {[
-                        { day: 1, label: 'Monday', color: 'border-l-4 border-l-blue-500 bg-blue-50/50' },
-                        { day: 2, label: 'Tuesday', color: 'border-l-4 border-l-green-500 bg-green-50/50' },
-                        { day: 3, label: 'Wednesday', color: 'border-l-4 border-l-purple-500 bg-purple-50/50' },
-                        { day: 4, label: 'Thursday', color: 'border-l-4 border-l-orange-500 bg-orange-50/50' },
-                        { day: 5, label: 'Friday', color: 'border-l-4 border-l-pink-500 bg-pink-50/50' },
-                        { day: 6, label: 'Saturday', color: 'border-l-4 border-l-yellow-500 bg-yellow-50/50' },
-                        { day: 0, label: 'Sunday', color: 'border-l-4 border-l-red-500 bg-red-50/50' },
-                      ].map(({ day, label, color }) => {
-                        const daySlots = recurringSlots.filter(slot => slot.day_of_week === day)
-
-                        return (
-                          <div key={day} className={`${color} border-2 border-gray-200 rounded-xl p-4 transition-all hover:shadow-md`}>
-                            <div className="flex items-center justify-between mb-3">
-                              <h5 className="font-bold text-canine-navy text-base">{label}</h5>
-                              <button
-                                onClick={() => handleAddSlot(day, label)}
-                                className="px-4 py-2 bg-canine-gold text-white rounded-lg hover:bg-canine-gold/90 text-sm font-semibold flex items-center gap-1 transition-all hover:scale-105"
-                              >
-                                <PlusIcon className="h-4 w-4" />
-                                Add Slot
-                              </button>
-                            </div>
-
-                            {/* Show actual slots from database */}
-                            <div className="space-y-2">
-                              {daySlots.length > 0 ? (
-                                daySlots.map(slot => (
-                                  <div key={slot.id} className="bg-white p-3 rounded-lg flex items-center justify-between text-sm shadow-sm border border-gray-200">
-                                    <div className="flex items-center gap-2">
-                                      <ClockIcon className="h-4 w-4 text-canine-gold" />
-                                      <span className="font-semibold text-canine-navy">
-                                        {slot.start_time.substring(0, 5)} - {slot.end_time.substring(0, 5)}
-                                      </span>
-                                    </div>
-                                    <button
-                                      onClick={() => handleDeleteSlot(slot.id, label, `${slot.start_time.substring(0, 5)}-${slot.end_time.substring(0, 5)}`)}
-                                      className="text-red-600 hover:text-red-800 text-sm font-semibold flex items-center gap-1 hover:scale-105 transition-all"
-                                    >
-                                      <TrashIcon className="h-4 w-4" />
-                                      Delete
-                                    </button>
-                                  </div>
-                                ))
-                              ) : (
-                                <p className="text-sm text-gray-400 italic py-2 text-center">No slots configured</p>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
                   </div>
                 </div>
 

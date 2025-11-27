@@ -48,6 +48,7 @@ export default function AddDogPage() {
     neutered: false,
     microchipped: false,
     microchip_number: '',
+    assessment_completed: false,
 
     // Health Information
     vaccinated: false,
@@ -206,6 +207,7 @@ export default function AddDogPage() {
           neutered: draft.neutered || false,
           microchipped: draft.microchipped || false,
           microchip_number: draft.microchip_number || '',
+          assessment_completed: draft.assessment_completed || false,
 
           // Health Information
           vaccinated: draft.vaccinated || false,
@@ -638,6 +640,7 @@ export default function AddDogPage() {
           neutered: formData.neutered,
           microchipped: formData.microchipped,
           microchip_number: formData.microchip_number || null,
+          assessment_completed: formData.assessment_completed,
 
           // Health
           vaccinated: formData.vaccinated,
@@ -719,6 +722,7 @@ export default function AddDogPage() {
             neutered: formData.neutered,
             microchipped: formData.microchipped,
             microchip_number: formData.microchip_number || null,
+            assessment_completed: formData.assessment_completed,
             vaccinated: formData.vaccinated,
             vaccination_expiry: formData.vaccination_expiry || null,
             medical_conditions: formData.medical_conditions || null,
@@ -1168,6 +1172,25 @@ export default function AddDogPage() {
                         <p className="text-xs text-gray-500 mt-1">You don't need to fill this in now - we'll record it when you attend daycare</p>
                       </div>
                     )}
+                  </div>
+
+                  {/* Assessment Completed Checkbox */}
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                    <label className="flex items-start cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.assessment_completed}
+                        onChange={(e) => setFormData({ ...formData, assessment_completed: e.target.checked })}
+                        className="mt-1 mr-3 text-blue-600 focus:ring-blue-600 rounded"
+                      />
+                      <div className="flex-1">
+                        <span className="text-gray-700 font-medium">This dog has already completed an assessment at our daycare</span>
+                        <p className="text-xs text-blue-700 mt-1">
+                          Check this box ONLY if this dog has previously attended our daycare and passed an assessment.
+                          New dogs will need to book and complete an assessment before attending regular daycare.
+                        </p>
+                      </div>
+                    </label>
                   </div>
                 </>
               )}
