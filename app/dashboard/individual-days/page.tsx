@@ -479,28 +479,30 @@ function IndividualDaysContent() {
 
           {/* Subscription Warning */}
           {activeSubscription && activeSubscription.days_remaining > 0 && (
-            <div className="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-yellow-800">
-                    You have an active subscription!
-                  </h3>
-                  <div className="mt-2 text-sm text-yellow-700">
-                    <p>
-                      You have <strong>{activeSubscription.days_remaining} days remaining</strong> in your {activeSubscription.subscription_tiers?.name} subscription.
-                      {' '}<Link href="/dashboard/booking" className="font-medium underline hover:text-yellow-900">
-                        Use your subscription days instead
-                      </Link>{' '}to avoid extra charges!
-                    </p>
-                    <p className="mt-2 text-xs">
-                      This page is for purchasing additional individual days beyond your subscription.
-                    </p>
+            <div className="mt-4 bg-gradient-to-r from-canine-gold to-amber-400 text-white p-6 rounded-2xl shadow-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+                    </svg>
+                    <h3 className="text-xl font-bold">
+                      You Have an Active Subscription!
+                    </h3>
                   </div>
+                  <p className="text-lg mb-4">
+                    You have <strong className="font-bold text-2xl">{activeSubscription.days_remaining} days remaining</strong> in your {activeSubscription.subscription_tiers?.name} subscription.
+                  </p>
+                  <p className="text-white/90 text-sm mb-4">
+                    This page is for purchasing additional individual days (£{pricePerDay}/day) beyond your subscription. Use your included subscription days first to save money!
+                  </p>
+                  <Link
+                    href="/dashboard/booking"
+                    className="inline-flex items-center gap-2 bg-white text-canine-gold px-6 py-3 rounded-xl font-bold text-lg hover:bg-canine-cream transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    <CalendarIcon className="h-6 w-6" />
+                    Book Using My Subscription Days
+                  </Link>
                 </div>
               </div>
             </div>
