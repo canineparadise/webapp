@@ -51,8 +51,57 @@ export default function BookAssessmentSlot() {
   const [appliedDiscount, setAppliedDiscount] = useState<any>(null)
   const [validatingCode, setValidatingCode] = useState(false)
 
+  const fetchAvailableSlots = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+
+      const { data, error } = await supabase
+        .from('assessment_slots')
+        .select('*')
+        .eq('is_available', true)
+        .gte('assessment_date', today)
+        .order('assessment_date', { ascending: true })
+        .order('start_time', { ascending: true })
+
+      if (error) throw error
+
+      // Filter slots that aren't full
+      const availableSlots = (data || []).filter(
+        slot => slot.booked_count < slot.max_dogs
+      )
+
+      setSlots(availableSlots)
+    } catch (error) {
+      console.error('Error fetching slots:', error)
+      toast.error('Failed to load available slots')
+    }
+  }
+
   useEffect(() => {
     init()
+
+    // Set up real-time subscription for assessment slots
+    const slotsSubscription = supabase
+      .channel('assessment_slots_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'assessment_slots'
+        },
+        (payload) => {
+          console.log('Assessment slots changed:', payload)
+          // Refresh available slots when any change occurs
+          fetchAvailableSlots()
+        }
+      )
+      .subscribe()
+
+    // Cleanup subscription on unmount
+    return () => {
+      slotsSubscription.unsubscribe()
+    }
   }, [])
 
   const init = async () => {
@@ -147,32 +196,6 @@ export default function BookAssessmentSlot() {
       console.error('Init error:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchAvailableSlots = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0]
-
-      const { data, error } = await supabase
-        .from('assessment_slots')
-        .select('*')
-        .eq('is_available', true)
-        .gte('assessment_date', today)
-        .order('assessment_date', { ascending: true })
-        .order('start_time', { ascending: true })
-
-      if (error) throw error
-
-      // Filter slots that aren't full
-      const availableSlots = (data || []).filter(
-        slot => slot.booked_count < slot.max_dogs
-      )
-
-      setSlots(availableSlots)
-    } catch (error) {
-      console.error('Error fetching slots:', error)
-      toast.error('Failed to load available slots')
     }
   }
 
