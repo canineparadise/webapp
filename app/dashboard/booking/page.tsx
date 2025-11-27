@@ -305,39 +305,6 @@ export default function BookingPage() {
       // Combine meal requirements with special notes
       const fullInstructions = mealText + (specialNotes || '')
 
-      // Determine meal option from mealOptions
-      let mealOption = 'none'
-      if (mealOptions.breakfast && mealOptions.lunch && mealOptions.dinner) {
-        mealOption = 'all'
-      } else if (mealOptions.breakfast && mealOptions.lunch) {
-        mealOption = 'breakfast_lunch'
-      } else if (mealOptions.lunch && mealOptions.dinner) {
-        mealOption = 'lunch_dinner'
-      } else if (mealOptions.breakfast && mealOptions.dinner) {
-        mealOption = 'breakfast_dinner'
-      } else if (mealOptions.breakfast) {
-        mealOption = 'breakfast'
-      } else if (mealOptions.lunch) {
-        mealOption = 'lunch'
-      } else if (mealOptions.dinner) {
-        mealOption = 'dinner'
-      }
-
-      // Get pricing based on subscription tier
-      const tier = subscription.subscription_tiers?.identifier || '4_days'
-      const pricingMap: any = {
-        '4_days': { full_day: 40, half_day: 30 },
-        '8_days': { full_day: 38, half_day: 28.50 },
-        '12_days': { full_day: 37, half_day: 27.75 },
-        '16_days': { full_day: 36, half_day: 27 },
-        '20_days': { full_day: 35, half_day: 25 },
-      }
-
-      // Default to full_day session type for subscription bookings
-      const sessionType = 'full_day'
-      const dailyRate = pricingMap[tier]?.[sessionType] || 40
-      const totalAmount = dailyRate * selectedDogs.length
-
       // Create bookings for each selected date and dog (OLD SCHEMA: one row per dog per date)
       const bookings = []
       for (const date of selectedDates) {
