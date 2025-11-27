@@ -155,7 +155,7 @@ export default function PrivacyPolicy() {
                   <li><strong>Withdraw Consent:</strong> Withdraw consent for marketing or photography at any time</li>
                   <li><strong>Complain:</strong> Lodge a complaint with the Information Commissioner's Office (ICO)</li>
                 </ul>
-                <p className="mt-4">To exercise any of these rights, contact us at <a href="mailto:wecare@canineparadise.com" className="text-canine-gold hover:text-canine-light-gold">wecare@canineparadise.com</a></p>
+                <p className="mt-4">To exercise any of these rights, contact us at <a href="mailto:admin@aldenhamdoggydaycare.com" className="text-canine-gold hover:text-canine-light-gold">admin@aldenhamdoggydaycare.com</a></p>
               </div>
             </section>
 
@@ -192,7 +192,7 @@ export default function PrivacyPolicy() {
               <div className="text-gray-700 leading-relaxed">
                 <p className="mb-3">If you have questions about this Privacy Policy or how we handle your data, please contact us:</p>
                 <div className="bg-canine-cream p-4 rounded-lg">
-                  <p><strong>Email:</strong> <a href="mailto:wecare@canineparadise.com" className="text-canine-gold hover:text-canine-light-gold">wecare@canineparadise.com</a></p>
+                  <p><strong>Email:</strong> <a href="mailto:admin@aldenhamdoggydaycare.com" className="text-canine-gold hover:text-canine-light-gold">admin@aldenhamdoggydaycare.com</a></p>
                   <p><strong>Business Name:</strong> Aldenham Doggy Day Care</p>
                 </div>
               </div>

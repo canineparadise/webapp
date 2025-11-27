@@ -51,7 +51,7 @@ export default function TermsAndConditions() {
             <section className="mb-8">
               <h2 className="text-2xl font-bold text-canine-navy mb-4">4. Cancellation Policy</h2>
               <div className="text-gray-700 leading-relaxed space-y-3">
-                <p><strong>4.1 Notice Period:</strong> Customers must provide <strong>30 days written notice</strong> to cancel their subscription. Notice must be submitted through your account dashboard or by email to wecare@canineparadise.com.</p>
+                <p><strong>4.1 Notice Period:</strong> Customers must provide <strong>30 days written notice</strong> to cancel their subscription. Notice must be submitted through your account dashboard or by email to admin@aldenhamdoggydaycare.com.</p>
                 <p><strong>4.2 Cancellation Charges:</strong> If less than 30 days notice is provided, you will be charged for one additional month at your current subscription rate.</p>
                 <p><strong>4.3 Effective Date:</strong> Cancellations become effective 30 days from the date of your cancellation request.</p>
                 <p><strong>4.4 Individual Bookings:</strong> Individual booking cancellations must be made at least 24 hours in advance for a full refund. Cancellations made less than 24 hours before the booking will not be refunded.</p>
@@ -116,7 +116,7 @@ export default function TermsAndConditions() {
               <h2 className="text-2xl font-bold text-canine-navy mb-4">12. Contact Information</h2>
               <p className="text-gray-700 leading-relaxed">
                 For questions about these Terms and Conditions, please contact us at:<br />
-                <strong>Email:</strong> <a href="mailto:wecare@canineparadise.com" className="text-canine-gold hover:text-canine-light-gold">wecare@canineparadise.com</a>
+                <strong>Email:</strong> <a href="mailto:admin@aldenhamdoggydaycare.com" className="text-canine-gold hover:text-canine-light-gold">admin@aldenhamdoggydaycare.com</a>
               </p>
             </section>
 

@@ -77,8 +77,8 @@ export default function Footer() {
               </li>
               <li className="flex items-center">
                 <EnvelopeIcon className="h-5 w-5 text-canine-gold mr-2" />
-                <a href="mailto:wecare@canineparadise.com" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  wecare@canineparadise.com
+                <a href="mailto:admin@aldenhamdoggydaycare.com" className="text-gray-300 hover:text-white transition-colors text-sm">
+                  admin@aldenhamdoggydaycare.com
                 </a>
               </li>
             </ul>

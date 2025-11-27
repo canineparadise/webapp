@@ -55,7 +55,7 @@ export default function ContactUs() {
     {
       icon: EnvelopeIcon,
       title: 'Email Us',
-      details: ['wecare@canineparadise.com', 'We reply within 24 hours'],
+      details: ['admin@aldenhamdoggydaycare.com', 'We reply within 24 hours'],
     },
     {
       icon: ClockIcon,
