@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import { CalendarIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
