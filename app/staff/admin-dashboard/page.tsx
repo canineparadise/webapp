@@ -1010,7 +1010,8 @@ export default function AdminDashboard() {
           let subscriptionStatus = 'None'
           if (subscription && subscription.subscription_tiers) {
             // Show tier name with days, e.g., "4 Days (Full Day)"
-            const tierDays = subscription.subscription_tiers.days_included || ''
+            const tier: any = subscription.subscription_tiers
+            const tierDays = tier.days_included || ''
             subscriptionStatus = `${tierDays} Days (Full Day)`
           } else if (subscription) {
             subscriptionStatus = 'Active'
