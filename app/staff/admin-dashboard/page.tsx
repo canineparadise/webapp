@@ -1203,12 +1203,17 @@ export default function AdminDashboard() {
         `)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        // Table doesn't exist in OLD schema - silently fail
+        console.log('Discount usage tracking table not available (expected for OLD schema)')
+        setDiscountUsages([])
+        return
+      }
 
       setDiscountUsages(data || [])
     } catch (error) {
-      console.error('Error fetching discount usages:', error)
-      toast.error('Failed to load discount usage data')
+      console.log('Discount usage tracking not available')
+      setDiscountUsages([])
     }
   }
 
