@@ -305,19 +305,54 @@ export default function BookingPage() {
       // Combine meal requirements with special notes
       const fullInstructions = mealText + (specialNotes || '')
 
+      // Determine meal option from mealOptions
+      let mealOption = 'none'
+      if (mealOptions.breakfast && mealOptions.lunch && mealOptions.dinner) {
+        mealOption = 'all'
+      } else if (mealOptions.breakfast && mealOptions.lunch) {
+        mealOption = 'breakfast_lunch'
+      } else if (mealOptions.lunch && mealOptions.dinner) {
+        mealOption = 'lunch_dinner'
+      } else if (mealOptions.breakfast && mealOptions.dinner) {
+        mealOption = 'breakfast_dinner'
+      } else if (mealOptions.breakfast) {
+        mealOption = 'breakfast'
+      } else if (mealOptions.lunch) {
+        mealOption = 'lunch'
+      } else if (mealOptions.dinner) {
+        mealOption = 'dinner'
+      }
+
+      // Get pricing based on subscription tier
+      const tier = subscription.subscription_tiers?.identifier || '4_days'
+      const pricingMap: any = {
+        '4_days': { full_day: 40, half_day: 30 },
+        '8_days': { full_day: 38, half_day: 28.50 },
+        '12_days': { full_day: 37, half_day: 27.75 },
+        '16_days': { full_day: 36, half_day: 27 },
+        '20_days': { full_day: 35, half_day: 25 },
+      }
+
+      // Default to full_day session type for subscription bookings
+      const sessionType = 'full_day'
+      const dailyRate = pricingMap[tier]?.[sessionType] || 40
+      const totalAmount = dailyRate * selectedDogs.length
+
       // Create bookings for each selected date
       const bookings = selectedDates.map(date => ({
         user_id: user.id,
         dog_ids: selectedDogs,
         booking_date: date,
         total_dogs: selectedDogs.length,
-        daily_rate: 40.00, // Default rate - will be updated based on subscription tier
-        total_amount: 40.00 * selectedDogs.length,
+        daily_rate: dailyRate,
+        total_amount: totalAmount,
         status: 'confirmed',
         payment_status: 'paid',
         subscription_id: subscription.id,
         is_subscription_booking: true,
-        special_instructions: fullInstructions.trim() || null
+        session_type: sessionType,
+        meal_option: mealOption,
+        special_notes: specialNotes || null
       }))
 
       const { error: bookingError } = await supabase
@@ -349,7 +384,7 @@ export default function BookingPage() {
 
     } catch (error: any) {
       console.error('Error creating booking:', error)
-      toast.error('Failed to create booking')
+      toast.error(error.message || 'Failed to create booking')
     } finally {
       setSubmitting(false)
     }
