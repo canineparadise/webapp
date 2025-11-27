@@ -2,6 +2,7 @@
 // Admin Dashboard - Business Settings & Management
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import {
   CalendarIcon,
   UserGroupIcon,
@@ -5781,6 +5782,25 @@ export default function AdminDashboard() {
                     </div>
                     <ChevronDownIcon className={`h-6 w-6 text-blue-500 transition-transform ${openSections.assessment ? 'rotate-180' : ''}`} />
                   </button>
+
+                  {/* ASSESSMENT SLOT MANAGEMENT LINK */}
+                  <div className="mb-6">
+                    <Link
+                      href="/staff/admin-dashboard/assessment-slots"
+                      className="block w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white p-6 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <CalendarDaysIcon className="h-6 w-6" />
+                            <h4 className="text-xl font-bold">Assessment Slot Management</h4>
+                          </div>
+                          <p className="text-sm text-white/90">Create manual slots for specific dates OR recurring templates for the full year (1 user per slot)</p>
+                        </div>
+                        <ChevronRightIcon className="h-6 w-6" />
+                      </div>
+                    </Link>
+                  </div>
 
                   <div className={`transition-all duration-300 ${openSections.assessment ? 'block' : 'hidden'}`}>
                   <div className="bg-white rounded-xl p-6 mb-6 border-2 border-blue-200">
