@@ -1085,10 +1085,10 @@ export default function AddDogPage() {
                         onChange={(e) => setFormData({ ...formData, size: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
                       >
-                        <option value="small">Small (0-25 lbs)</option>
-                        <option value="medium">Medium (25-60 lbs)</option>
-                        <option value="large">Large (60-90 lbs)</option>
-                        <option value="extra_large">Extra Large (90+ lbs)</option>
+                        <option value="small">Small (0-11 kg)</option>
+                        <option value="medium">Medium (11-27 kg)</option>
+                        <option value="large">Large (27-41 kg)</option>
+                        <option value="extra_large">Extra Large (41+ kg)</option>
                       </select>
                     </div>
                   </div>
@@ -1096,7 +1096,7 @@ export default function AddDogPage() {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Weight (lbs)
+                        Weight (kg)
                       </label>
                       <input
                         type="number"

@@ -200,7 +200,7 @@ export default function DogProfilePage() {
                 {dog.weight_kg && (
                   <>
                     <span>•</span>
-                    <span>{dog.weight_kg} lbs</span>
+                    <span>{dog.weight_kg} kg</span>
                   </>
                 )}
               </div>
@@ -313,7 +313,7 @@ export default function DogProfilePage() {
                     <FireIcon className="h-4 w-4" />
                     Weight
                   </p>
-                  <p className="font-bold text-gray-900 text-lg">{dog.weight_kg ? `${dog.weight_kg} lbs` : 'Not specified'}</p>
+                  <p className="font-bold text-gray-900 text-lg">{dog.weight_kg ? `${dog.weight_kg} kg` : 'Not specified'}</p>
                 </div>
               </div>
 

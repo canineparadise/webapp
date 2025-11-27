@@ -485,16 +485,16 @@ export default function EditDogPage() {
                       onChange={(e) => setFormData({ ...formData, size: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
                     >
-                      <option value="toy">Toy (under 10 lbs)</option>
-                      <option value="small">Small (10-25 lbs)</option>
-                      <option value="medium">Medium (26-50 lbs)</option>
-                      <option value="large">Large (51-100 lbs)</option>
-                      <option value="giant">Giant (over 100 lbs)</option>
+                      <option value="toy">Toy (under 4.5 kg)</option>
+                      <option value="small">Small (4.5-11 kg)</option>
+                      <option value="medium">Medium (12-23 kg)</option>
+                      <option value="large">Large (23-45 kg)</option>
+                      <option value="giant">Giant (over 45 kg)</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Weight (lbs)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg)</label>
                     <input
                       type="number"
                       step="0.1"
