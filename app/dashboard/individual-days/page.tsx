@@ -588,9 +588,15 @@ function IndividualDaysContent() {
                         {/* Calendar grid */}
                         <div className="grid grid-cols-7 gap-2">
                           {/* Add empty cells for days before the first date of the month */}
-                          {monthDates[0].getDate() === 1 && Array.from({ length: monthDates[0].getDay() === 0 ? 6 : monthDates[0].getDay() - 1 }).map((_, i) => (
-                            <div key={`empty-${i}`} />
-                          ))}
+                          {monthDates[0].getDate() === 1 && (() => {
+                            // Get day of week for first day of month (0 = Sunday, 1 = Monday, etc.)
+                            const firstDayOfWeek = monthDates[0].getDay()
+                            // Calculate offset for Mon-Sun calendar (Monday = 0)
+                            const offset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
+                            return Array.from({ length: offset }).map((_, i) => (
+                              <div key={`empty-${i}`} />
+                            ))
+                          })()}
 
                           {monthDates.map((date) => {
                             const dateStr = date.toISOString().split('T')[0]
