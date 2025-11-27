@@ -54,15 +54,23 @@ export default function BookingPage() {
 
       setDogs(dogsData || [])
 
-      // Load subscription
+      // Load subscription with tier info
       const { data: subData } = await supabase
         .from('subscriptions')
-        .select('*')
+        .select(`
+          *,
+          subscription_tiers(name)
+        `)
         .eq('user_id', user.id)
-        .eq('status', 'active')
+        .eq('is_active', true)
         .single()
 
-      setSubscription(subData)
+      if (subData) {
+        setSubscription({
+          ...subData,
+          tier_name: subData.subscription_tiers?.name || 'Subscription'
+        })
+      }
 
       // Load existing bookings
       const { data: bookingsData } = await supabase
@@ -223,10 +231,53 @@ export default function BookingPage() {
       return
     }
 
-    // Check if user has enough days remaining
+    // Calculate included vs extra days
     const daysRemaining = subscription.days_remaining || 0
-    if (selectedDates.length > daysRemaining) {
-      toast.error(`You only have ${daysRemaining} days remaining in your subscription`)
+    const includedDays = Math.min(selectedDates.length, daysRemaining)
+    const extraDays = Math.max(0, selectedDates.length - daysRemaining)
+
+    // If there are extra days, we'll need to charge at subscription rate
+    if (extraDays > 0) {
+      const extraDayCost = subscription.price_per_day || 40.00
+      const totalExtraCost = extraDays * extraDayCost
+
+      // Show confirmation that extra days will be charged
+      if (!window.confirm(
+        `You have ${daysRemaining} days remaining in your subscription.\n\n` +
+        `• ${includedDays} day${includedDays !== 1 ? 's' : ''} will use your included days (FREE)\n` +
+        `• ${extraDays} extra day${extraDays !== 1 ? 's' : ''} will be charged at £${extraDayCost}/day = £${totalExtraCost.toFixed(2)}\n\n` +
+        `Continue to payment?`
+      )) {
+        return
+      }
+
+      // Redirect to Stripe checkout for extra days
+      try {
+        const response = await fetch('/api/create-subscription-extra-days-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subscriptionId: subscription.id,
+            numExtraDays: extraDays,
+            pricePerDay: extraDayCost,
+            selectedDates: selectedDates,
+            selectedDogs: selectedDogs,
+            mealOptions: mealOptions,
+            specialNotes: specialNotes,
+            includedDays: includedDays
+          })
+        })
+
+        const data = await response.json()
+        if (data.url) {
+          window.location.href = data.url
+        } else {
+          throw new Error('No checkout URL returned')
+        }
+      } catch (error) {
+        console.error('Error creating checkout:', error)
+        toast.error('Failed to create payment session')
+      }
       return
     }
 
@@ -514,6 +565,17 @@ export default function BookingPage() {
                     <p className="text-sm text-blue-200 mb-1">Days Selected</p>
                     <p className="text-3xl font-bold text-canine-gold">{selectedDates.length}</p>
                   </div>
+                  {selectedDates.length > daysRemaining && (
+                    <div className="bg-amber-500/20 backdrop-blur rounded-xl p-4 border-2 border-amber-400">
+                      <p className="text-sm text-amber-100 mb-2 font-semibold">Extra Days</p>
+                      <p className="text-lg text-white">
+                        {selectedDates.length - daysRemaining} extra day{selectedDates.length - daysRemaining !== 1 ? 's' : ''} @ £{subscription.price_per_day || 40}/day
+                      </p>
+                      <p className="text-2xl font-bold text-amber-100 mt-1">
+                        = £{((selectedDates.length - daysRemaining) * (subscription.price_per_day || 40)).toFixed(2)}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="bg-white/10 backdrop-blur rounded-xl p-4">

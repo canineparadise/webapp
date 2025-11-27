@@ -165,6 +165,116 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     } else {
       console.log('Individual day bookings created successfully for user:', userId)
     }
+  } else if (metadata.type === 'subscription_extra_days') {
+    // Handle subscription extra days purchase with bookings
+    const {
+      subscriptionId,
+      numExtraDays,
+      pricePerDay,
+      selectedDates,
+      selectedDogs,
+      mealBreakfast,
+      mealLunch,
+      mealDinner,
+      specialNotes,
+      includedDays
+    } = metadata
+
+    const datesArray = selectedDates.split(',')
+    const dogsArray = selectedDogs.split(',')
+
+    // Get subscription details
+    const { data: subscription } = await supabase
+      .from('subscriptions')
+      .select('days_remaining, days_used')
+      .eq('id', subscriptionId)
+      .single()
+
+    if (!subscription) {
+      console.error('Subscription not found for extra days booking')
+      return
+    }
+
+    // Build meal requirements text
+    const mealRequirements = []
+    if (mealBreakfast === 'true') mealRequirements.push('Breakfast')
+    if (mealLunch === 'true') mealRequirements.push('Lunch')
+    if (mealDinner === 'true') mealRequirements.push('Dinner')
+    const mealText = mealRequirements.length > 0
+      ? `MEALS REQUIRED: ${mealRequirements.join(', ')}. `
+      : ''
+    const fullInstructions = mealText + (specialNotes || '')
+
+    const includedDaysCount = parseInt(includedDays)
+    const daysRemaining = subscription.days_remaining || 0
+
+    // Split dates into included (FREE) and extra (PAID)
+    const includedDates = datesArray.slice(0, includedDaysCount)
+    const extraDates = datesArray.slice(includedDaysCount)
+
+    // Create bookings for included days (FREE - use subscription)
+    if (includedDates.length > 0) {
+      const includedBookings = includedDates.map((date: string) => ({
+        user_id: userId,
+        dog_ids: dogsArray,
+        booking_date: date,
+        total_dogs: dogsArray.length,
+        daily_rate: parseFloat(pricePerDay),
+        total_amount: parseFloat(pricePerDay) * dogsArray.length,
+        status: 'confirmed',
+        payment_status: 'paid',
+        subscription_id: subscriptionId,
+        is_subscription_booking: true,
+        special_instructions: fullInstructions.trim() || null
+      }))
+
+      const { error: includedError } = await supabase
+        .from('bookings')
+        .insert(includedBookings)
+
+      if (includedError) {
+        console.error('Error creating included day bookings:', includedError)
+      }
+
+      // Update subscription days remaining for included days
+      await supabase
+        .from('subscriptions')
+        .update({
+          days_remaining: daysRemaining - includedDates.length,
+          days_used: (subscription.days_used || 0) + includedDates.length
+        })
+        .eq('id', subscriptionId)
+    }
+
+    // Create bookings for extra days (PAID - charged at subscription rate)
+    if (extraDates.length > 0) {
+      const extraBookings = extraDates.map((date: string) => ({
+        user_id: userId,
+        dog_ids: dogsArray,
+        booking_date: date,
+        total_dogs: dogsArray.length,
+        daily_rate: parseFloat(pricePerDay),
+        total_amount: parseFloat(pricePerDay) * dogsArray.length,
+        status: 'confirmed',
+        payment_status: 'paid',
+        subscription_id: subscriptionId,
+        is_subscription_booking: false, // Extra days, not subscription days
+        stripe_session_id: session.id,
+        special_instructions: fullInstructions.trim() || null
+      }))
+
+      const { error: extraError } = await supabase
+        .from('bookings')
+        .insert(extraBookings)
+
+      if (extraError) {
+        console.error('Error creating extra day bookings:', extraError)
+      } else {
+        console.log('Extra day bookings created successfully:', extraDates.length)
+      }
+    }
+
+    console.log(`Subscription extra days handled: ${includedDates.length} included, ${extraDates.length} extra`)
   }
 }
 
