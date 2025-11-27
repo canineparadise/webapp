@@ -338,19 +338,20 @@ export default function BookingPage() {
       const dailyRate = pricingMap[tier]?.[sessionType] || 40
       const totalAmount = dailyRate * selectedDogs.length
 
-      // Create bookings for each selected date
-      const bookings = selectedDates.map(date => ({
-        user_id: user.id,
-        dog_ids: selectedDogs,
-        booking_date: date,
-        total_dogs: selectedDogs.length,
-        status: 'confirmed',
-        payment_status: 'paid',
-        subscription_id: subscription.id,
-        session_type: sessionType,
-        meal_option: mealOption,
-        special_notes: specialNotes || null
-      }))
+      // Create bookings for each selected date and dog (OLD SCHEMA: one row per dog per date)
+      const bookings = []
+      for (const date of selectedDates) {
+        for (const dogId of selectedDogs) {
+          bookings.push({
+            user_id: user.id,
+            dog_id: dogId,
+            booking_date: date,
+            subscription_id: subscription.id,
+            status: 'confirmed',
+            special_instructions: fullInstructions.trim() || null
+          })
+        }
+      }
 
       const { error: bookingError } = await supabase
         .from('bookings')
