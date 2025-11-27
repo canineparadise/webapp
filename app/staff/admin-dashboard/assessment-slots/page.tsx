@@ -270,11 +270,24 @@ export default function AssessmentSlots() {
   }
 
   const handleDeleteGeneratedSlot = async (slotId: string) => {
-    if (!confirm('Are you sure you want to delete this generated slot? This will cancel any bookings.')) {
+    if (!confirm('Are you sure you want to delete this slot? This will cancel any bookings.')) {
       return
     }
 
     try {
+      // First check if the slot exists
+      const { data: slotCheck, error: checkError } = await supabase
+        .from('assessment_slots')
+        .select('id, assessment_date, start_time, end_time')
+        .eq('id', slotId)
+        .single()
+
+      if (checkError) {
+        console.error('Error checking slot:', checkError)
+        throw new Error('Slot not found')
+      }
+
+      // Delete the slot
       const { error } = await supabase
         .from('assessment_slots')
         .delete()
@@ -282,11 +295,11 @@ export default function AssessmentSlots() {
 
       if (error) throw error
 
-      toast.success('Slot deleted successfully')
+      toast.success(`Slot deleted: ${slotCheck.assessment_date} at ${slotCheck.start_time.slice(0, 5)}`)
       await fetchGeneratedSlots()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting slot:', error)
-      toast.error('Failed to delete slot')
+      toast.error('Failed to delete slot: ' + (error.message || 'Unknown error'))
     }
   }
 
@@ -307,6 +320,22 @@ export default function AssessmentSlots() {
     }
 
     try {
+      // Check if slot already exists for this date and time
+      const { data: existingSlots, error: checkError } = await supabase
+        .from('assessment_slots')
+        .select('id')
+        .eq('assessment_date', manualDate)
+        .eq('start_time', manualStartTime)
+        .eq('end_time', manualEndTime)
+
+      if (checkError) throw checkError
+
+      if (existingSlots && existingSlots.length > 0) {
+        toast.error('This time slot already exists for this day')
+        return
+      }
+
+      // Create the slot
       const { error } = await supabase
         .from('assessment_slots')
         .insert({
@@ -331,9 +360,13 @@ export default function AssessmentSlots() {
 
       // Refresh slots
       await fetchGeneratedSlots()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating manual slot:', error)
-      toast.error('Failed to create manual slot')
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        toast.error('This time slot already exists for this day')
+      } else {
+        toast.error('Failed to create manual slot: ' + (error.message || 'Unknown error'))
+      }
     }
   }
 
