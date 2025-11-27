@@ -995,10 +995,10 @@ export default function AdminDashboard() {
             .select('*', { count: 'exact', head: true })
             .eq('owner_id', user.id)
 
-          // Check subscription status - fetch tier info with name
+          // Check subscription status - fetch tier info with name and start date
           const { data: subscription, error: subError} = await supabase
             .from('subscriptions')
-            .select('tier_id, subscription_tiers(name, identifier, days_included)')
+            .select('tier_id, created_at, subscription_tiers(name, identifier, days_included)')
             .eq('user_id', user.id)
             .eq('is_active', true)
             .maybeSingle()
@@ -1008,19 +1008,23 @@ export default function AdminDashboard() {
           }
 
           let subscriptionStatus = 'None'
+          let subscriptionStartDate = null
           if (subscription && subscription.subscription_tiers) {
             // Show tier name with days, e.g., "4 Days (Full Day)"
             const tier: any = subscription.subscription_tiers
             const tierDays = tier.days_included || ''
             subscriptionStatus = `${tierDays} Days (Full Day)`
+            subscriptionStartDate = subscription.created_at
           } else if (subscription) {
             subscriptionStatus = 'Active'
+            subscriptionStartDate = subscription.created_at
           }
 
           return {
             ...user,
             dogs_count: dogsCount || 0,
-            subscription_status: subscriptionStatus
+            subscription_status: subscriptionStatus,
+            subscription_start_date: subscriptionStartDate
           }
         })
       )
@@ -5159,7 +5163,7 @@ export default function AdminDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm">
-                          {user.created_at ? new Date(user.created_at).toLocaleDateString('en-GB') : 'N/A'}
+                          {user.subscription_start_date ? new Date(user.subscription_start_date).toLocaleDateString('en-GB') : 'N/A'}
                         </td>
                       </tr>
                     ))}
