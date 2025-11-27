@@ -131,6 +131,7 @@ export default function AssessmentSlots() {
 
   const fetchGeneratedSlots = async () => {
     try {
+      // SHOW ALL SLOTS INCLUDING TODAY - no date filtering in admin view
       const { data, error } = await supabase
         .from('assessment_slots')
         .select(`
@@ -147,12 +148,12 @@ export default function AssessmentSlots() {
             )
           )
         `)
-        .gte('assessment_date', new Date().toISOString().split('T')[0])
         .order('assessment_date', { ascending: true })
         .order('start_time', { ascending: true })
 
       if (error) throw error
 
+      console.log('Admin: Fetched ALL slots:', data?.length || 0)
       setGeneratedSlots(data || [])
     } catch (error) {
       console.error('Error fetching generated slots:', error)
@@ -310,14 +311,7 @@ export default function AssessmentSlots() {
       return
     }
 
-    const selectedDate = new Date(manualDate)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    if (selectedDate < today) {
-      toast.error('Cannot create slots for past dates')
-      return
-    }
+    // REMOVED past date check - admin can create slots for any date including today
 
     try {
       // Check if slot already exists for this date and time
@@ -678,7 +672,6 @@ export default function AssessmentSlots() {
                       type="date"
                       value={manualDate}
                       onChange={(e) => setManualDate(e.target.value)}
-                      min={new Date().toISOString().split('T')[0]}
                       className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-canine-gold outline-none"
                     />
                     <p className="text-xs text-gray-500 mt-1">
