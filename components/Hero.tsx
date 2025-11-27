@@ -6,7 +6,7 @@ import { SparklesIcon, HeartIcon, CheckCircleIcon } from '@heroicons/react/24/so
 
 export default function Hero() {
   return (
-    <section className="relative min-h-[70vh] md:min-h-[80vh] flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[60vh] sm:min-h-[70vh] md:min-h-[80vh] flex items-center justify-center overflow-hidden">
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: 'url(/hero-banner-outdoor.jpg)' }}
@@ -16,7 +16,7 @@ export default function Hero() {
       </div>
       <div className="absolute inset-0 paw-pattern opacity-10"></div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 md:py-20">
         <div className="text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -54,13 +54,13 @@ export default function Hero() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center"
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4"
           >
-            <Link href="/login" className="bg-canine-gold text-white px-8 py-4 rounded-full font-semibold text-lg transition-all duration-300 hover:bg-canine-light-gold hover:shadow-xl hover:scale-105 inline-flex items-center justify-center group">
+            <Link href="/login" className="bg-canine-gold text-white px-6 py-3 sm:px-8 sm:py-4 rounded-full font-semibold text-base sm:text-lg transition-all duration-300 hover:bg-canine-light-gold hover:shadow-xl hover:scale-105 inline-flex items-center justify-center group">
               Book a Visit
-              <HeartIcon className="h-5 w-5 ml-2 group-hover:animate-pulse" />
+              <HeartIcon className="h-4 w-4 sm:h-5 sm:w-5 ml-2 group-hover:animate-pulse" />
             </Link>
-            <Link href="#about" className="bg-white/90 backdrop-blur-sm text-canine-navy px-8 py-4 rounded-full font-semibold text-lg transition-all duration-300 hover:bg-white hover:shadow-xl hover:scale-105 inline-flex items-center justify-center">
+            <Link href="#about" className="bg-white/90 backdrop-blur-sm text-canine-navy px-6 py-3 sm:px-8 sm:py-4 rounded-full font-semibold text-base sm:text-lg transition-all duration-300 hover:bg-white hover:shadow-xl hover:scale-105 inline-flex items-center justify-center">
               Learn More
             </Link>
           </motion.div>
@@ -70,7 +70,7 @@ export default function Hero() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1 }}
-          className="mt-16 grid md:grid-cols-3 gap-8 max-w-4xl mx-auto"
+          className="mt-8 sm:mt-12 md:mt-16 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-8 max-w-4xl mx-auto px-4"
         >
           {[
             { text: 'Licensed & Insured' },
@@ -80,10 +80,10 @@ export default function Hero() {
             <motion.div
               key={index}
               whileHover={{ scale: 1.05 }}
-              className="flex items-center justify-center space-x-3 bg-white/90 backdrop-blur-sm rounded-xl py-4 px-6 border border-canine-gold/20"
+              className="flex items-center justify-center space-x-2 sm:space-x-3 bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-xl py-3 px-4 sm:py-4 sm:px-6 border border-canine-gold/20"
             >
-              <CheckCircleIcon className="h-6 w-6 text-canine-gold flex-shrink-0" />
-              <span className="text-canine-navy font-semibold">{item.text}</span>
+              <CheckCircleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-canine-gold flex-shrink-0" />
+              <span className="text-canine-navy font-semibold text-sm sm:text-base">{item.text}</span>
             </motion.div>
           ))}
         </motion.div>

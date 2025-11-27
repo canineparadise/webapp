@@ -14,22 +14,22 @@ export default function About() {
   ]
 
   return (
-    <section id="about" className="py-20 bg-gradient-to-br from-canine-cream to-white">
+    <section id="about" className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-canine-cream to-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 sm:gap-10 md:gap-12 items-center">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             whileInView={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-canine-navy mb-6">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-canine-navy mb-4 sm:mb-6">
               Why Choose Aldenham Doggy Day Care?
             </h2>
-            <p className="text-lg text-gray-700 mb-8">
+            <p className="text-base sm:text-lg text-gray-700 mb-6 sm:mb-8">
               At Aldenham Doggy Day Care, we provide a safe, engaging, and loving environment where your furry friend can play, socialize, and thrive. Our dedicated team ensures every dog receives personalized attention and care tailored to their unique needs.
             </p>
-            <ul className="space-y-3">
+            <ul className="space-y-2.5 sm:space-y-3">
               {features.map((feature, index) => (
                 <motion.li
                   key={index}
@@ -39,8 +39,8 @@ export default function About() {
                   viewport={{ once: true }}
                   className="flex items-center"
                 >
-                  <CheckCircleIcon className="h-6 w-6 text-canine-gold mr-3 flex-shrink-0" />
-                  <span className="text-gray-700">{feature}</span>
+                  <CheckCircleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-canine-gold mr-2.5 sm:mr-3 flex-shrink-0" />
+                  <span className="text-sm sm:text-base text-gray-700">{feature}</span>
                 </motion.li>
               ))}
             </ul>

@@ -310,26 +310,26 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky">
       {/* Friendly Header with Gradient */}
       <header className="bg-gradient-to-r from-canine-navy to-blue-900 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
               {/* Friendly Avatar with Border */}
-              <div className="h-16 w-16 rounded-full bg-gradient-to-br from-canine-gold to-canine-light-gold flex items-center justify-center text-white font-bold text-2xl shadow-lg border-4 border-white/20">
+              <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 rounded-full bg-gradient-to-br from-canine-gold to-canine-light-gold flex items-center justify-center text-white font-bold text-lg sm:text-xl md:text-2xl shadow-lg border-2 sm:border-4 border-white/20 flex-shrink-0">
                 {initials}
               </div>
-              <div>
-                <h1 className="text-3xl font-display font-bold">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-2xl md:text-3xl font-display font-bold truncate">
                   Welcome back, {firstName}! 👋
                 </h1>
-                <p className="text-blue-100 mt-1">We're happy to see you and your pups!</p>
+                <p className="text-blue-100 mt-0.5 sm:mt-1 text-xs sm:text-sm hidden sm:block">We're happy to see you and your pups!</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {/* Logout Button */}
               <button
                 onClick={handleSignOut}
-                className="text-white/90 hover:text-white text-sm px-4 py-2 rounded-lg border border-white/30 hover:border-white/60 hover:bg-white/10 transition-all"
+                className="text-white/90 hover:text-white text-xs sm:text-sm px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg border border-white/30 hover:border-white/60 hover:bg-white/10 transition-all whitespace-nowrap"
               >
                 Logout
               </button>
@@ -400,59 +400,59 @@ export default function Dashboard() {
         )}
 
         {/* Main Content Area */}
-        <div className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex-1 px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Quick Actions Bar - Fun & Friendly */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <Link href="/dashboard/assessment/schedule">
-            <button className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-white to-teal-50 text-canine-navy hover:shadow-lg border border-teal-200/50 transition-all transform hover:scale-105 w-full">
-              <ClockIcon className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
+            <button className="group flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-teal-50 text-canine-navy hover:shadow-lg border border-teal-200/50 transition-all transform hover:scale-105 w-full">
+              <ClockIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform" />
               <span className="font-semibold text-sm">Assessment</span>
             </button>
           </Link>
 
           <Link href="/dashboard/add-dog?new=true">
-            <button className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-white to-green-50 text-canine-navy hover:shadow-lg border border-green-200/50 transition-all transform hover:scale-105 w-full">
-              <PlusIcon className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
-              <span className="font-semibold text-sm">Add Dog</span>
+            <button className="group flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-green-50 text-canine-navy hover:shadow-lg border border-green-200/50 transition-all transform hover:scale-105 w-full">
+              <PlusIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold text-xs sm:text-sm">Add Dog</span>
             </button>
           </Link>
 
           <button
             onClick={() => setActiveTab('dogs')}
-            className={`group flex flex-col items-center justify-center p-6 rounded-2xl transition-all transform hover:scale-105 ${
+            className={`group flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl transition-all transform hover:scale-105 ${
               activeTab === 'dogs'
                 ? 'bg-gradient-to-br from-pink-400 to-pink-600 text-white shadow-xl shadow-pink-400/30'
                 : 'bg-gradient-to-br from-white to-pink-50 text-canine-navy hover:shadow-lg border border-pink-200/50'
             }`}
           >
-            <HeartIcon className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
-            <span className="font-semibold text-sm">My Dogs</span>
+            <HeartIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform" />
+            <span className="font-semibold text-xs sm:text-sm">My Dogs</span>
           </button>
 
           <Link href="/dashboard/subscriptions">
-            <button className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-white to-purple-50 text-canine-navy hover:shadow-lg border border-purple-200/50 transition-all transform hover:scale-105 w-full">
-              <CreditCardIcon className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
-              <span className="font-semibold text-sm">Subscription</span>
+            <button className="group flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-purple-50 text-canine-navy hover:shadow-lg border border-purple-200/50 transition-all transform hover:scale-105 w-full">
+              <CreditCardIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold text-xs sm:text-sm">Subscription</span>
             </button>
           </Link>
 
           <Link href="/dashboard/individual-days">
-            <button className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-white to-amber-50 text-canine-navy hover:shadow-lg border border-amber-200/50 transition-all transform hover:scale-105 w-full">
-              <CalendarDaysIcon className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
-              <span className="font-semibold text-sm">Individual Days</span>
+            <button className="group flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-amber-50 text-canine-navy hover:shadow-lg border border-amber-200/50 transition-all transform hover:scale-105 w-full">
+              <CalendarDaysIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold text-xs sm:text-sm">Individual Days</span>
             </button>
           </Link>
 
           <Link href="/dashboard/profile">
-            <button className="group flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-white to-orange-50 text-canine-navy hover:shadow-lg border border-orange-200/50 transition-all transform hover:scale-105 w-full">
-              <UserIcon className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
-              <span className="font-semibold text-sm">My Profile</span>
+            <button className="group flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-orange-50 text-canine-navy hover:shadow-lg border border-orange-200/50 transition-all transform hover:scale-105 w-full">
+              <UserIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold text-xs sm:text-sm">My Profile</span>
             </button>
           </Link>
         </div>
 
         {/* At-a-Glance Status Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Subscription Status Card */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">

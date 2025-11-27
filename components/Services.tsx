@@ -49,25 +49,25 @@ const services = [
 
 export default function Services() {
   return (
-    <section id="services" className="py-20 bg-white">
+    <section id="services" className="py-12 sm:py-16 md:py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-8 sm:mb-12 md:mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-display font-bold text-canine-navy mb-4">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-canine-navy mb-3 sm:mb-4">
             What We Offer
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-3xl mx-auto px-4">
             A complete day of joy, care, and adventure for your furry friend
           </p>
         </motion.div>
 
         {/* First row - 3 services */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 mb-6 sm:mb-8">
           {services.slice(0, 3).map((service, index) => (
             <motion.div
               key={index}
@@ -81,21 +81,21 @@ export default function Services() {
               <img
                 src={service.image}
                 alt={service.title}
-                className="w-full h-48 object-cover rounded-lg mb-4"
+                className="w-full h-40 sm:h-48 object-cover rounded-lg mb-3 sm:mb-4"
               />
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-canine-gold/20 group-hover:bg-canine-gold/30 transition-colors mb-4">
-                <service.icon className="h-7 w-7 text-canine-gold" />
+              <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-canine-gold/20 group-hover:bg-canine-gold/30 transition-colors mb-3 sm:mb-4">
+                <service.icon className="h-6 w-6 sm:h-7 sm:w-7 text-canine-gold" />
               </div>
-              <h3 className="text-xl font-semibold text-canine-navy mb-3">
+              <h3 className="text-lg sm:text-xl font-semibold text-canine-navy mb-2 sm:mb-3">
                 {service.title}
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
                 {service.description}
               </p>
-              <ul className="space-y-2">
+              <ul className="space-y-1.5 sm:space-y-2">
                 {service.features.map((feature, idx) => (
-                  <li key={idx} className="flex items-center text-sm text-gray-500">
-                    <span className="w-1.5 h-1.5 bg-canine-gold rounded-full mr-2"></span>
+                  <li key={idx} className="flex items-center text-xs sm:text-sm text-gray-500">
+                    <span className="w-1.5 h-1.5 bg-canine-gold rounded-full mr-2 flex-shrink-0"></span>
                     {feature}
                   </li>
                 ))}
@@ -105,7 +105,7 @@ export default function Services() {
         </div>
 
         {/* Second row - 2 services centered */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
           {services.slice(3, 5).map((service, index) => (
             <motion.div
               key={index + 3}
@@ -119,21 +119,21 @@ export default function Services() {
               <img
                 src={service.image}
                 alt={service.title}
-                className="w-full h-48 object-cover rounded-lg mb-4"
+                className="w-full h-40 sm:h-48 object-cover rounded-lg mb-3 sm:mb-4"
               />
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-canine-gold/20 group-hover:bg-canine-gold/30 transition-colors mb-4">
-                <service.icon className="h-7 w-7 text-canine-gold" />
+              <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-canine-gold/20 group-hover:bg-canine-gold/30 transition-colors mb-3 sm:mb-4">
+                <service.icon className="h-6 w-6 sm:h-7 sm:w-7 text-canine-gold" />
               </div>
-              <h3 className="text-xl font-semibold text-canine-navy mb-3">
+              <h3 className="text-lg sm:text-xl font-semibold text-canine-navy mb-2 sm:mb-3">
                 {service.title}
               </h3>
-              <p className="text-gray-600 mb-4">
+              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
                 {service.description}
               </p>
-              <ul className="space-y-2">
+              <ul className="space-y-1.5 sm:space-y-2">
                 {service.features.map((feature, idx) => (
-                  <li key={idx} className="flex items-center text-sm text-gray-500">
-                    <span className="w-1.5 h-1.5 bg-canine-gold rounded-full mr-2"></span>
+                  <li key={idx} className="flex items-center text-xs sm:text-sm text-gray-500">
+                    <span className="w-1.5 h-1.5 bg-canine-gold rounded-full mr-2 flex-shrink-0"></span>
                     {feature}
                   </li>
                 ))}
