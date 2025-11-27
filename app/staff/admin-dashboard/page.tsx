@@ -822,15 +822,15 @@ export default function AdminDashboard() {
       }
       setWeeklyStats(weeklyData)
 
-      // Monthly revenue - Calculate from booking amount (including assessments and individual days)
+      // Monthly revenue - Calculate from subscriptions, individual days, and assessments
       try {
-        // Get subscription bookings revenue
-        const { data: revenueData, error } = await supabase
-          .from('bookings')
-          .select('amount')
-          .gte('booking_date', firstDayOfMonth)
-          .lte('booking_date', lastDayOfMonth)
-          .in('status', ['confirmed', 'completed'])
+        // Get subscription signups this month (actual payments received)
+        const { data: subscriptionRevenueData } = await supabase
+          .from('subscriptions')
+          .select('monthly_price, created_at')
+          .gte('created_at', firstDayOfMonth)
+          .lte('created_at', lastDayOfMonth)
+          .eq('payment_status', 'paid')
 
         // Get individual day bookings revenue - only count non-free bookings
         const { data: individualRevenueData } = await supabase
@@ -849,59 +849,53 @@ export default function AdminDashboard() {
           .gte('booked_at', firstDayOfMonth)
           .lte('booked_at', lastDayOfMonth)
 
-        // Get discount usage for all bookings this month
+        // Get discount usage for all bookings this month (only if table exists)
         const { data: discountUsageData } = await supabase
           .from('discount_code_usage')
           .select('used_for, final_amount, user_id, created_at')
           .gte('created_at', firstDayOfMonth)
           .lte('created_at', lastDayOfMonth)
+          .then(res => res.data)
+          .catch(() => null) // Silently fail if table doesn't exist
 
-        if (!error && revenueData) {
-          // Subscription revenue - use amount from bookings table (already includes Stripe discount)
-          // For extra accuracy, we could also verify against discount_code_usage but Stripe handles this
-          const subscriptionRev = revenueData.reduce((sum, b) => sum + (b.amount || 0), 0) || 0
+        // Calculate subscription revenue (payments received this month)
+        const subscriptionRev = subscriptionRevenueData?.reduce((sum, s) => sum + Number(s.monthly_price || 0), 0) || 0
 
-          // Individual day revenue from paid bookings (already excludes free ones with price > 0 filter)
-          const individualRev = individualRevenueData?.reduce((sum, b) => sum + (b.price || 0), 0) || 0
+        // Individual day revenue from paid bookings (already excludes free ones with price > 0 filter)
+        const individualRev = individualRevenueData?.reduce((sum, b) => sum + (b.price || 0), 0) || 0
 
-          const bookingsRev = subscriptionRev + individualRev
+        const bookingsRev = subscriptionRev + individualRev
 
-          // Calculate assessment revenue with discounts
-          let assessmentsRev = 0
-          if (assessmentRevenueData) {
-            for (const assessment of assessmentRevenueData) {
-              // Check if this assessment had a discount applied
-              const discount = discountUsageData?.find(d =>
-                d.used_for === 'assessment' &&
-                d.user_id === assessment.user_id &&
-                new Date(d.created_at).toDateString() === new Date(assessment.booked_at).toDateString()
-              )
+        // Calculate assessment revenue with discounts
+        let assessmentsRev = 0
+        if (assessmentRevenueData) {
+          for (const assessment of assessmentRevenueData) {
+            // Check if this assessment had a discount applied
+            const discount = discountUsageData?.find(d =>
+              d.used_for === 'assessment' &&
+              d.user_id === assessment.user_id &&
+              new Date(d.created_at).toDateString() === new Date(assessment.booked_at).toDateString()
+            )
 
-              if (discount) {
-                // Use final amount after discount (excluding 100% discount which is £0)
-                if (discount.final_amount > 0) {
-                  assessmentsRev += discount.final_amount
-                }
-              } else {
-                // No discount, use full assessment fee
-                assessmentsRev += (settings.assessment_fee || 40)
+            if (discount) {
+              // Use final amount after discount (excluding 100% discount which is £0)
+              if (discount.final_amount > 0) {
+                assessmentsRev += discount.final_amount
               }
+            } else {
+              // No discount, use full assessment fee
+              assessmentsRev += (settings.assessment_fee || 40)
             }
           }
-
-          const totalRevenue = bookingsRev + assessmentsRev
-          setMonthlyRevenue(totalRevenue)
-          setBookingRevenue(bookingsRev)
-          setAssessmentRevenue(assessmentsRev)
-          console.log('📊 Revenue breakdown:', { subscriptionRev, individualRev, bookingRevenue: bookingsRev, assessmentRevenue: assessmentsRev, totalRevenue })
-        } else {
-          console.log('Revenue query issue:', error?.message)
-          setMonthlyRevenue(0)
-          setBookingRevenue(0)
-          setAssessmentRevenue(0)
         }
+
+        const totalRevenue = bookingsRev + assessmentsRev
+        setMonthlyRevenue(totalRevenue)
+        setBookingRevenue(bookingsRev)
+        setAssessmentRevenue(assessmentsRev)
+        console.log('📊 Revenue breakdown:', { subscriptionRev, individualRev, bookingRevenue: bookingsRev, assessmentRevenue: assessmentsRev, totalRevenue })
       } catch (e) {
-        console.log('Revenue calculation failed')
+        console.log('Revenue calculation failed:', e)
         setMonthlyRevenue(0)
       }
 
@@ -1106,6 +1100,34 @@ export default function AdminDashboard() {
 
   const fetchFinancialTransactions = async () => {
     try {
+      // Fetch subscription payments as transactions
+      const { data: subscriptionPayments } = await supabase
+        .from('subscriptions')
+        .select(`
+          id,
+          user_id,
+          monthly_price,
+          created_at,
+          payment_status,
+          stripe_subscription_id,
+          profiles!subscriptions_user_id_fkey (first_name, last_name, email)
+        `)
+        .eq('payment_status', 'paid')
+        .order('created_at', { ascending: false })
+
+      // Transform subscription payments into transaction format
+      const subscriptionTransactions: FinancialTransaction[] = (subscriptionPayments || []).map(sub => ({
+        id: sub.id,
+        user_id: sub.user_id,
+        booking_id: undefined,
+        stripe_payment_id: sub.stripe_subscription_id || undefined,
+        amount: Math.round(Number(sub.monthly_price) * 100), // Convert to pence
+        transaction_type: 'subscription',
+        status: 'completed',
+        created_at: sub.created_at,
+        profiles: Array.isArray(sub.profiles) ? sub.profiles[0] : sub.profiles
+      }))
+
       // Fetch assessment bookings as transactions
       const { data: assessmentBookings } = await supabase
         .from('assessment_bookings')
@@ -1132,36 +1154,36 @@ export default function AdminDashboard() {
         profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles
       }))
 
-      // Fetch regular bookings with amount as transactions
-      const { data: regularBookings } = await supabase
-        .from('bookings')
+      // Fetch individual day bookings as transactions (paid only)
+      const { data: individualBookings } = await supabase
+        .from('individual_day_bookings')
         .select(`
           id,
           user_id,
-          amount,
+          price,
           booking_date,
-          status,
-          profiles!bookings_user_id_fkey (first_name, last_name, email)
+          payment_status,
+          profiles!individual_day_bookings_user_id_fkey (first_name, last_name, email)
         `)
-        .in('status', ['confirmed', 'completed'])
-        .not('amount', 'is', null)
+        .eq('payment_status', 'paid')
+        .gt('price', 0)
         .order('booking_date', { ascending: false })
 
-      // Transform regular bookings into transaction format
-      const bookingTransactions: FinancialTransaction[] = (regularBookings || []).map(booking => ({
+      // Transform individual bookings into transaction format
+      const individualTransactions: FinancialTransaction[] = (individualBookings || []).map(booking => ({
         id: booking.id,
         user_id: booking.user_id,
         booking_id: booking.id,
         stripe_payment_id: undefined,
-        amount: booking.amount,
+        amount: Math.round(Number(booking.price) * 100), // Convert to pence
         transaction_type: 'booking',
-        status: booking.status,
+        status: 'completed',
         created_at: booking.booking_date,
         profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles
       }))
 
       // Combine and sort all transactions by date
-      const allTransactions = [...assessmentTransactions, ...bookingTransactions]
+      const allTransactions = [...subscriptionTransactions, ...assessmentTransactions, ...individualTransactions]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
       setFinancialTransactions(allTransactions)
