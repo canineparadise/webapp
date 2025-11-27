@@ -414,7 +414,8 @@ export default function StaffDashboard() {
             ...dog,
             booking_id: booking.id,
             check_in_time: booking.check_in_time,
-            check_out_time: booking.check_out_time
+            check_out_time: booking.check_out_time,
+            special_instructions: booking.special_instructions
           }
 
           if (booking.check_out_time) {
@@ -435,7 +436,8 @@ export default function StaffDashboard() {
             ...dog,
             booking_id: booking.id,
             check_in_time: booking.check_in_time,
-            check_out_time: booking.check_out_time
+            check_out_time: booking.check_out_time,
+            special_instructions: booking.special_instructions || booking.notes
           }
 
           if (booking.check_out_time) {
@@ -1769,13 +1771,20 @@ export default function StaffDashboard() {
                                     <div className="flex items-center justify-center h-full text-xl">🐕</div>
                                   )}
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                   <h4 className="font-bold text-canine-navy">{dog.name}</h4>
                                   <p className="text-sm text-gray-600">{dog.breed}</p>
                                   <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                  <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
                                 </div>
                               </div>
                             </div>
+                            {dog.special_instructions && (
+                              <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-xs font-semibold text-blue-900 mb-1">Special Instructions:</p>
+                                <p className="text-sm text-blue-800 whitespace-pre-wrap">{dog.special_instructions}</p>
+                              </div>
+                            )}
                             <button
                               onClick={() => {
                                 setSelectedBookingDog(dog)
@@ -1816,10 +1825,11 @@ export default function StaffDashboard() {
                                     <div className="flex items-center justify-center h-full text-xl">🐕</div>
                                   )}
                                 </div>
-                                <div>
+                                <div className="flex-1">
                                   <h4 className="font-bold text-canine-navy">{dog.name}</h4>
                                   <p className="text-sm text-gray-600">{dog.breed}</p>
                                   <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                  <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
                                   {dog.check_in_time && (
                                     <p className="text-xs text-green-700 font-semibold">
                                       In: {new Date(dog.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1828,6 +1838,12 @@ export default function StaffDashboard() {
                                 </div>
                               </div>
                             </div>
+                            {dog.special_instructions && (
+                              <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-xs font-semibold text-blue-900 mb-1">Special Instructions:</p>
+                                <p className="text-sm text-blue-800 whitespace-pre-wrap">{dog.special_instructions}</p>
+                              </div>
+                            )}
                             <button
                               onClick={() => {
                                 setSelectedBookingDog(dog)
@@ -1860,7 +1876,7 @@ export default function StaffDashboard() {
                             onClick={() => handleDogClick(dog)}
                             className="bg-white rounded-xl p-4 shadow-sm border-2 border-gray-200 cursor-pointer"
                           >
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-3 mb-3">
                               <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-400 overflow-hidden flex-shrink-0">
                                 {dog.photo_url ? (
                                   <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
@@ -1868,10 +1884,11 @@ export default function StaffDashboard() {
                                   <div className="flex items-center justify-center h-full text-xl">🐕</div>
                                 )}
                               </div>
-                              <div>
+                              <div className="flex-1">
                                 <h4 className="font-bold text-canine-navy">{dog.name}</h4>
                                 <p className="text-sm text-gray-600">{dog.breed}</p>
                                 <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
                                 {dog.check_out_time && (
                                   <p className="text-xs text-gray-700 font-semibold">
                                     Out: {new Date(dog.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1879,6 +1896,12 @@ export default function StaffDashboard() {
                                 )}
                               </div>
                             </div>
+                            {dog.special_instructions && (
+                              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <p className="text-xs font-semibold text-blue-900 mb-1">Special Instructions:</p>
+                                <p className="text-sm text-blue-800 whitespace-pre-wrap">{dog.special_instructions}</p>
+                              </div>
+                            )}
                           </motion.div>
                           )
                         })}
