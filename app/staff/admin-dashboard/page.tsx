@@ -995,10 +995,10 @@ export default function AdminDashboard() {
             .select('*', { count: 'exact', head: true })
             .eq('owner_id', user.id)
 
-          // Check subscription status - uses is_active boolean and tier_id
-          const { data: subscription, error: subError } = await supabase
+          // Check subscription status - fetch tier info with name
+          const { data: subscription, error: subError} = await supabase
             .from('subscriptions')
-            .select('tier_id')
+            .select('tier_id, subscription_tiers(name, identifier, days_included)')
             .eq('user_id', user.id)
             .eq('is_active', true)
             .maybeSingle()
@@ -1008,9 +1008,12 @@ export default function AdminDashboard() {
           }
 
           let subscriptionStatus = 'None'
-          if (subscription) {
-            // Active subscription found - show tier_id or just 'Active'
-            subscriptionStatus = subscription.tier_id || 'Active'
+          if (subscription && subscription.subscription_tiers) {
+            // Show tier name with days, e.g., "4 Days (Full Day)"
+            const tierDays = subscription.subscription_tiers.days_included || ''
+            subscriptionStatus = `${tierDays} Days (Full Day)`
+          } else if (subscription) {
+            subscriptionStatus = 'Active'
           }
 
           return {
@@ -1051,12 +1054,15 @@ export default function AdminDashboard() {
         .order('signed_at', { ascending: false })
 
       if (error) {
-        console.error('Error fetching legal agreements:', error)
+        // Table might not exist in OLD schema - silently fail
+        console.log('Legal agreements table not available (expected for OLD schema)')
+        setLegalAgreements([])
         return
       }
       setLegalAgreements(data || [])
     } catch (error) {
-      console.error('Error fetching legal agreements:', error)
+      console.log('Legal agreements not available')
+      setLegalAgreements([])
     }
   }
 
