@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -15,6 +15,8 @@ import {
   SparklesIcon,
   CurrencyPoundIcon,
   TicketIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from '@heroicons/react/24/outline'
 
 interface AssessmentSlot {
@@ -44,14 +46,15 @@ export default function BookAssessmentSlot() {
   const [selectedSlot, setSelectedSlot] = useState<string>('')
   const [selectedDogs, setSelectedDogs] = useState<string[]>([])
   const [existingBooking, setExistingBooking] = useState<any>(null)
-  const [assessmentFee, setAssessmentFee] = useState<number>(40) // Default to £40, fetched from database
+  const [assessmentFee, setAssessmentFee] = useState<number>(40)
+  const [currentMonth, setCurrentMonth] = useState(new Date())
 
   // Discount code state
   const [discountCode, setDiscountCode] = useState('')
   const [appliedDiscount, setAppliedDiscount] = useState<any>(null)
   const [validatingCode, setValidatingCode] = useState(false)
 
-  const fetchAvailableSlots = async () => {
+  const fetchAvailableSlots = useCallback(async () => {
     try {
       const today = new Date().toISOString().split('T')[0]
 
@@ -75,7 +78,7 @@ export default function BookAssessmentSlot() {
       console.error('Error fetching slots:', error)
       toast.error('Failed to load available slots')
     }
-  }
+  }, [])
 
   useEffect(() => {
     init()
@@ -102,7 +105,7 @@ export default function BookAssessmentSlot() {
     return () => {
       slotsSubscription.unsubscribe()
     }
-  }, [])
+  }, [fetchAvailableSlots])
 
   const init = async () => {
     try {
@@ -197,6 +200,29 @@ export default function BookAssessmentSlot() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDayOfWeek = firstDay.getDay()
+
+    return { daysInMonth, startingDayOfWeek, year, month }
+  }
+
+  const getSlotsForDate = (dateString: string) => {
+    return slots.filter(slot => slot.assessment_date === dateString)
+  }
+
+  const previousMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+  }
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
   }
 
   const handleDogToggle = (dogId: string) => {
@@ -335,18 +361,74 @@ export default function BookAssessmentSlot() {
     }
   }
 
-  const groupSlotsByDate = () => {
-    const grouped: Record<string, AssessmentSlot[]> = {}
-    slots.forEach(slot => {
-      if (!grouped[slot.assessment_date]) {
-        grouped[slot.assessment_date] = []
-      }
-      grouped[slot.assessment_date].push(slot)
-    })
-    return grouped
-  }
+  // Render calendar
+  const renderCalendar = () => {
+    const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth)
+    const days = []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
 
-  const groupedSlots = groupSlotsByDate()
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(<div key={`empty-${i}`} className="p-2"></div>)
+    }
+
+    // Add cells for each day of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day)
+      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      const dateSlots = getSlotsForDate(dateString)
+      const isPast = date < today
+      const dayOfWeek = date.getDay()
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+
+      days.push(
+        <motion.div
+          key={day}
+          whileHover={!isPast && dateSlots.length > 0 ? { scale: 1.05 } : {}}
+          className={`p-3 border rounded-lg min-h-[100px] transition-all ${
+            isPast
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : isWeekend
+              ? 'bg-gray-50 text-gray-400'
+              : dateSlots.length > 0
+              ? 'bg-green-50 border-green-300 cursor-pointer hover:bg-green-100'
+              : 'bg-white border-gray-200'
+          }`}
+        >
+          <div className="font-bold mb-1">{day}</div>
+          {!isPast && dateSlots.length > 0 && (
+            <div className="space-y-1">
+              {dateSlots.map(slot => (
+                <button
+                  key={slot.id}
+                  onClick={() => setSelectedSlot(slot.id)}
+                  className={`w-full text-xs p-2 rounded transition-all ${
+                    selectedSlot === slot.id
+                      ? 'bg-canine-gold text-white font-bold'
+                      : 'bg-white border border-green-400 text-green-700 hover:bg-green-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <ClockIcon className="h-3 w-3" />
+                    <span>{slot.start_time.slice(0, 5)}</span>
+                  </div>
+                  <div className="text-[10px] mt-0.5">
+                    {slot.max_dogs - slot.booked_count} spots
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {!isPast && isWeekend && (
+            <div className="text-xs text-gray-400 mt-1">Closed</div>
+          )}
+        </motion.div>
+      )
+    }
+
+    return days
+  }
 
   if (loading) {
     return (
@@ -402,7 +484,7 @@ export default function BookAssessmentSlot() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-12 px-4">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <Link
           href="/dashboard"
           className="inline-flex items-center text-canine-navy hover:text-canine-gold mb-6 transition-colors font-semibold"
@@ -422,7 +504,7 @@ export default function BookAssessmentSlot() {
                 Book Assessment Slot
               </h1>
               <p className="text-gray-600">
-                Select a time slot for your dog's assessment
+                Select a time slot for your dog's assessment (typically Fridays)
               </p>
             </div>
             <div className="bg-canine-gold text-white px-6 py-3 rounded-xl">
@@ -430,7 +512,7 @@ export default function BookAssessmentSlot() {
                 <CurrencyPoundIcon className="h-6 w-6" />
                 <span className="text-2xl font-bold">£{assessmentFee}</span>
               </div>
-              <p className="text-xs opacity-90">One-time fee</p>
+              <p className="text-xs opacity-90">Per dog</p>
             </div>
           </div>
         </motion.div>
@@ -558,74 +640,71 @@ export default function BookAssessmentSlot() {
           </motion.div>
         )}
 
-        {/* Available Slots */}
+        {/* Calendar View */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="bg-white rounded-2xl shadow-2xl p-8"
         >
-          <h2 className="text-2xl font-display font-bold text-canine-navy mb-6">
-            Available Time Slots
-          </h2>
-
-          {Object.keys(groupedSlots).length === 0 ? (
-            <div className="text-center py-12">
-              <CalendarDaysIcon className="h-16 w-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-xl text-gray-600 mb-2">No slots available</p>
-              <p className="text-gray-500">Please check back later for new assessment slots</p>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-display font-bold text-canine-navy">
+              Available Assessment Dates
+            </h2>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={previousMonth}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <ChevronLeftIcon className="h-6 w-6 text-canine-navy" />
+              </button>
+              <span className="text-lg font-semibold text-canine-navy min-w-[200px] text-center">
+                {currentMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                onClick={nextMonth}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <ChevronRightIcon className="h-6 w-6 text-canine-navy" />
+              </button>
             </div>
-          ) : (
-            <div className="space-y-8">
-              {Object.entries(groupedSlots).map(([date, dateSlots]) => (
-                <div key={date}>
-                  <h3 className="text-xl font-display font-bold text-gray-800 mb-4">
-                    {new Date(date).toLocaleDateString('en-GB', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                    })}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {dateSlots.map(slot => (
-                      <motion.div
-                        key={slot.id}
-                        whileHover={{ scale: 1.02 }}
-                        onClick={() => setSelectedSlot(slot.id)}
-                        className={`p-6 rounded-xl border-2 cursor-pointer transition-all ${
-                          selectedSlot === slot.id
-                            ? 'border-canine-gold bg-canine-gold/10'
-                            : 'border-gray-300 hover:border-canine-gold/50'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center space-x-2">
-                            <ClockIcon className="h-6 w-6 text-canine-gold" />
-                            <span className="font-bold text-lg text-gray-900">
-                              {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
-                            </span>
-                          </div>
-                          {selectedSlot === slot.id && (
-                            <CheckCircleIcon className="h-6 w-6 text-canine-gold" />
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-600">
-                          {slot.max_dogs - slot.booked_count} spot{slot.max_dogs - slot.booked_count !== 1 ? 's' : ''} left
-                        </p>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
 
-          {Object.keys(groupedSlots).length > 0 && (
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-2 mb-4">
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="text-center font-semibold text-gray-600 p-2">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-2">
+            {renderCalendar()}
+          </div>
+
+          {/* Legend */}
+          <div className="mt-6 flex flex-wrap gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-green-50 border border-green-300 rounded"></div>
+              <span>Available slots</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-gray-50 border border-gray-200 rounded"></div>
+              <span>Weekend (Closed)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+              <span>Past date</span>
+            </div>
+          </div>
+
+          {/* Book Button */}
+          {selectedSlot && selectedDogs.length > 0 && (
             <div className="mt-8 pt-6 border-t border-gray-200">
               <button
                 onClick={handleBookSlot}
-                disabled={!selectedSlot || selectedDogs.length === 0 || booking}
+                disabled={booking}
                 className="w-full px-8 py-4 bg-canine-gold text-white rounded-xl hover:bg-canine-light-gold transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
               >
                 {booking ? (
