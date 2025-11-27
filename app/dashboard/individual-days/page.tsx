@@ -55,6 +55,7 @@ function IndividualDaysContent() {
   const [discountType, setDiscountType] = useState<'percentage' | 'fixed' | null>(null)
   const [isValidatingDiscount, setIsValidatingDiscount] = useState(false)
   const [discountError, setDiscountError] = useState('')
+  const [activeSubscription, setActiveSubscription] = useState<any>(null)
 
   // Generate next 60 days for calendar grouped by month
   const generateCalendarDates = () => {
@@ -117,6 +118,19 @@ function IndividualDaysContent() {
       console.log('Got user:', user?.id)
       if (user) {
         setUser(user)
+
+        // Check for active subscription
+        const { data: subData } = await supabase
+          .from('subscriptions')
+          .select('*, subscription_tiers(name)')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .maybeSingle()
+
+        if (subData) {
+          setActiveSubscription(subData)
+          console.log('Active subscription found:', subData)
+        }
 
         // Load user's dogs (only approved dogs)
         console.log('Fetching dogs for user:', user.id)
@@ -461,6 +475,35 @@ function IndividualDaysContent() {
           <p className="text-gray-600">
             Select dates for individual day care at £{pricePerDay} per day
           </p>
+
+          {/* Subscription Warning */}
+          {activeSubscription && activeSubscription.days_remaining > 0 && (
+            <div className="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    You have an active subscription!
+                  </h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>
+                      You have <strong>{activeSubscription.days_remaining} days remaining</strong> in your {activeSubscription.subscription_tiers?.name} subscription.
+                      {' '}<Link href="/dashboard/booking" className="font-medium underline hover:text-yellow-900">
+                        Use your subscription days instead
+                      </Link>{' '}to avoid extra charges!
+                    </p>
+                    <p className="mt-2 text-xs">
+                      This page is for purchasing additional individual days beyond your subscription.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </motion.div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -542,7 +585,7 @@ function IndividualDaysContent() {
                         {/* Calendar grid */}
                         <div className="grid grid-cols-7 gap-2">
                           {/* Add empty cells for days before the first date of the month */}
-                          {monthDates[0].getDate() === 1 && Array.from({ length: (monthDates[0].getDay() + 6) % 7 }).map((_, i) => (
+                          {monthDates[0].getDate() === 1 && Array.from({ length: monthDates[0].getDay() === 0 ? 6 : monthDates[0].getDay() - 1 }).map((_, i) => (
                             <div key={`empty-${i}`} />
                           ))}
 

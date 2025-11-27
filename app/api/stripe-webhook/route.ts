@@ -63,10 +63,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const { tierId, days } = metadata
     const amount = session.amount_total ? session.amount_total / 100 : 0
 
-    // Calculate end date (4 weeks from start date)
+    // Calculate end date (30 days from start date)
     const startDate = new Date()
     const endDate = new Date(startDate)
-    endDate.setDate(endDate.getDate() + 28) // 4 weeks = 28 days
+    endDate.setDate(endDate.getDate() + 30) // Monthly billing = 30 days
 
     // Create subscription in database
     const { error } = await supabase
