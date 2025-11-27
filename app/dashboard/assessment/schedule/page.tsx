@@ -16,6 +16,8 @@ import {
   SparklesIcon,
   CurrencyPoundIcon,
   TicketIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from '@heroicons/react/24/outline'
 import { CalendarDaysIcon as CalendarSolid, StarIcon as StarSolid } from '@heroicons/react/24/solid'
 
@@ -31,6 +33,7 @@ export default function ScheduleAssessment() {
   const [existingAssessment, setExistingAssessment] = useState<any>(null)
   const [assessmentFee, setAssessmentFee] = useState<number>(40) // Default to £40, fetched from database
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
+  const [currentMonth, setCurrentMonth] = useState(new Date())
 
   // Discount code state
   const [discountCode, setDiscountCode] = useState('')
@@ -39,6 +42,27 @@ export default function ScheduleAssessment() {
 
   useEffect(() => {
     init()
+
+    // Set up real-time subscription for assessment slots
+    const slotsSubscription = supabase
+      .channel('assessment_slots_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'assessment_slots'
+        },
+        (payload) => {
+          console.log('Assessment slots changed:', payload)
+          fetchAvailableSlots()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      slotsSubscription.unsubscribe()
+    }
   }, [])
 
   const init = async () => {
@@ -149,25 +173,117 @@ export default function ScheduleAssessment() {
           assessment_date,
           start_time,
           end_time,
-          booked_by_user_id,
+          max_dogs,
+          booked_count,
           is_available
         `)
         .gte('assessment_date', new Date().toISOString().split('T')[0])
         .eq('is_available', true)
-        .is('booked_by_user_id', null)
         .order('assessment_date', { ascending: true })
         .order('start_time', { ascending: true })
 
       if (error) throw error
 
-      // Filter to only show slots that are not booked (booked_by_user_id is null)
-      const availableSlots = slots || []
+      // Filter slots that aren't full
+      const availableSlots = (slots || []).filter(
+        slot => slot.booked_count < slot.max_dogs
+      )
 
       setAvailableSlots(availableSlots)
     } catch (error) {
       console.error('Error fetching slots:', error)
       toast.error('Failed to load available assessment slots')
     }
+  }
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDayOfWeek = firstDay.getDay()
+    return { daysInMonth, startingDayOfWeek, year, month }
+  }
+
+  const getSlotsForDate = (dateString: string) => {
+    return availableSlots.filter(slot => slot.assessment_date === dateString)
+  }
+
+  const previousMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+  }
+
+  const nextMonth = () => {
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+  }
+
+  const renderCalendar = () => {
+    const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth)
+    const days = []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(<div key={`empty-${i}`} className="p-2"></div>)
+    }
+
+    // Add cells for each day of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month, day)
+      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      const dateSlots = getSlotsForDate(dateString)
+      const isPast = date < today
+      const dayOfWeek = date.getDay()
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
+
+      days.push(
+        <motion.div
+          key={day}
+          whileHover={!isPast && dateSlots.length > 0 ? { scale: 1.05 } : {}}
+          className={`p-3 border rounded-lg min-h-[120px] transition-all ${
+            isPast
+              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              : isWeekend
+              ? 'bg-gray-50 text-gray-400'
+              : dateSlots.length > 0
+              ? 'bg-green-50 border-green-300 cursor-pointer hover:bg-green-100'
+              : 'bg-white border-gray-200'
+          }`}
+        >
+          <div className="font-bold mb-1">{day}</div>
+          {!isPast && dateSlots.length > 0 && (
+            <div className="space-y-1">
+              {dateSlots.map(slot => (
+                <button
+                  key={slot.id}
+                  onClick={() => setSelectedSlot(slot.id)}
+                  className={`w-full text-xs p-2 rounded transition-all ${
+                    selectedSlot === slot.id
+                      ? 'bg-amber-500 text-white font-bold'
+                      : 'bg-white border border-green-400 text-green-700 hover:bg-green-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <ClockIcon className="h-3 w-3" />
+                    <span>{slot.start_time.slice(0, 5)}</span>
+                  </div>
+                  <div className="text-[10px] mt-0.5">
+                    {slot.max_dogs - slot.booked_count} spots
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          {!isPast && isWeekend && (
+            <div className="text-xs text-gray-400 mt-1">Closed</div>
+          )}
+        </motion.div>
+      )
+    }
+
+    return days
   }
 
   const handleValidateDiscountCode = async () => {
@@ -603,7 +719,7 @@ export default function ScheduleAssessment() {
             )}
           </motion.div>
 
-          {/* Available Slots */}
+          {/* Calendar View */}
           {!existingAssessment && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -611,13 +727,32 @@ export default function ScheduleAssessment() {
               transition={{ delay: 0.4 }}
               className="bg-white rounded-2xl shadow-xl p-6 border-2 border-amber-100"
             >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl p-2">
-                  <CalendarDaysIcon className="h-6 w-6 text-white" />
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl p-2">
+                    <CalendarDaysIcon className="h-6 w-6 text-white" />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Select Assessment Time Slot
+                  </h2>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  Select Assessment Time Slot
-                </h2>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={previousMonth}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <ChevronLeftIcon className="h-6 w-6 text-amber-600" />
+                  </button>
+                  <span className="text-lg font-semibold text-gray-900 min-w-[200px] text-center">
+                    {currentMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button
+                    onClick={nextMonth}
+                    className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <ChevronRightIcon className="h-6 w-6 text-amber-600" />
+                  </button>
+                </div>
               </div>
 
               {availableSlots.length === 0 ? (
@@ -627,62 +762,36 @@ export default function ScheduleAssessment() {
                   <p className="text-sm">Please check back later or contact us for more information.</p>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  {Object.entries(
-                    availableSlots.reduce((acc: any, slot: any) => {
-                      if (!acc[slot.assessment_date]) {
-                        acc[slot.assessment_date] = []
-                      }
-                      acc[slot.assessment_date].push(slot)
-                      return acc
-                    }, {})
-                  ).map(([date, dateSlots]: [string, any], dateIndex) => (
-                    <div key={date} className="border-2 border-gray-100 rounded-xl p-4">
-                      <h3 className="font-bold text-lg text-gray-900 mb-4 flex items-center gap-2">
-                        <CalendarDaysIcon className="h-5 w-5 text-amber-500" />
-                        {new Date(date).toLocaleDateString('en-GB', {
-                          weekday: 'long',
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric'
-                        })}
-                      </h3>
-                      <div className="grid md:grid-cols-3 gap-3">
-                        {dateSlots.map((slot: any, index: number) => (
-                          <motion.div
-                            key={slot.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.5 + dateIndex * 0.1 + index * 0.05 }}
-                            whileHover={{ scale: 1.05, y: -2 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setSelectedSlot(slot.id)}
-                            className={`
-                              p-4 rounded-xl border-2 cursor-pointer transition-all shadow relative overflow-hidden
-                              ${selectedSlot === slot.id
-                                ? 'border-amber-500 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg'
-                                : 'border-gray-200 hover:border-amber-400 bg-white hover:shadow-md'
-                              }
-                            `}
-                          >
-                            {selectedSlot === slot.id && (
-                              <div className="absolute top-2 right-2">
-                                <CheckCircleIcon className="h-6 w-6 text-amber-500" />
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-2">
-                              <ClockIcon className="h-5 w-5 text-amber-500" />
-                              <span className="font-bold text-gray-900">
-                                {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
-                              </span>
-                            </div>
-                          </motion.div>
-                        ))}
+                <>
+                  {/* Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-2 mb-4">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                      <div key={day} className="text-center font-semibold text-gray-600 p-2">
+                        {day}
                       </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-2">
+                    {renderCalendar()}
+                  </div>
+
+                  {/* Legend */}
+                  <div className="mt-6 flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-green-50 border border-green-300 rounded"></div>
+                      <span>Available slots</span>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-gray-50 border border-gray-200 rounded"></div>
+                      <span>Weekend (Closed)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
+                      <span>Past date</span>
+                    </div>
+                  </div>
+                </>
               )}
 
               {/* Book Button */}
