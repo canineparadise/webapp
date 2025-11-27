@@ -14,6 +14,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import BackButton from '@/components/BackButton'
 
 interface DailyData {
   date: string
@@ -283,21 +284,15 @@ export default function Analytics() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <button
-          onClick={() => router.push('/staff/admin-dashboard')}
-          className="mb-4 flex items-center gap-2 text-canine-navy hover:text-canine-gold transition-colors"
-        >
-          <ArrowLeftIcon className="h-5 w-5" />
-          <span className="font-semibold">Back to Dashboard</span>
-        </button>
-
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8"
         >
+          <div className="mb-4">
+            <BackButton href="/staff/admin-dashboard" />
+          </div>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-canine-navy mb-2">

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import BackButton from '@/components/BackButton'
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -162,10 +163,9 @@ export default function UserApprovalsPage() {
         >
           {/* Header */}
           <div className="mb-8">
-            <Link href="/staff/dashboard" className="text-canine-gold hover:text-canine-light-gold mb-4 inline-flex items-center">
-              <ArrowLeftIcon className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Link>
+            <div className="mb-4">
+              <BackButton href="/staff/dashboard" />
+            </div>
             <h1 className="text-3xl font-display font-bold text-canine-navy flex items-center gap-3">
               <UserGroupIcon className="h-10 w-10 text-canine-gold" />
               User Approvals

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import BackButton from '@/components/BackButton'
 import {
   CreditCardIcon,
   CheckCircleIcon,
@@ -393,12 +394,10 @@ export default function SubscribeDogsPage() {
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <Link href="/dashboard" className="text-canine-navy hover:text-canine-gold mb-4 inline-flex items-center font-medium">
-            <ArrowLeftIcon className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Link>
+          <BackButton href="/dashboard" />
 
           <motion.div
+            className="mt-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-2xl shadow-xl p-8"

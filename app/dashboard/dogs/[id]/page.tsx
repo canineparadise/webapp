@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import BackButton from '@/components/BackButton'
 import {
   ArrowLeftIcon,
   HeartIcon,
@@ -153,10 +154,9 @@ export default function DogProfilePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Back Button */}
-        <Link href="/dashboard" className="inline-flex items-center text-canine-gold hover:text-canine-navy mb-8 font-medium transition-colors group">
-          <ArrowLeftIcon className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-          Back to Dashboard
-        </Link>
+        <div className="mb-8">
+          <BackButton href="/dashboard" />
+        </div>
 
         {/* Hero Header */}
         <motion.div

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import BackButton from '@/components/BackButton'
 import {
   ArrowLeftIcon,
   DocumentTextIcon,
@@ -108,11 +109,8 @@ export default function ViewAssessmentPage() {
         >
           {/* Header */}
           <div className="mb-8">
-            <Link href="/dashboard" className="text-canine-gold hover:text-canine-light-gold mb-4 inline-flex items-center">
-              <ArrowLeftIcon className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Link>
-            <div className="flex justify-between items-start">
+            <BackButton href="/dashboard" />
+            <div className="flex justify-between items-start mt-4">
               <div>
                 <h1 className="text-3xl font-display font-bold text-canine-navy">
                   Your Assessment Form

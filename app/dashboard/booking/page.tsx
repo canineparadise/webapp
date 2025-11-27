@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import BackButton from '@/components/BackButton'
 import {
   CalendarIcon,
   CheckCircleIcon,
@@ -377,10 +378,9 @@ export default function BookingPage() {
     <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white py-12">
       <div className="max-w-6xl mx-auto px-4">
 
-        <Link href="/dashboard" className="inline-flex items-center text-canine-gold hover:text-canine-navy mb-8 font-medium transition-colors group">
-          <ArrowLeftIcon className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-          Back to Dashboard
-        </Link>
+        <div className="mb-8">
+          <BackButton href="/dashboard" />
+        </div>
 
         {/* Warning Banners */}
         {!canBook && (

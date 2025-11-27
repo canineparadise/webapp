@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import BackButton from '@/components/BackButton'
 import {
   CreditCardIcon,
   CheckCircleIcon,
@@ -302,10 +303,9 @@ export default function BuyExtraDaysPage() {
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <Link href="/dashboard" className="text-canine-navy hover:text-canine-gold mb-4 inline-flex items-center font-medium">
-            <ArrowLeftIcon className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Link>
+          <div className="mb-4">
+            <BackButton href="/dashboard" />
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}

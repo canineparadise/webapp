@@ -14,6 +14,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import BackButton from '@/components/BackButton'
 
 interface NoticeSubscription {
   id: string
@@ -119,21 +120,15 @@ export default function NoticePeriodReport() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Back Button */}
-        <button
-          onClick={() => router.push('/staff/admin-dashboard')}
-          className="mb-4 flex items-center gap-2 text-canine-navy hover:text-canine-gold transition-colors"
-        >
-          <ArrowLeftIcon className="h-5 w-5" />
-          <span className="font-semibold">Back to Dashboard</span>
-        </button>
-
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-xl p-8 mb-8"
         >
+          <div className="mb-4">
+            <BackButton href="/staff/admin-dashboard" />
+          </div>
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">

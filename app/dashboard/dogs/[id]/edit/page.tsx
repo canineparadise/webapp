@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
+import BackButton from '@/components/BackButton'
 import {
   ArrowLeftIcon,
   CheckCircleIcon,
@@ -352,10 +353,9 @@ export default function EditDogPage() {
       <div className="max-w-4xl mx-auto px-4">
 
         {/* Header */}
-        <Link href={`/dashboard/dogs/${params.id}`} className="inline-flex items-center text-canine-gold hover:text-canine-navy mb-8 font-medium transition-colors group">
-          <ArrowLeftIcon className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-          Back to Profile
-        </Link>
+        <div className="mb-8">
+          <BackButton href={`/dashboard/dogs/${params.id}`} label="Back to Profile" />
+        </div>
 
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           {/* Header */}

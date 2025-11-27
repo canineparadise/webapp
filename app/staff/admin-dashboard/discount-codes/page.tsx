@@ -17,6 +17,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 interface DiscountCode {
   id: string
@@ -197,18 +198,14 @@ export default function DiscountCodesPage() {
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-8 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <Link href="/staff/admin-dashboard" className="text-canine-navy hover:text-canine-gold mb-4 inline-flex items-center font-medium">
-            <ArrowLeftIcon className="h-4 w-4 mr-2" />
-            Back to Admin Dashboard
-          </Link>
-        </div>
-
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-xl p-8 mb-8"
         >
+          <div className="mb-4">
+            <BackButton href="/staff/admin-dashboard" />
+          </div>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">

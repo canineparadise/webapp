@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import BackButton from '@/components/BackButton'
 import {
   CalendarDaysIcon,
   ClockIcon,
@@ -485,13 +486,9 @@ export default function BookAssessmentSlot() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-12 px-4">
       <div className="max-w-7xl mx-auto">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center text-canine-navy hover:text-canine-gold mb-6 transition-colors font-semibold"
-        >
-          <ArrowLeftIcon className="h-5 w-5 mr-2" />
-          Back to Dashboard
-        </Link>
+        <div className="mb-8">
+          <BackButton href="/dashboard" />
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: -20 }}

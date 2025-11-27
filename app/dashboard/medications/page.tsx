@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { PlusIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import BackButton from '@/components/BackButton'
 
 interface Dog {
   id: string
@@ -231,6 +232,9 @@ export default function MedicationsPage() {
   return (
     <div className="min-h-screen bg-canine-cream py-12">
       <div className="max-w-4xl mx-auto px-4">
+        <div className="mb-4">
+          <BackButton href="/dashboard" />
+        </div>
         <div className="mb-8">
           <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">
             Medication Management

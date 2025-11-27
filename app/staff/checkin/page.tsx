@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 interface Booking {
   id: string
@@ -230,10 +231,9 @@ export default function CheckInPage() {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <Link href="/staff/dashboard" className="inline-flex items-center text-canine-sky hover:text-white mb-2">
-                <ArrowLeftIcon className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Link>
+              <div className="mb-2">
+                <BackButton href="/staff/dashboard" />
+              </div>
               <h1 className="text-3xl font-display font-bold">Daily Check-In / Check-Out</h1>
               <p className="text-canine-sky mt-1">Manage dog arrivals and departures</p>
             </div>

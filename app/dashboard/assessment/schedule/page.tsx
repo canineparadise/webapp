@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import BackButton from '@/components/BackButton'
 import {
   CalendarDaysIcon,
   ClockIcon,
@@ -482,10 +483,7 @@ export default function ScheduleAssessment() {
         >
           {/* Header */}
           <div className="mb-8">
-            <Link href="/dashboard" className="text-amber-600 hover:text-amber-700 mb-4 inline-flex items-center font-medium group">
-              <ArrowLeftIcon className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-              Back to Dashboard
-            </Link>
+            <BackButton href="/dashboard" />
 
             {/* Hero Header */}
             <motion.div

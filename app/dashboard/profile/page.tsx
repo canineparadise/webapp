@@ -14,6 +14,7 @@ import {
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -193,11 +194,8 @@ export default function ProfilePage() {
         >
           {/* Header */}
           <div className="mb-8">
-            <Link href="/dashboard" className="text-canine-gold hover:text-canine-light-gold mb-4 inline-flex items-center">
-              <ArrowLeftIcon className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Link>
-            <h1 className="text-3xl font-display font-bold text-canine-navy">
+            <BackButton href="/dashboard" />
+            <h1 className="text-3xl font-display font-bold text-canine-navy mt-4">
               Your Profile
             </h1>
             <p className="text-gray-600 mt-2">

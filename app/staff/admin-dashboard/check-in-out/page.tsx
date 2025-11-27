@@ -12,6 +12,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import BackButton from '@/components/BackButton'
 
 interface Dog {
   id: string
@@ -204,6 +205,9 @@ export default function AdminCheckInOut() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl shadow-xl p-8 mb-8"
         >
+          <div className="mb-4">
+            <BackButton href="/staff/admin-dashboard" />
+          </div>
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">

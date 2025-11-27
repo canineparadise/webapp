@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import BackButton from '@/components/BackButton'
 import {
   DocumentTextIcon,
   ShieldCheckIcon,
@@ -217,11 +218,8 @@ export default function LegalAgreementsPage() {
             transition={{ duration: 0.5 }}
           >
             <div className="mb-8">
-              <Link href="/dashboard" className="text-canine-gold hover:text-canine-light-gold mb-4 inline-flex items-center">
-                <ArrowLeftIcon className="h-4 w-4 mr-2" />
-                Back to Dashboard
-              </Link>
-              <h1 className="text-3xl font-display font-bold text-canine-navy">
+              <BackButton href="/dashboard" />
+              <h1 className="text-3xl font-display font-bold text-canine-navy mt-4">
                 Legal Agreements
               </h1>
             </div>
@@ -267,11 +265,8 @@ export default function LegalAgreementsPage() {
         >
           {/* Header */}
           <div className="mb-8">
-            <Link href="/dashboard" className="text-canine-gold hover:text-canine-light-gold mb-4 inline-flex items-center">
-              <ArrowLeftIcon className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Link>
-            <h1 className="text-3xl font-display font-bold text-canine-navy flex items-center gap-3">
+            <BackButton href="/dashboard" />
+            <h1 className="text-3xl font-display font-bold text-canine-navy flex items-center gap-3 mt-4">
               <DocumentTextIcon className="h-10 w-10 text-canine-gold" />
               Legal Agreements & Waivers
             </h1>

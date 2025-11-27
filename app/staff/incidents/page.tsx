@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import BackButton from '@/components/BackButton'
 import {
   ExclamationTriangleIcon,
   PlusIcon,
@@ -209,6 +210,9 @@ export default function StaffIncidents() {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
             <div>
+              <div className="mb-2">
+                <BackButton href="/staff/dashboard" />
+              </div>
               <h1 className="text-3xl font-display font-bold">Incident Reports</h1>
               <p className="text-canine-sky mt-1">Track and manage daycare incidents</p>
             </div>

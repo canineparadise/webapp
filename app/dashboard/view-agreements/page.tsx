@@ -26,6 +26,7 @@ import {
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 export default function ViewAgreementsPage() {
   const router = useRouter()
@@ -102,10 +103,9 @@ export default function ViewAgreementsPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50 py-12">
         <div className="max-w-4xl mx-auto px-4">
-          <Link href="/dashboard" className="inline-flex items-center text-slate-600 hover:text-slate-900 mb-8 transition-colors">
-            <ArrowLeftIcon className="w-5 h-5 mr-2" />
-            Back to Dashboard
-          </Link>
+          <div className="mb-8">
+            <BackButton href="/dashboard" />
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -227,10 +227,9 @@ export default function ViewAgreementsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50 py-12">
       <div className="max-w-5xl mx-auto px-4">
-        <Link href="/dashboard" className="inline-flex items-center text-slate-600 hover:text-slate-900 mb-8 transition-colors group">
-          <ArrowLeftIcon className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-          Back to Dashboard
-        </Link>
+        <div className="mb-8">
+          <BackButton href="/dashboard" />
+        </div>
 
         {/* Header */}
         <motion.div

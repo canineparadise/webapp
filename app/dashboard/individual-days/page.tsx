@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
+import BackButton from '@/components/BackButton'
 import { CalendarIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { loadStripe } from '@stripe/stripe-js'
 import toast from 'react-hot-toast'
@@ -463,14 +464,8 @@ function IndividualDaysContent() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-2 text-canine-navy hover:text-canine-gold transition-colors mb-4"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-            <span>Back to Dashboard</span>
-          </button>
-          <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">
+          <BackButton href="/dashboard" />
+          <h1 className="text-4xl font-display font-bold text-canine-navy mb-2 mt-4">
             Book Individual Days
           </h1>
           <p className="text-gray-600">

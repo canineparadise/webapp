@@ -19,6 +19,7 @@ import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 type ViewType = 'calendar' | 'approvals'
 
@@ -355,10 +356,9 @@ export default function StaffAssessmentsPage() {
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <Link href="/staff/dashboard" className="flex items-center text-canine-sky hover:text-white mb-2 transition-colors">
-                <ArrowLeftIcon className="h-5 w-5 mr-2" />
-                Back to Dashboard
-              </Link>
+              <div className="mb-2">
+                <BackButton href="/staff/dashboard" />
+              </div>
               <h1 className="text-3xl font-display font-bold">Assessment Management</h1>
               <p className="text-canine-sky">View and approve dog assessments</p>
             </div>

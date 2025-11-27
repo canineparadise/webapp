@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
+import BackButton from '@/components/BackButton'
 import {
   HeartIcon,
   CameraIcon,
@@ -921,11 +922,8 @@ export default function AddDogPage() {
         >
           {/* Header */}
           <div className="mb-8">
-            <Link href="/dashboard" className="text-canine-gold hover:text-canine-light-gold mb-4 inline-flex items-center">
-              <ArrowLeftIcon className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Link>
-            <div className="flex items-center justify-between">
+            <BackButton href="/dashboard" />
+            <div className="flex items-center justify-between mt-4">
               <div>
                 <h1 className="text-3xl font-display font-bold text-canine-navy flex items-center gap-3">
                   <HeartSolid className="h-10 w-10 text-red-500" />
