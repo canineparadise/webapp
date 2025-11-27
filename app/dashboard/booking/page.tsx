@@ -344,8 +344,6 @@ export default function BookingPage() {
         dog_ids: selectedDogs,
         booking_date: date,
         total_dogs: selectedDogs.length,
-        daily_rate: dailyRate,
-        total_amount: totalAmount,
         status: 'confirmed',
         payment_status: 'paid',
         subscription_id: subscription.id,
