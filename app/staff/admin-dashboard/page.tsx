@@ -2296,6 +2296,17 @@ export default function AdminDashboard() {
 
       if (updateError) throw updateError
 
+      // Also update the owner's approval status to 'approved' so they can subscribe
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ approval_status: 'approved' })
+        .eq('id', dog.owner_id)
+
+      if (profileError) {
+        console.error('Failed to update owner approval status:', profileError)
+        // Don't fail the whole operation - dog is still approved
+      }
+
       // Send approval email to owner
       try {
         await fetch('/api/send-approval-email', {
