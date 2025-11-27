@@ -347,7 +347,6 @@ export default function BookingPage() {
         status: 'confirmed',
         payment_status: 'paid',
         subscription_id: subscription.id,
-        is_subscription_booking: true,
         session_type: sessionType,
         meal_option: mealOption,
         special_notes: specialNotes || null
