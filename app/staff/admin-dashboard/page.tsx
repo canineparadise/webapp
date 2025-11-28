@@ -75,6 +75,12 @@ interface Dog {
     city?: string
     postcode?: string
   }
+  profiles?: {
+    first_name: string
+    last_name: string
+    phone: string
+    email: string
+  }
   emergency_contact_name?: string
   emergency_contact_phone?: string
   emergency_contact_relationship?: string
@@ -3322,9 +3328,9 @@ export default function AdminDashboard() {
                               </span>
                             </td>
                             <td className="py-3 px-4 text-gray-700">
-                              {dog.owner?.first_name} {dog.owner?.last_name}
+                              {dog.profiles?.first_name} {dog.profiles?.last_name}
                             </td>
-                            <td className="py-3 px-4 text-gray-600">{dog.owner?.phone || 'N/A'}</td>
+                            <td className="py-3 px-4 text-gray-600">{dog.profiles?.phone || 'N/A'}</td>
                           </tr>
                         ))
                       })}
