@@ -994,7 +994,7 @@ export default function AdminDashboard() {
           // Check subscription status - fetch tier info with name and start date
           const { data: subscription, error: subError} = await supabase
             .from('subscriptions')
-            .select('tier_id, created_at, subscription_tiers(name, identifier, days_included)')
+            .select('tier_id, created_at, subscription_tiers(name, days_included)')
             .eq('user_id', user.id)
             .eq('is_active', true)
             .maybeSingle()
