@@ -69,28 +69,8 @@ export async function POST(request: Request) {
 
     const session = await stripe.checkout.sessions.create(sessionParams)
 
-    // Store pending subscription data in database
-    // This will be completed by the webhook after successful payment
-    for (const dogSub of dogSubscriptions) {
-      await supabase.from('subscriptions').insert({
-        user_id: userId,
-        dog_id: dogSub.dogId,
-        tier_id: dogSub.tierId,
-        session_type: dogSub.sessionType,
-        days_included: dogSub.daysIncluded,
-        days_used: 0,
-        days_remaining: dogSub.daysIncluded,
-        price_per_day: dogSub.pricePerDay,
-        monthly_price: dogSub.monthlyPrice,
-        is_active: false, // Will be activated by webhook
-        payment_status: 'pending',
-        stripe_subscription_id: null, // Will be set by webhook
-        stripe_customer_id: null, // Will be set by webhook
-        current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-        next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      })
-    }
+    // Note: Subscription will be created by the webhook after successful payment
+    // Removed duplicate subscription creation here to avoid conflicts
 
     // Record discount code usage if applicable
     if (discountCodeId) {

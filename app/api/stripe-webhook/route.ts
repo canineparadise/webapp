@@ -72,7 +72,16 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       console.log('Creating subscriptions for dogs:', dogSubscriptions)
 
       for (const dogSub of dogSubscriptions) {
-        const { error } = await supabase
+        console.log('Inserting subscription with data:', {
+          user_id: userId,
+          dog_id: dogSub.dogId,
+          tier_id: dogSub.tierId,
+          days_included: parseInt(dogSub.daysIncluded),
+          days_remaining: parseInt(dogSub.daysIncluded),
+          stripe_subscription_id: subscription
+        })
+
+        const { data, error } = await supabase
           .from('subscriptions')
           .insert({
             user_id: userId,
@@ -80,6 +89,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             tier_id: dogSub.tierId,
             days_included: parseInt(dogSub.daysIncluded),
             days_remaining: parseInt(dogSub.daysIncluded),
+            days_used: 0,
             monthly_price: parseFloat(dogSub.monthlyPrice),
             price_per_day: parseFloat(dogSub.pricePerDay),
             is_active: true,
@@ -92,11 +102,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             stripe_subscription_id: subscription as string,
             payment_status: 'paid',
           })
+          .select()
 
         if (error) {
-          console.error('Error creating subscription for dog:', dogSub.dogId, error)
+          console.error('❌ ERROR creating subscription for dog:', dogSub.dogId)
+          console.error('Error details:', JSON.stringify(error, null, 2))
         } else {
-          console.log('Subscription created successfully for dog:', dogSub.dogId)
+          console.log('✅ Subscription created successfully for dog:', dogSub.dogId)
+          console.log('Created subscription data:', JSON.stringify(data, null, 2))
         }
       }
     } catch (error) {
