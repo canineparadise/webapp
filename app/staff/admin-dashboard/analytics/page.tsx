@@ -121,7 +121,7 @@ export default function Analytics() {
     // Fetch regular bookings within date range
     const { data: bookings, error } = await supabase
       .from('bookings')
-      .select('booking_date, dog_ids, amount')
+      .select('booking_date, dog_id, amount')
       .gte('booking_date', start)
       .lte('booking_date', end)
       .in('status', ['confirmed', 'completed'])
@@ -148,7 +148,8 @@ export default function Analytics() {
       if (!dataMap[date]) {
         dataMap[date] = { attendance: 0, revenue: 0 }
       }
-      dataMap[date].attendance += (booking.dog_ids?.length || 0)
+      // OLD SCHEMA: dog_id is a single ID, not an array - each booking is 1 dog
+      dataMap[date].attendance += (booking.dog_id ? 1 : 0)
       dataMap[date].revenue += (booking.amount || 0)
     })
 
