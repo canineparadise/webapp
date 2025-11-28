@@ -397,10 +397,9 @@ export default function SubscribeDogsPage() {
           <BackButton href="/dashboard" />
 
           <motion.div
-            className="mt-4"
+            className="mt-4 bg-white rounded-2xl shadow-xl p-8"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-xl p-8"
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="bg-canine-gold rounded-2xl p-3">

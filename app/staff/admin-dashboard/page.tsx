@@ -123,6 +123,7 @@ interface User {
   role: string
   dogs_count?: number
   subscription_status?: string
+  subscription_start_date?: string
   created_at?: string
 }
 
@@ -850,13 +851,14 @@ export default function AdminDashboard() {
           .lte('booked_at', lastDayOfMonth)
 
         // Get discount usage for all bookings this month (only if table exists)
-        const { data: discountUsageData } = await supabase
+        const discountUsageResult = await supabase
           .from('discount_code_usage')
           .select('used_for, final_amount, user_id, created_at')
           .gte('created_at', firstDayOfMonth)
           .lte('created_at', lastDayOfMonth)
-          .then(res => res.data)
-          .catch(() => null) // Silently fail if table doesn't exist
+
+        // Silently fail if table doesn't exist (OLD schema)
+        const discountUsageData = discountUsageResult.error ? null : discountUsageResult.data
 
         // Calculate subscription revenue (payments received this month)
         const subscriptionRev = subscriptionRevenueData?.reduce((sum, s) => sum + Number(s.monthly_price || 0), 0) || 0
