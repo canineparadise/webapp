@@ -133,22 +133,22 @@ function SuccessContent() {
         setSuccess(true)
         toast.success(`Assessment booked successfully for ${dogs.length} dog(s)!`)
 
-        // Send confirmation email
-        try {
-          await fetch('/api/send-assessment-confirmation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user.id,
-              slotId: slotId,
-              dogIds: dogs.map(d => d.id),
-              amountPaid: 0, // Will be calculated from Stripe metadata if needed
-            }),
-          })
-        } catch (emailError) {
-          console.error('Failed to send confirmation email:', emailError)
-          // Don't fail the booking if email fails
-        }
+        // Send confirmation email - DISABLED (using Supabase emails only)
+        // try {
+        //   await fetch('/api/send-assessment-confirmation', {
+        //     method: 'POST',
+        //     headers: { 'Content-Type': 'application/json' },
+        //     body: JSON.stringify({
+        //       userId: user.id,
+        //       slotId: slotId,
+        //       dogIds: dogs.map(d => d.id),
+        //       amountPaid: 0, // Will be calculated from Stripe metadata if needed
+        //     }),
+        //   })
+        // } catch (emailError) {
+        //   console.error('Failed to send confirmation email:', emailError)
+        //   // Don't fail the booking if email fails
+        // }
       } else if (date) {
         // Old date-based system (for backward compatibility)
         const { data: existingAssessments } = await supabase

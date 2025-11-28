@@ -239,21 +239,21 @@ export default function StaffAssessmentsPage() {
         console.error('Failed to update profile approval status:', profileError)
       }
 
-      // Send approval email
-      try {
-        await fetch('/api/send-approval-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userEmail: selectedBooking.profiles.email,
-            userName: `${selectedBooking.profiles.first_name} ${selectedBooking.profiles.last_name}`,
-            dogNames: selectedBooking.dogs.map(d => d.name).join(', '),
-            notes: approvalNotes
-          })
-        })
-      } catch (emailError) {
-        console.error('Failed to send email:', emailError)
-      }
+      // Send approval email - DISABLED (using Supabase emails only)
+      // try {
+      //   await fetch('/api/send-approval-email', {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({
+      //       userEmail: selectedBooking.profiles.email,
+      //       userName: `${selectedBooking.profiles.first_name} ${selectedBooking.profiles.last_name}`,
+      //       dogNames: selectedBooking.dogs.map(d => d.name).join(', '),
+      //       notes: approvalNotes
+      //     })
+      //   })
+      // } catch (emailError) {
+      //   console.error('Failed to send email:', emailError)
+      // }
 
       toast.success('All dogs approved successfully!')
       setShowApprovalModal(false)
@@ -304,22 +304,22 @@ export default function StaffAssessmentsPage() {
         console.error('Failed to update profile approval status:', profileError)
       }
 
-      // Send decline email
-      try {
-        await fetch('/api/send-approval-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userEmail: selectedBooking.profiles.email,
-            userName: `${selectedBooking.profiles.first_name} ${selectedBooking.profiles.last_name}`,
-            dogNames: selectedBooking.dogs.map(d => d.name).join(', '),
-            status: 'declined',
-            notes: declineNotes
-          })
-        })
-      } catch (emailError) {
-        console.error('Failed to send email:', emailError)
-      }
+      // Send decline email - DISABLED (using Supabase emails only)
+      // try {
+      //   await fetch('/api/send-approval-email', {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({
+      //       userEmail: selectedBooking.profiles.email,
+      //       userName: `${selectedBooking.profiles.first_name} ${selectedBooking.profiles.last_name}`,
+      //       dogNames: selectedBooking.dogs.map(d => d.name).join(', '),
+      //       status: 'declined',
+      //       notes: declineNotes
+      //     })
+      //   })
+      // } catch (emailError) {
+      //   console.error('Failed to send email:', emailError)
+      // }
 
       toast.success('Assessment declined')
       setShowApprovalModal(false)

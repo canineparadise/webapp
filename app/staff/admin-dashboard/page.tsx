@@ -2395,21 +2395,21 @@ export default function AdminDashboard() {
         // Don't fail the whole operation - dog is still approved
       }
 
-      // Send approval email to owner
-      try {
-        await fetch('/api/send-approval-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ownerEmail: dog.owner?.email,
-            ownerName: `${dog.owner?.first_name} ${dog.owner?.last_name}`,
-            dogName: dog.name
-          })
-        })
-      } catch (emailError) {
-        console.error('Failed to send approval email:', emailError)
-        // Don't fail the whole operation if email fails
-      }
+      // Send approval email to owner - DISABLED (using Supabase emails only)
+      // try {
+      //   await fetch('/api/send-approval-email', {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({
+      //       ownerEmail: dog.owner?.email,
+      //       ownerName: `${dog.owner?.first_name} ${dog.owner?.last_name}`,
+      //       dogName: dog.name
+      //     })
+      //   })
+      // } catch (emailError) {
+      //   console.error('Failed to send approval email:', emailError)
+      //   // Don't fail the whole operation if email fails
+      // }
 
       toast.success(`${dog.name} approved successfully! Owner will be notified by email.`)
       fetchDashboardData() // Refresh data

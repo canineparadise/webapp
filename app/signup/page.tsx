@@ -100,21 +100,21 @@ export default function SignUp() {
 
       if (authError) throw authError;
 
-      // Send welcome email
-      if (authData.user) {
-        try {
-          await fetch('/api/send-welcome-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: authData.user.id,
-            }),
-          })
-        } catch (emailError) {
-          console.error('Failed to send welcome email:', emailError)
-          // Don't fail signup if email fails
-        }
-      }
+      // Send welcome email - DISABLED (using Supabase emails only)
+      // if (authData.user) {
+      //   try {
+      //     await fetch('/api/send-welcome-email', {
+      //       method: 'POST',
+      //       headers: { 'Content-Type': 'application/json' },
+      //       body: JSON.stringify({
+      //         userId: authData.user.id,
+      //       }),
+      //     })
+      //   } catch (emailError) {
+      //     console.error('Failed to send welcome email:', emailError)
+      //     // Don't fail signup if email fails
+      //   }
+      // }
 
       setEmailSent(true);
       toast.success(

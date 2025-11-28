@@ -852,34 +852,34 @@ export default function AddDogPage() {
 
       toast.success(`${formData.name} has been added to your pack! 🐕`)
 
-      // Send dog registration confirmation email
-      try {
-        const emailResponse = await fetch('/api/send-dog-registration-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: user.id,
-            dogName: formData.name,
-            requiresAssessment: !formData.assessment_completed,
-          }),
-        })
+      // Send dog registration confirmation email - DISABLED (using Supabase emails only)
+      // try {
+      //   const emailResponse = await fetch('/api/send-dog-registration-email', {
+      //     method: 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify({
+      //       userId: user.id,
+      //       dogName: formData.name,
+      //       requiresAssessment: !formData.assessment_completed,
+      //     }),
+      //   })
 
-        const emailResult = await emailResponse.json()
+      //   const emailResult = await emailResponse.json()
 
-        if (!emailResponse.ok || !emailResult.success) {
-          console.error('Failed to send registration email:', emailResult.error)
-          toast.error('Dog added but confirmation email failed to send. Please contact support.', {
-            duration: 6000
-          })
-        } else {
-          console.log('Registration email sent successfully:', emailResult.messageId)
-        }
-      } catch (emailError) {
-        console.error('Failed to send registration email:', emailError)
-        toast.error('Dog added but confirmation email failed to send. Please contact support.', {
-          duration: 6000
-        })
-      }
+      //   if (!emailResponse.ok || !emailResult.success) {
+      //     console.error('Failed to send registration email:', emailResult.error)
+      //     toast.error('Dog added but confirmation email failed to send. Please contact support.', {
+      //       duration: 6000
+      //     })
+      //   } else {
+      //     console.log('Registration email sent successfully:', emailResult.messageId)
+      //   }
+      // } catch (emailError) {
+      //   console.error('Failed to send registration email:', emailError)
+      //   toast.error('Dog added but confirmation email failed to send. Please contact support.', {
+      //     duration: 6000
+      //   })
+      // }
 
       // Check if user needs to sign agreements
       const { data: agreements } = await supabase
