@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import BackButton from '@/components/BackButton'
 import {
   CalendarIcon,
   ClockIcon,
@@ -288,26 +289,18 @@ export default function ManageBookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-canine-navy to-blue-900 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-display font-bold">Manage Bookings</h1>
-              <p className="text-blue-100 mt-1">Cancel, reschedule, and manage your daycare bookings</p>
-            </div>
-            <Link
-              href="/dashboard"
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg border border-white/30 transition-colors"
-            >
-              Back to Dashboard
-            </Link>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Back Button */}
+        <div className="mb-8">
+          <BackButton href="/dashboard" />
         </div>
-      </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">Manage Bookings</h1>
+          <p className="text-gray-600">Cancel, reschedule, and manage your daycare bookings</p>
+        </div>
         {/* Credits Banner */}
         {totalCredits > 0 && (
           <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
