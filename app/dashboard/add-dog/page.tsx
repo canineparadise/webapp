@@ -36,6 +36,7 @@ export default function AddDogPage() {
   const [currentSection, setCurrentSection] = useState(0)
   const [draftDogId, setDraftDogId] = useState<string | null>(null)
   const [lastSavedSection, setLastSavedSection] = useState(0)
+  const [showAddAnotherModal, setShowAddAnotherModal] = useState(false)
 
   const [formData, setFormData] = useState({
     // Basic Information
@@ -883,12 +884,7 @@ export default function AddDogPage() {
           router.push('/dashboard/legal-agreements')
         }, 2000)
       } else if (dogCount + 1 < 4) {
-        const addAnother = window.confirm('Would you like to add another dog?')
-        if (addAnother) {
-          window.location.reload()
-        } else {
-          router.push('/dashboard')
-        }
+        setShowAddAnotherModal(true)
       } else {
         toast.success('You\'ve added the maximum of 4 dogs!')
         setTimeout(() => {
@@ -2018,6 +2014,50 @@ export default function AddDogPage() {
           </form>
         </motion.div>
       </div>
+
+      {/* Add Another Dog Modal */}
+      {showAddAnotherModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8"
+          >
+            <div className="text-center mb-6">
+              <div className="inline-block p-4 bg-gradient-to-br from-canine-gold to-canine-light-gold rounded-full mb-4">
+                <HeartSolid className="h-8 w-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-canine-navy mb-2">
+                Dog Added Successfully! 🎉
+              </h2>
+              <p className="text-gray-600">
+                Would you like to add another dog?
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAddAnotherModal(false)
+                  router.push('/dashboard')
+                }}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+              >
+                No
+              </button>
+              <button
+                onClick={() => {
+                  setShowAddAnotherModal(false)
+                  window.location.reload()
+                }}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-canine-gold to-canine-light-gold text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+              >
+                Yes
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }
