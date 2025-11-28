@@ -687,8 +687,8 @@ export default function AddDogPage() {
           checkout_password: formData.checkout_password || null,
 
           has_vaccination_docs: false,
-          is_approved: false,
           is_draft: false,
+          // is_approved is handled by database trigger for existing clients
         }
 
         // Keep existing photo if no new photo file uploaded
@@ -756,8 +756,8 @@ export default function AddDogPage() {
             authorized_pickup_people: formData.authorized_pickup_people.length > 0 ? formData.authorized_pickup_people : null,
             checkout_password: formData.checkout_password || null,
             has_vaccination_docs: false,
-            is_approved: false,
             is_draft: false,
+            // is_approved is handled by database trigger for existing clients
           })
           .select()
           .single()
