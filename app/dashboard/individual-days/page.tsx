@@ -468,9 +468,19 @@ function IndividualDaysContent() {
           <h1 className="text-4xl font-display font-bold text-canine-navy mb-2 mt-4">
             Book Individual Days
           </h1>
-          <p className="text-gray-600">
-            Select dates for individual day care at £{pricePerDay} per day
+          <p className="text-gray-600 mb-4">
+            Pay-as-you-go daycare at £{pricePerDay} per day - perfect for occasional visits without a subscription.
           </p>
+          <div className="flex gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span className="text-gray-600">For non-subscription users</span>
+            </div>
+            <Link href="/dashboard/booking" className="flex items-center gap-2 text-canine-navy hover:text-canine-gold transition-colors">
+              <div className="w-3 h-3 bg-canine-gold rounded-full"></div>
+              <span className="font-medium">Have a subscription? Book here for discounted rates</span>
+            </Link>
+          </div>
 
           {/* Subscription Warning */}
           {activeSubscription && activeSubscription.days_remaining > 0 && (

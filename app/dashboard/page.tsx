@@ -601,12 +601,11 @@ export default function Dashboard() {
                   </div>
                 ))}
 
-                <button
-                  onClick={() => setActiveTab('bookings')}
-                  className="w-full bg-canine-navy text-white py-2 rounded-lg hover:bg-opacity-90 transition-colors text-sm font-medium mt-4"
-                >
-                  View All Bookings
-                </button>
+                <Link href="/dashboard/booking">
+                  <button className="w-full bg-canine-navy text-white py-2 rounded-lg hover:bg-opacity-90 transition-colors text-sm font-medium mt-4">
+                    Book Now
+                  </button>
+                </Link>
               </div>
             ) : (
               <div>

@@ -382,6 +382,25 @@ export default function BookingPage() {
           <BackButton href="/dashboard" />
         </div>
 
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">Book Your Subscription Days</h1>
+          <p className="text-gray-600">
+            Use your subscription days to book daycare visits. If you've used all your days, you can book extra days at your discounted subscription rate.
+            {!subscription && <span className="font-semibold text-purple-600"> (Subscription required to book)</span>}
+          </p>
+          <div className="mt-4 flex gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-canine-gold rounded-full"></div>
+              <span className="text-gray-600">For subscription members</span>
+            </div>
+            <Link href="/dashboard/individual-days" className="flex items-center gap-2 text-canine-navy hover:text-canine-gold transition-colors">
+              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <span className="font-medium">Looking for individual days? Click here</span>
+            </Link>
+          </div>
+        </div>
+
         {/* Warning Banners */}
         {!canBook && (
           <div className="mb-8 space-y-4">
