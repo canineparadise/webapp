@@ -14,16 +14,29 @@ BEGIN
   FROM public.profiles
   WHERE id = NEW.owner_id;
 
+  -- If we couldn't find the email, just return without changes
+  IF user_email IS NULL THEN
+    RAISE NOTICE 'Could not find email for owner_id: %', NEW.owner_id;
+    RETURN NEW;
+  END IF;
+
+  RAISE NOTICE 'Checking email: %', user_email;
+
   -- Check if user's email exists in existing_clients (case-insensitive)
   SELECT EXISTS (
     SELECT 1 FROM public.existing_clients
     WHERE LOWER(email) = LOWER(user_email)
   ) INTO user_is_existing_client;
 
+  RAISE NOTICE 'Is existing client: %', user_is_existing_client;
+
   -- If existing client, auto-approve the dog
   IF user_is_existing_client THEN
+    RAISE NOTICE 'Auto-approving dog for existing client: %', user_email;
     NEW.is_approved := TRUE;
     NEW.is_draft := FALSE;
+  ELSE
+    RAISE NOTICE 'Not an existing client: %', user_email;
   END IF;
 
   RETURN NEW;
