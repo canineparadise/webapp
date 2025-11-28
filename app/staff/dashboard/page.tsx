@@ -759,7 +759,7 @@ export default function StaffDashboard() {
           name,
           photo_url,
           feeding_schedule,
-          dietary_requirements,
+          special_dietary_requirements,
           profiles:owner_id (first_name, last_name)
         `)
         .in('id', allDogIds)
@@ -781,7 +781,7 @@ export default function StaffDashboard() {
           owner_name: `${owner?.first_name} ${owner?.last_name}`,
           booking_id: booking.id,
           feeding_schedule: dog.feeding_schedule,
-          dietary_requirements: dog.dietary_requirements,
+          dietary_requirements: dog.special_dietary_requirements,
           breakfast_completed: booking.breakfast_completed,
           breakfast_completed_at: booking.breakfast_completed_at,
           lunch_completed: booking.lunch_completed,
