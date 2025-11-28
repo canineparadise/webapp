@@ -19,6 +19,7 @@ import {
   ChevronRightIcon,
   ArrowTopRightOnSquareIcon,
   CalendarDaysIcon,
+  ClipboardDocumentListIcon,
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid'
 
@@ -440,6 +441,13 @@ export default function Dashboard() {
             <button className="group flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-amber-50 text-canine-navy hover:shadow-lg border border-amber-200/50 transition-all transform hover:scale-105 w-full">
               <CalendarDaysIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform" />
               <span className="font-semibold text-xs sm:text-sm">Individual Days</span>
+            </button>
+          </Link>
+
+          <Link href="/dashboard/manage-bookings">
+            <button className="group flex flex-col items-center justify-center p-4 sm:p-5 md:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-br from-white to-blue-50 text-canine-navy hover:shadow-lg border border-blue-200/50 transition-all transform hover:scale-105 w-full">
+              <ClipboardDocumentListIcon className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 mb-1.5 sm:mb-2 group-hover:scale-110 transition-transform" />
+              <span className="font-semibold text-xs sm:text-sm">Manage Bookings</span>
             </button>
           </Link>
 

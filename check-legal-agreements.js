@@ -20,9 +20,12 @@ async function checkLegalAgreements() {
   console.log('Total found:', agreements?.length || 0)
   agreements?.forEach(a => {
     console.log('\nUser ID:', a.user_id)
-    console.log('Terms Agreed:', a.terms_agreed)
+    console.log('Terms Accepted:', a.terms_accepted)
     console.log('Injury Waiver Agreed:', a.injury_waiver_agreed)
-    console.log('Created At:', a.created_at)
+    console.log('Photo Permission Agreed:', a.photo_permission_agreed)
+    console.log('Recurring Billing Agreed:', a.recurring_billing_agreed)
+    console.log('Password Policy Agreed:', a.password_policy_agreed)
+    console.log('Signed At:', a.signed_at)
   })
 }
 

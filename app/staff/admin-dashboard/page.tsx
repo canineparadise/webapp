@@ -47,6 +47,7 @@ import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
   TicketIcon,
+  ReceiptRefundIcon,
 } from '@heroicons/react/24/outline'
 import { ChatBubbleLeftIcon as QuoteIcon } from '@heroicons/react/24/solid'
 import { supabase } from '@/lib/supabase'
@@ -338,7 +339,7 @@ interface StaffTask {
   }
 }
 
-type TabType = 'dashboard' | 'checkin' | 'schedule' | 'dogs_today' | 'assessments' | 'all_dogs' | 'all_clients' | 'all_bookings' | 'staff_users' | 'staff_activity' | 'staff_performance' | 'staff_schedule' | 'legal' | 'medications' | 'incidents' | 'documents' | 'transactions' | 'monthly_revenue' | 'subscriptions' | 'cancellations' | 'business_settings' | 'playgroups' | 'pricing' | 'discounts' | 'newsletter'
+type TabType = 'dashboard' | 'checkin' | 'schedule' | 'dogs_today' | 'assessments' | 'all_dogs' | 'all_clients' | 'all_bookings' | 'staff_users' | 'staff_activity' | 'staff_performance' | 'staff_schedule' | 'legal' | 'medications' | 'incidents' | 'documents' | 'transactions' | 'monthly_revenue' | 'subscriptions' | 'cancellations' | 'business_settings' | 'playgroups' | 'pricing' | 'discounts' | 'refund_requests' | 'newsletter'
 
 export default function AdminDashboard() {
   const router = useRouter()
@@ -405,6 +406,7 @@ export default function AdminDashboard() {
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [financialTransactions, setFinancialTransactions] = useState<FinancialTransaction[]>([])
   const [discountUsages, setDiscountUsages] = useState<DiscountUsage[]>([])
+  const [refundRequests, setRefundRequests] = useState<any[]>([])
 
   // Business Settings accordion state - all sections open by default
   const [openSections, setOpenSections] = useState({
@@ -553,6 +555,7 @@ export default function AdminDashboard() {
     fetchAllBookings()
     fetchStaffActivityLog()
     fetchDiscountUsages()
+    fetchRefundRequests()
     fetchStaffAssignments()
     fetchStaffTasks()
   }, [])
@@ -665,6 +668,7 @@ export default function AdminDashboard() {
         { id: 'business_settings', name: 'Business Settings', icon: BuildingOfficeIcon },
         { id: 'pricing', name: 'Pricing Tiers', icon: BanknotesIcon },
         { id: 'discounts', name: 'Discount Usage', icon: TicketIcon },
+        { id: 'refund_requests', name: 'Refund Requests', icon: ReceiptRefundIcon },
         { id: 'transactions', name: 'Transactions', icon: CurrencyPoundIcon },
         { id: 'monthly_revenue', name: 'Monthly Revenue', icon: ChartBarIcon },
         { id: 'subscriptions', name: 'Subscriptions', icon: CreditCardIcon },
@@ -1224,6 +1228,31 @@ export default function AdminDashboard() {
     } catch (error) {
       console.log('Discount usage tracking not available')
       setDiscountUsages([])
+    }
+  }
+
+  const fetchRefundRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('refund_requests')
+        .select(`
+          *,
+          profiles:user_id (first_name, last_name, email, phone),
+          dogs:dog_id (name, breed),
+          reviewed_by_profile:reviewed_by (first_name, last_name)
+        `)
+        .order('requested_at', { ascending: false })
+
+      if (error) {
+        console.log('Refund requests table not available:', error.message)
+        setRefundRequests([])
+        return
+      }
+
+      setRefundRequests(data || [])
+    } catch (error) {
+      console.log('Refund requests not available')
+      setRefundRequests([])
     }
   }
 
@@ -5076,6 +5105,196 @@ export default function AdminDashboard() {
                 <div className="bg-white rounded-2xl p-12 text-center">
                   <TicketIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-600">No discount codes have been used yet</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* REFUND REQUESTS TAB */}
+          {activeTab === 'refund_requests' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-display font-bold text-canine-navy">Refund Requests</h2>
+                  <p className="text-gray-600">Manage booking cancellations and refund requests</p>
+                </div>
+                <button
+                  onClick={fetchRefundRequests}
+                  className="px-4 py-2 bg-canine-gold text-white rounded-lg hover:bg-canine-light-gold"
+                >
+                  Refresh
+                </button>
+              </div>
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-yellow-200">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Pending Requests</h3>
+                  <p className="text-3xl font-bold text-yellow-600">
+                    {refundRequests.filter(r => r.status === 'pending').length}
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-green-200">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Approved</h3>
+                  <p className="text-3xl font-bold text-green-600">
+                    {refundRequests.filter(r => r.status === 'approved' || r.status === 'completed').length}
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-red-200">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Rejected</h3>
+                  <p className="text-3xl font-bold text-red-600">
+                    {refundRequests.filter(r => r.status === 'rejected').length}
+                  </p>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-purple-200">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Refund Amount</h3>
+                  <p className="text-3xl font-bold text-purple-600">
+                    £{refundRequests.filter(r => r.status === 'approved' || r.status === 'completed').reduce((sum, r) => sum + r.amount, 0).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Refund Requests Table */}
+              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-canine-navy text-white">
+                    <tr>
+                      <th className="px-6 py-4 text-left">Date Requested</th>
+                      <th className="px-6 py-4 text-left">Client</th>
+                      <th className="px-6 py-4 text-left">Booking Date</th>
+                      <th className="px-6 py-4 text-left">Dog</th>
+                      <th className="px-6 py-4 text-left">Amount</th>
+                      <th className="px-6 py-4 text-left">Reason</th>
+                      <th className="px-6 py-4 text-center">Status</th>
+                      <th className="px-6 py-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {refundRequests.map((request) => {
+                      const profile = Array.isArray(request.profiles) ? request.profiles[0] : request.profiles
+                      const dog = Array.isArray(request.dogs) ? request.dogs[0] : request.dogs
+
+                      return (
+                        <tr key={request.id} className="border-b hover:bg-canine-cream">
+                          <td className="px-6 py-4 text-sm">
+                            {new Date(request.requested_at).toLocaleDateString('en-GB')}
+                          </td>
+                          <td className="px-6 py-4">
+                            <div>
+                              <div className="font-semibold">{profile?.first_name} {profile?.last_name}</div>
+                              <div className="text-xs text-gray-600">{profile?.email}</div>
+                              <div className="text-xs text-gray-600">{profile?.phone}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            {new Date(request.booking_date).toLocaleDateString('en-GB')}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            {dog?.name || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 font-semibold text-canine-navy">
+                            £{request.amount.toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 text-sm max-w-xs truncate" title={request.reason}>
+                            {request.reason || 'No reason provided'}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              request.status === 'approved' ? 'bg-blue-100 text-blue-800' :
+                              request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                              request.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {request.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {request.status === 'pending' && (
+                              <div className="flex gap-2 justify-center">
+                                <button
+                                  onClick={async () => {
+                                    const { data: { user } } = await supabase.auth.getUser()
+                                    const { error } = await supabase
+                                      .from('refund_requests')
+                                      .update({
+                                        status: 'approved',
+                                        reviewed_at: new Date().toISOString(),
+                                        reviewed_by: user?.id
+                                      })
+                                      .eq('id', request.id)
+
+                                    if (!error) {
+                                      toast.success('Refund request approved')
+                                      fetchRefundRequests()
+                                    } else {
+                                      toast.error('Failed to approve request')
+                                    }
+                                  }}
+                                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-xs"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const { data: { user } } = await supabase.auth.getUser()
+                                    const { error } = await supabase
+                                      .from('refund_requests')
+                                      .update({
+                                        status: 'rejected',
+                                        reviewed_at: new Date().toISOString(),
+                                        reviewed_by: user?.id
+                                      })
+                                      .eq('id', request.id)
+
+                                    if (!error) {
+                                      toast.success('Refund request rejected')
+                                      fetchRefundRequests()
+                                    } else {
+                                      toast.error('Failed to reject request')
+                                    }
+                                  }}
+                                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                            {request.status === 'approved' && (
+                              <button
+                                onClick={async () => {
+                                  const { error } = await supabase
+                                    .from('refund_requests')
+                                    .update({
+                                      status: 'completed',
+                                      completed_at: new Date().toISOString()
+                                    })
+                                    .eq('id', request.id)
+
+                                  if (!error) {
+                                    toast.success('Refund marked as completed')
+                                    fetchRefundRequests()
+                                  } else {
+                                    toast.error('Failed to update status')
+                                  }
+                                }}
+                                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs"
+                              >
+                                Mark Completed
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {refundRequests.length === 0 && (
+                <div className="bg-white rounded-2xl p-12 text-center">
+                  <ReceiptRefundIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">No refund requests yet</p>
                 </div>
               )}
             </div>

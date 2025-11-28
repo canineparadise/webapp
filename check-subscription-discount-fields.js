@@ -5,8 +5,8 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhtbG1henJkb2dscWZpY3RqY25tIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NzkyMDk0OSwiZXhwIjoyMDczNDk2OTQ5fQ.r-CdXvHM8e5HRAgnNOHuikXaIBpr-sBacVNAHR-FDRs'
 )
 
-async function checkAndrewSubscription() {
-  console.log('=== CHECKING ANDREW\'S SUBSCRIPTION ===\n')
+async function checkSubscriptionFields() {
+  console.log('=== CHECKING ANDREW\'S FULL SUBSCRIPTION RECORD ===\n')
 
   const andrewId = 'c5e76355-e017-4492-80b5-40ad9a93e379'
 
@@ -19,13 +19,18 @@ async function checkAndrewSubscription() {
   if (error) {
     console.log('Error:', error.message)
   } else {
-    console.log('Subscription found - discount related fields:')
-    Object.keys(subscription).sort().forEach(key => {
-      if (key.includes('discount') || key.includes('price') || key.includes('amount')) {
-        console.log(`  ${key}: ${subscription[key]}`)
-      }
+    console.log('Full subscription record:')
+    console.log(JSON.stringify(subscription, null, 2))
+
+    console.log('\n=== DISCOUNT-RELATED FIELDS ===')
+    const discountFields = Object.keys(subscription).filter(key =>
+      key.includes('discount') || key.includes('code') || key.includes('price') || key.includes('amount')
+    )
+
+    discountFields.forEach(field => {
+      console.log(`${field}: ${subscription[field]}`)
     })
   }
 }
 
-checkAndrewSubscription().catch(console.error)
+checkSubscriptionFields().catch(console.error)
