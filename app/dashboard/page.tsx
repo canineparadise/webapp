@@ -320,14 +320,9 @@ export default function Dashboard() {
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                  <h1 className="text-lg sm:text-2xl md:text-3xl font-display font-bold truncate">
-                    Welcome back, {firstName}! 👋
-                  </h1>
-                  {profile?.is_vip_member && profile?.vip_badge_type === 'golden_paw_founders' && (
-                    <GoldenPawBadge size="small" showText={false} className="flex-shrink-0" />
-                  )}
-                </div>
+                <h1 className="text-lg sm:text-2xl md:text-3xl font-display font-bold">
+                  Welcome back, {firstName}! 👋
+                </h1>
                 <p className="text-blue-100 mt-0.5 sm:mt-1 text-xs sm:text-sm hidden sm:block">
                   {profile?.is_vip_member ? "Thank you for being a VIP Founder! 🌟" : "We're happy to see you and your pups!"}
                 </p>
@@ -346,6 +341,17 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* VIP Badge Banner - Right under navigation */}
+      {profile?.is_vip_member && profile?.vip_badge_type === 'golden_paw_founders' && (
+        <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border-b-2 border-amber-200 shadow-md">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex items-center justify-center gap-3">
+              <GoldenPawBadge size="medium" showText={true} />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex max-w-[1600px] mx-auto">
         {/* Left Sidebar Checklist - Only show if not all steps completed */}
@@ -466,22 +472,6 @@ export default function Dashboard() {
             </button>
           </Link>
         </div>
-
-        {/* VIP Founders Club Banner */}
-        {profile?.is_vip_member && profile?.vip_badge_type === 'golden_paw_founders' && (
-          <div className="mb-6 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border-2 border-amber-200 rounded-2xl p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <GoldenPawBadge size="large" showText={true} />
-                <div>
-                  <h3 className="text-xl font-bold text-amber-900">VIP Founders Club Member</h3>
-                  <p className="text-amber-700 mt-1">You're one of our exclusive founding members! Enjoy priority access to special offers and events. 🎉</p>
-                  <p className="text-xs text-amber-600 mt-2">Member since: {new Date(profile.vip_granted_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* At-a-Glance Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
