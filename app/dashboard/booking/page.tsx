@@ -258,6 +258,7 @@ export default function BookingPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            userId: user.id,
             subscriptionId: subscription.id,
             numExtraDays: extraDays,
             pricePerDay: extraDayCost,

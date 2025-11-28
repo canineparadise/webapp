@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+import { supabase } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,6 +10,7 @@ export async function POST(req: NextRequest) {
     })
 
     const {
+      userId,
       subscriptionId,
       numExtraDays,
       pricePerDay,
@@ -25,12 +21,8 @@ export async function POST(req: NextRequest) {
       includedDays
     } = await req.json()
 
-    // Get user from session cookie
-    const cookieHeader = req.headers.get('cookie') || ''
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!userId || !subscriptionId || !numExtraDays) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
     // Calculate total cost (extra days only, included days are FREE)
@@ -55,7 +47,7 @@ export async function POST(req: NextRequest) {
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/booking/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/booking`,
-      client_reference_id: user.id,
+      client_reference_id: userId,
       metadata: {
         type: 'subscription_extra_days',
         subscriptionId: subscriptionId,
