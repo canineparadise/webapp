@@ -854,7 +854,7 @@ export default function AddDogPage() {
 
       // Send dog registration confirmation email
       try {
-        await fetch('/api/send-dog-registration-email', {
+        const emailResponse = await fetch('/api/send-dog-registration-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -863,9 +863,22 @@ export default function AddDogPage() {
             requiresAssessment: !formData.assessment_completed,
           }),
         })
+
+        const emailResult = await emailResponse.json()
+
+        if (!emailResponse.ok || !emailResult.success) {
+          console.error('Failed to send registration email:', emailResult.error)
+          toast.error('Dog added but confirmation email failed to send. Please contact support.', {
+            duration: 6000
+          })
+        } else {
+          console.log('Registration email sent successfully:', emailResult.messageId)
+        }
       } catch (emailError) {
         console.error('Failed to send registration email:', emailError)
-        // Don't block the user flow if email fails
+        toast.error('Dog added but confirmation email failed to send. Please contact support.', {
+          duration: 6000
+        })
       }
 
       // Check if user needs to sign agreements
