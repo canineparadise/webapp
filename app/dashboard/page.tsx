@@ -493,7 +493,7 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                <Link href="/dashboard/subscriptions">
+                <Link href="/dashboard/manage-bookings">
                   <button className="w-full bg-canine-navy text-white py-2 rounded-lg hover:bg-opacity-90 transition-colors text-sm font-medium">
                     Manage Subscription
                   </button>
