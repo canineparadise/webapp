@@ -19,23 +19,47 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user profile
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('first_name, last_name, email')
       .eq('id', userId)
       .single()
 
-    if (!profile) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+    console.log('Profile data:', profile, 'Error:', profileError)
+
+    if (!profile || !profile.email) {
+      // If profile doesn't exist yet, get email from auth user
+      const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userId)
+
+      if (!user || !user.email) {
+        console.error('Could not find user email:', userError)
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        )
+      }
+
+      // Send email with just email address
+      const result = await sendWelcomeEmail({
+        userEmail: user.email,
+        userName: user.email.split('@')[0], // Use email prefix as name
+      })
+
+      if (result.success) {
+        return NextResponse.json({ success: true, messageId: result.messageId })
+      } else {
+        throw new Error('Failed to send email')
+      }
     }
 
-    // Send email
+    // Send email with profile data
+    const userName = profile.first_name && profile.last_name
+      ? `${profile.first_name} ${profile.last_name}`
+      : profile.email.split('@')[0]
+
     const result = await sendWelcomeEmail({
       userEmail: profile.email,
-      userName: `${profile.first_name} ${profile.last_name}`,
+      userName: userName,
     })
 
     if (result.success) {
