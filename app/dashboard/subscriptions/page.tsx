@@ -347,11 +347,13 @@ export default function SubscribeDogsPage() {
     setCancelling(true)
     try {
       // Update subscription in database
+      // Keep is_active: true during notice period, just disable auto_renew
       const { error } = await supabase
         .from('subscriptions')
         .update({
-          is_active: false,
           auto_renew: false,
+          cancelled_at: new Date().toISOString(),
+          cancellation_reason: cancelReason.trim() || null,
         })
         .eq('id', subscriptionToCancel.id)
 
@@ -360,7 +362,7 @@ export default function SubscribeDogsPage() {
         throw error
       }
 
-      toast.success('Subscription cancelled successfully. It will remain active until the end of the current billing period.')
+      toast.success('Subscription cancelled. Auto-renewal disabled. Your subscription will remain active until the end of the current billing period.')
 
       // Refresh subscriptions list
       await init()
