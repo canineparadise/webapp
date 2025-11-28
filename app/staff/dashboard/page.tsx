@@ -492,12 +492,12 @@ export default function StaffDashboard() {
           *,
           dogs:dog_id (
             id, name, photo_url,
-            owner:profiles!dogs_owner_id_fkey (first_name, last_name, phone)
+            profiles:owner_id (first_name, last_name, phone)
           )
         `)
         .in('dog_id', todayDogIds)
         .or(`end_date.is.null,end_date.gte.${currentDate}`)
-        .order('time_of_day', { ascending: true })
+        .order('created_at', { ascending: true })
 
       setMedicationsToday(medsData || [])
 
@@ -760,7 +760,7 @@ export default function StaffDashboard() {
           photo_url,
           feeding_schedule,
           dietary_requirements,
-          owner:profiles!dogs_owner_id_fkey (first_name, last_name)
+          profiles:owner_id (first_name, last_name)
         `)
         .in('id', allDogIds)
 
@@ -773,7 +773,7 @@ export default function StaffDashboard() {
         const dog = dogsData?.find(d => d.id === booking.dog_id)
         if (!dog) return
 
-        const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+        const owner = Array.isArray(dog.profiles) ? dog.profiles[0] : dog.profiles
         const feedingDog: FeedingDog = {
           dog_id: dog.id,
           dog_name: dog.name,
