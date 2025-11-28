@@ -133,6 +133,9 @@ interface User {
   subscription_status?: string
   subscription_start_date?: string
   created_at?: string
+  is_vip_member?: boolean
+  vip_badge_type?: string
+  vip_granted_at?: string
 }
 
 interface Assessment {
