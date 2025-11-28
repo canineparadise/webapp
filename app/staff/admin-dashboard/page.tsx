@@ -727,21 +727,21 @@ export default function AdminDashboard() {
         .select(`
           *,
           profiles:user_id (first_name, last_name, phone),
-          dogs!individual_day_bookings_dog_id_fkey (id, name, breed, photo_url, owner_id, owner:profiles!dogs_owner_id_fkey (first_name, last_name, email, phone))
+          dogs:dog_id (id, name, breed, photo_url, owner_id, profiles:owner_id (first_name, last_name, email, phone))
         `)
         .eq('booking_date', today)
         .eq('status', 'confirmed')
 
-      // Process subscription bookings
+      // Process subscription bookings (OLD SCHEMA: dog_id not dog_ids)
       const subscriptionWithDogs = await Promise.all(
         (todaySubscriptionBookings || []).map(async (booking) => {
           const { data: dogsData } = await supabase
             .from('dogs')
             .select(`
               id, name, breed, photo_url, owner_id,
-              owner:profiles!dogs_owner_id_fkey (first_name, last_name, email, phone)
+              profiles:owner_id (first_name, last_name, email, phone)
             `)
-            .in('id', booking.dog_ids)
+            .eq('id', booking.dog_id)
 
           return { ...booking, dogs: dogsData || [], booking_type: 'subscription' }
         })
@@ -795,10 +795,10 @@ export default function AdminDashboard() {
         const dateStr = date.toISOString().split('T')[0]
         const dayName = date.toLocaleDateString('en-GB', { weekday: 'short' })
 
-        // Get subscription bookings
+        // Get subscription bookings (OLD SCHEMA: dog_id not dog_ids)
         const { data: daySubscriptionBookings } = await supabase
           .from('bookings')
-          .select('session_type, dog_ids')
+          .select('session_type, dog_id')
           .eq('booking_date', dateStr)
           .eq('status', 'confirmed')
 
@@ -809,8 +809,8 @@ export default function AdminDashboard() {
           .eq('booking_date', dateStr)
           .eq('status', 'confirmed')
 
-        const subFullDay = daySubscriptionBookings?.filter(b => b.session_type === 'full_day').reduce((sum, b) => sum + (b.dog_ids?.length || 0), 0) || 0
-        const subHalfDay = daySubscriptionBookings?.filter(b => b.session_type === 'half_day').reduce((sum, b) => sum + (b.dog_ids?.length || 0), 0) || 0
+        const subFullDay = daySubscriptionBookings?.filter(b => b.session_type === 'full_day').length || 0
+        const subHalfDay = daySubscriptionBookings?.filter(b => b.session_type === 'half_day').length || 0
         const indFullDay = dayIndividualBookings?.length || 0 // Each individual booking is 1 dog
 
         weeklyData.push({
@@ -1301,19 +1301,19 @@ export default function AdminDashboard() {
         .from('dogs')
         .select(`
           id, name, is_approved, assessment_completed, assessment_notes, assessment_date,
-          owner:profiles!dogs_owner_id_fkey (first_name, last_name)
+          profiles:owner_id (first_name, last_name)
         `)
         .eq('assessment_completed', true)
         .not('assessment_date', 'is', null)
         .order('assessment_date', { ascending: false })
         .limit(100)
 
-      // Fetch check-in/out activities from bookings
+      // Fetch check-in/out activities from bookings (OLD SCHEMA: dog_id not dog_ids)
       const { data: bookingActivities } = await supabase
         .from('bookings')
         .select(`
           id, booking_date, checked_in, checked_out, checked_in_at, checked_out_at,
-          dropped_off_by, picked_up_by, dog_ids,
+          dropped_off_by, picked_up_by, dog_id,
           profiles:user_id (first_name, last_name)
         `)
         .or('checked_in.eq.true,checked_out.eq.true')
@@ -1326,7 +1326,7 @@ export default function AdminDashboard() {
       // Add dog approval/decline activities
       dogActivities?.forEach((dog: any) => {
         if (dog.assessment_date) {
-          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+          const owner = Array.isArray(dog.profiles) ? dog.profiles[0] : dog.profiles
           activities.push({
             id: `dog-${dog.id}-${dog.assessment_date}`,
             staff_id: 'unknown',
