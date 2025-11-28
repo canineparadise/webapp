@@ -3,15 +3,14 @@ import nodemailer from 'nodemailer'
 // Create reusable transporter with explicit SSL settings for Hostinger
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT || '465'),
-  secure: true, // Always true for port 465
+  port: parseInt(process.env.EMAIL_PORT || '587'),
+  secure: process.env.EMAIL_PORT === '465', // true for 465, false for 587
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
   tls: {
-    rejectUnauthorized: true,
-    minVersion: 'TLSv1.2'
+    rejectUnauthorized: false, // Less strict - may help with Hostinger
   },
   debug: true, // Enable debug output
   logger: true, // Log to console
