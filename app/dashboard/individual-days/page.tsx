@@ -583,7 +583,7 @@ function IndividualDaysContent() {
 
                         {/* Day headers */}
                         <div className="grid grid-cols-7 gap-2 mb-2">
-                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
                             <div key={day} className="text-xs font-semibold text-gray-500 text-center">
                               {day}
                             </div>
@@ -596,9 +596,8 @@ function IndividualDaysContent() {
                           {monthDates[0].getDate() === 1 && (() => {
                             // Get day of week for first day of month (0 = Sunday, 1 = Monday, etc.)
                             const firstDayOfWeek = monthDates[0].getDay()
-                            // Calculate offset for Mon-Sun calendar (Monday = 0)
-                            const offset = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1
-                            return Array.from({ length: offset }).map((_, i) => (
+                            // No offset needed - Sunday is already 0, which means first column
+                            return Array.from({ length: firstDayOfWeek }).map((_, i) => (
                               <div key={`empty-${i}`} />
                             ))
                           })()}
