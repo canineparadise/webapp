@@ -9,10 +9,10 @@ DECLARE
   user_is_existing_client BOOLEAN;
   user_email TEXT;
 BEGIN
-  -- Get the user's email from profiles
+  -- Get the user's email from profiles (dogs table uses owner_id)
   SELECT email INTO user_email
   FROM public.profiles
-  WHERE id = NEW.user_id;
+  WHERE id = NEW.owner_id;
 
   -- Check if user's email exists in existing_clients (case-insensitive)
   SELECT EXISTS (
