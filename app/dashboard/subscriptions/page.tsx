@@ -351,12 +351,14 @@ export default function SubscribeDogsPage() {
         .from('subscriptions')
         .update({
           is_active: false,
-          cancelled_at: new Date().toISOString(),
-          cancellation_reason: cancelReason.trim() || null,
+          auto_renew: false,
         })
         .eq('id', subscriptionToCancel.id)
 
-      if (error) throw error
+      if (error) {
+        console.error('Database error cancelling subscription:', error)
+        throw error
+      }
 
       toast.success('Subscription cancelled successfully. It will remain active until the end of the current billing period.')
 
