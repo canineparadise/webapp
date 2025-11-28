@@ -729,7 +729,7 @@ export default function StaffDashboard() {
         .from('bookings')
         .select(`
           id,
-          dog_ids,
+          dog_id,
           needs_breakfast,
           needs_lunch,
           needs_dinner,
@@ -749,8 +749,8 @@ export default function StaffDashboard() {
         return
       }
 
-      // Get all dog IDs that need feeding
-      const allDogIds = Array.from(new Set(bookingsData.flatMap(b => b.dog_ids)))
+      // Get all dog IDs that need feeding (OLD SCHEMA: dog_id not dog_ids)
+      const allDogIds = Array.from(new Set(bookingsData.map(b => b.dog_id)))
 
       const { data: dogsData } = await supabase
         .from('dogs')
@@ -768,32 +768,31 @@ export default function StaffDashboard() {
       const lunch: FeedingDog[] = []
       const dinner: FeedingDog[] = []
 
+      // OLD SCHEMA: Process each booking with single dog_id (not dog_ids array)
       bookingsData.forEach(booking => {
-        booking.dog_ids.forEach((dogId: string) => {
-          const dog = dogsData?.find(d => d.id === dogId)
-          if (!dog) return
+        const dog = dogsData?.find(d => d.id === booking.dog_id)
+        if (!dog) return
 
-          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
-          const feedingDog: FeedingDog = {
-            dog_id: dog.id,
-            dog_name: dog.name,
-            dog_photo_url: dog.photo_url,
-            owner_name: `${owner?.first_name} ${owner?.last_name}`,
-            booking_id: booking.id,
-            feeding_schedule: dog.feeding_schedule,
-            dietary_requirements: dog.dietary_requirements,
-            breakfast_completed: booking.breakfast_completed,
-            breakfast_completed_at: booking.breakfast_completed_at,
-            lunch_completed: booking.lunch_completed,
-            lunch_completed_at: booking.lunch_completed_at,
-            dinner_completed: booking.dinner_completed,
-            dinner_completed_at: booking.dinner_completed_at
-          }
+        const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+        const feedingDog: FeedingDog = {
+          dog_id: dog.id,
+          dog_name: dog.name,
+          dog_photo_url: dog.photo_url,
+          owner_name: `${owner?.first_name} ${owner?.last_name}`,
+          booking_id: booking.id,
+          feeding_schedule: dog.feeding_schedule,
+          dietary_requirements: dog.dietary_requirements,
+          breakfast_completed: booking.breakfast_completed,
+          breakfast_completed_at: booking.breakfast_completed_at,
+          lunch_completed: booking.lunch_completed,
+          lunch_completed_at: booking.lunch_completed_at,
+          dinner_completed: booking.dinner_completed,
+          dinner_completed_at: booking.dinner_completed_at
+        }
 
-          if (booking.needs_breakfast) breakfast.push(feedingDog)
-          if (booking.needs_lunch) lunch.push(feedingDog)
-          if (booking.needs_dinner) dinner.push(feedingDog)
-        })
+        if (booking.needs_breakfast) breakfast.push(feedingDog)
+        if (booking.needs_lunch) lunch.push(feedingDog)
+        if (booking.needs_dinner) dinner.push(feedingDog)
       })
 
       setFeedingSchedule({ breakfast, lunch, dinner })
