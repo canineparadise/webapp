@@ -56,9 +56,53 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
-  const userId = client_reference_id
+  const userId = metadata.userId || client_reference_id
 
-  if (metadata.type === 'subscription') {
+  console.log('Processing checkout session:', session.id)
+  console.log('Metadata:', JSON.stringify(metadata))
+
+  // NEW FORMAT: dogSubscriptions in metadata
+  if (metadata.dogSubscriptions) {
+    try {
+      const dogSubscriptions = JSON.parse(metadata.dogSubscriptions)
+      const startDate = new Date()
+      const endDate = new Date(startDate)
+      endDate.setDate(endDate.getDate() + 30)
+
+      console.log('Creating subscriptions for dogs:', dogSubscriptions)
+
+      for (const dogSub of dogSubscriptions) {
+        const { error } = await supabase
+          .from('subscriptions')
+          .insert({
+            user_id: userId,
+            dog_id: dogSub.dogId,
+            tier_id: dogSub.tierId,
+            days_included: parseInt(dogSub.daysIncluded),
+            days_remaining: parseInt(dogSub.daysIncluded),
+            monthly_price: parseFloat(dogSub.monthlyPrice),
+            price_per_day: parseFloat(dogSub.pricePerDay),
+            is_active: true,
+            auto_renew: true,
+            start_date: startDate.toISOString().split('T')[0],
+            end_date: endDate.toISOString().split('T')[0],
+            next_billing_date: endDate.toISOString().split('T')[0],
+            current_period_start: startDate.toISOString(),
+            current_period_end: endDate.toISOString(),
+            stripe_subscription_id: subscription as string,
+            payment_status: 'paid',
+          })
+
+        if (error) {
+          console.error('Error creating subscription for dog:', dogSub.dogId, error)
+        } else {
+          console.log('Subscription created successfully for dog:', dogSub.dogId)
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing dogSubscriptions:', error)
+    }
+  } else if (metadata.type === 'subscription') {
     // Handle new subscription
     const { tierId, days } = metadata
     const amount = session.amount_total ? session.amount_total / 100 : 0
