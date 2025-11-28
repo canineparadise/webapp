@@ -99,8 +99,23 @@ export default function SignUp() {
 
       if (authError) throw authError;
 
-      // Send custom welcome email
+      // Auto-confirm the user immediately (bypass email verification)
       if (authData.user) {
+        try {
+          await fetch('/api/auto-confirm-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: authData.user.id,
+            }),
+          })
+          console.log('User auto-confirmed successfully')
+        } catch (confirmError) {
+          console.error('Failed to auto-confirm user:', confirmError)
+          // Continue anyway - user can still verify via email
+        }
+
+        // Send custom welcome email
         try {
           await fetch('/api/send-welcome-email', {
             method: 'POST',
@@ -115,15 +130,18 @@ export default function SignUp() {
         }
       }
 
-      // Auto-login the user immediately (no email verification needed)
+      // Auto-login the user immediately
       if (authData.session) {
         toast.success("Account created successfully! Redirecting to dashboard...");
         setTimeout(() => {
           window.location.href = '/dashboard';
         }, 1500);
       } else {
-        setEmailSent(true);
-        toast.success("Success! You can now login to your account.");
+        // User was created but needs to login
+        toast.success("Account created! You can now login.");
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
       }
     } catch (error: any) {
       console.error("Signup error:", error);
