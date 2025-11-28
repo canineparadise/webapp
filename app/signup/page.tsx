@@ -85,7 +85,7 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      // Sign up the user with Supabase Auth
+      // Sign up the user with Supabase Auth (auto-confirm, no email verification)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -95,31 +95,39 @@ export default function SignUp() {
             firstName: formData.firstName,
             lastName: formData.lastName,
           },
+          // Disable email confirmation - auto-confirm users
+          emailRedirectTo: undefined,
         },
       });
 
       if (authError) throw authError;
 
-      // Send welcome email - DISABLED (using Supabase emails only)
-      // if (authData.user) {
-      //   try {
-      //     await fetch('/api/send-welcome-email', {
-      //       method: 'POST',
-      //       headers: { 'Content-Type': 'application/json' },
-      //       body: JSON.stringify({
-      //         userId: authData.user.id,
-      //       }),
-      //     })
-      //   } catch (emailError) {
-      //     console.error('Failed to send welcome email:', emailError)
-      //     // Don't fail signup if email fails
-      //   }
-      // }
+      // Send custom welcome email
+      if (authData.user) {
+        try {
+          await fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: authData.user.id,
+            }),
+          })
+        } catch (emailError) {
+          console.error('Failed to send welcome email:', emailError)
+          // Don't fail signup if email fails
+        }
+      }
 
-      setEmailSent(true);
-      toast.success(
-        "Success! Please check your email to confirm your account.",
-      );
+      // Auto-login the user immediately (no email verification needed)
+      if (authData.session) {
+        toast.success("Account created successfully! Redirecting to dashboard...");
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 1500);
+      } else {
+        setEmailSent(true);
+        toast.success("Success! You can now login to your account.");
+      }
     } catch (error: any) {
       console.error("Signup error:", error);
       if (error.message.includes("already registered")) {
