@@ -103,18 +103,30 @@ export async function POST(request: Request) {
         final_amount: finalAmount,
       })
 
-      // Increment usage count
-      const { data: discountCode } = await supabase
+      // Increment usage count and check for VIP badge eligibility
+      const { data: discountCodeData } = await supabase
         .from('discount_codes')
-        .select('current_uses')
+        .select('current_uses, code')
         .eq('id', discountCodeId)
         .single()
-      
-      if (discountCode) {
+
+      if (discountCodeData) {
         await supabase
           .from('discount_codes')
-          .update({ current_uses: discountCode.current_uses + 1 })
+          .update({ current_uses: discountCodeData.current_uses + 1 })
           .eq('id', discountCodeId)
+
+        // Grant Golden Paw VIP Founders Club badge if using FIRST50
+        if (discountCodeData.code === 'FIRST50') {
+          await supabase
+            .from('profiles')
+            .update({
+              is_vip_member: true,
+              vip_badge_type: 'golden_paw_founders',
+              vip_granted_at: new Date().toISOString()
+            })
+            .eq('id', userId)
+        }
       }
     }
 

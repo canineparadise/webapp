@@ -54,6 +54,7 @@ import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import GoldenPawBadge from '@/components/GoldenPawBadge'
 
 interface Dog {
   id: string
@@ -396,6 +397,7 @@ export default function AdminDashboard() {
   const [allUsers, setAllUsers] = useState<User[]>([])
   const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const [userSearchQuery, setUserSearchQuery] = useState('')
+  const [showVIPOnly, setShowVIPOnly] = useState(false)
   const [staffUsers, setStaffUsers] = useState<StaffUser[]>([])
   const [staffActivityLog, setStaffActivityLog] = useState<StaffActivityLog[]>([])
   const [allBookings, setAllBookings] = useState<Booking[]>([])
@@ -573,13 +575,19 @@ export default function AdminDashboard() {
   }, [dogSearchQuery, allDogs])
 
   useEffect(() => {
-    const filtered = allUsers.filter(user =>
+    let filtered = allUsers.filter(user =>
       user.first_name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
       user.last_name?.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
       user.email?.toLowerCase().includes(userSearchQuery.toLowerCase())
     )
+
+    // Apply VIP filter if enabled
+    if (showVIPOnly) {
+      filtered = filtered.filter(user => user.is_vip_member === true)
+    }
+
     setFilteredUsers(filtered)
-  }, [userSearchQuery, allUsers])
+  }, [userSearchQuery, allUsers, showVIPOnly])
 
   useEffect(() => {
     const filtered = allBookings.filter(booking =>
@@ -3797,7 +3805,20 @@ export default function AdminDashboard() {
               transition={{ duration: 0.3 }}
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-3xl font-display font-bold text-canine-navy">Clients ({totalUsers})</h2>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-3xl font-display font-bold text-canine-navy">Clients ({filteredUsers.length})</h2>
+                  <button
+                    onClick={() => setShowVIPOnly(!showVIPOnly)}
+                    className={`px-4 py-2 rounded-lg border-2 transition-all flex items-center gap-2 ${
+                      showVIPOnly
+                        ? 'bg-gradient-to-r from-amber-100 to-yellow-100 border-amber-300 text-amber-900'
+                        : 'bg-white border-gray-300 text-gray-700 hover:border-amber-300'
+                    }`}
+                  >
+                    {showVIPOnly ? <GoldenPawBadge size="small" showText={false} /> : null}
+                    <span className="font-semibold">{showVIPOnly ? 'VIP Only' : 'Show VIP Only'}</span>
+                  </button>
+                </div>
                 <div className="relative">
                   <input
                     type="text"
@@ -3820,6 +3841,7 @@ export default function AdminDashboard() {
                         <th className="px-6 py-4 text-left font-semibold">Phone</th>
                         <th className="px-6 py-4 text-left font-semibold">Dogs</th>
                         <th className="px-6 py-4 text-left font-semibold">Subscription</th>
+                        <th className="px-6 py-4 text-center font-semibold">VIP Status</th>
                         <th className="px-6 py-4 text-center font-semibold">Actions</th>
                       </tr>
                     </thead>
@@ -3849,6 +3871,15 @@ export default function AdminDashboard() {
                             }`}>
                               {user.subscription_status}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            {user.is_vip_member && user.vip_badge_type === 'golden_paw_founders' ? (
+                              <div className="flex justify-center">
+                                <GoldenPawBadge size="small" showText={false} />
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 text-sm">-</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-center">
                             <button
