@@ -168,7 +168,7 @@ interface PlayGroup {
 interface LegalAgreement {
   id: string
   user_id: string
-  terms_agreed: boolean
+  terms_accepted: boolean
   injury_waiver_agreed: boolean
   photo_permission_agreed: boolean
   recurring_billing_agreed: boolean
@@ -4273,7 +4273,7 @@ export default function AdminDashboard() {
 
                       // Check if essential waivers are signed (terms and injury waiver are required)
                       const allWaiversSigned = agreement ? (
-                        agreement.terms_agreed &&
+                        agreement.terms_accepted &&
                         agreement.injury_waiver_agreed
                       ) : false
 
@@ -4844,7 +4844,7 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">{agreement.profiles?.email}</td>
                         <td className="px-6 py-4 text-center">
-                          {agreement.terms_agreed ? (
+                          {agreement.terms_accepted ? (
                             <CheckIcon className="h-5 w-5 text-green-600 mx-auto" />
                           ) : (
                             <XCircleIcon className="h-5 w-5 text-red-600 mx-auto" />
@@ -7177,7 +7177,7 @@ export default function AdminDashboard() {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-600">Terms & Conditions</span>
-                        {clientLegalAgreement.terms_agreed ? (
+                        {clientLegalAgreement.terms_accepted ? (
                           <CheckCircleIcon className="h-5 w-5 text-green-600" />
                         ) : (
                           <XCircleIcon className="h-5 w-5 text-red-600" />
