@@ -90,13 +90,10 @@ export default function SignUp() {
         email: formData.email,
         password: formData.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             firstName: formData.firstName,
             lastName: formData.lastName,
           },
-          // Disable email confirmation - auto-confirm users
-          emailRedirectTo: undefined,
         },
       });
 
