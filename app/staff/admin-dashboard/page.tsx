@@ -4838,8 +4838,6 @@ export default function AdminDashboard() {
                       <th className="px-6 py-4 text-left">Email</th>
                       <th className="px-6 py-4 text-center">Terms</th>
                       <th className="px-6 py-4 text-center">Waiver</th>
-                      <th className="px-6 py-4 text-center">Photo</th>
-                      <th className="px-6 py-4 text-center">Billing</th>
                       <th className="px-6 py-4 text-center">Password</th>
                       <th className="px-6 py-4 text-left">Signed Date</th>
                     </tr>
@@ -4860,20 +4858,6 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-6 py-4 text-center">
                           {agreement.injury_waiver_agreed ? (
-                            <CheckIcon className="h-5 w-5 text-green-600 mx-auto" />
-                          ) : (
-                            <XCircleIcon className="h-5 w-5 text-red-600 mx-auto" />
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          {agreement.photo_permission_agreed ? (
-                            <CheckIcon className="h-5 w-5 text-green-600 mx-auto" />
-                          ) : (
-                            <XCircleIcon className="h-5 w-5 text-red-600 mx-auto" />
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          {agreement.recurring_billing_agreed ? (
                             <CheckIcon className="h-5 w-5 text-green-600 mx-auto" />
                           ) : (
                             <XCircleIcon className="h-5 w-5 text-red-600 mx-auto" />
