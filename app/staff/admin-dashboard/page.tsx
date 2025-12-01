@@ -1014,13 +1014,12 @@ export default function AdminDashboard() {
             .select('*', { count: 'exact', head: true })
             .eq('owner_id', user.id)
 
-          // Check subscription status - fetch tier info with name and start date
-          const { data: subscription, error: subError} = await supabase
+          // Check subscription status - fetch ALL subscriptions (user may have multiple for different dogs)
+          const { data: subscriptions, error: subError} = await supabase
             .from('subscriptions')
             .select('tier_id, created_at, subscription_tiers(name, days_included)')
             .eq('user_id', user.id)
             .eq('is_active', true)
-            .maybeSingle()
 
           if (subError) {
             console.log('❌ Subscription query error for user', user.first_name, user.last_name, ':', subError.message)
@@ -1028,15 +1027,21 @@ export default function AdminDashboard() {
 
           let subscriptionStatus = 'None'
           let subscriptionStartDate = null
-          if (subscription && subscription.subscription_tiers) {
-            // Show tier name with days, e.g., "4 Days (Full Day)"
-            const tier: any = subscription.subscription_tiers
-            const tierDays = tier.days_included || ''
-            subscriptionStatus = `${tierDays} Days (Full Day)`
-            subscriptionStartDate = subscription.created_at
-          } else if (subscription) {
-            subscriptionStatus = 'Active'
-            subscriptionStartDate = subscription.created_at
+
+          if (subscriptions && subscriptions.length > 0) {
+            // If multiple subscriptions (multi-dog owner), show count and tier info
+            if (subscriptions.length > 1) {
+              const tier: any = subscriptions[0].subscription_tiers
+              const tierDays = tier?.days_included || ''
+              subscriptionStatus = `${subscriptions.length} subscriptions (${tierDays} Days each)`
+              subscriptionStartDate = subscriptions[0].created_at
+            } else {
+              // Single subscription
+              const tier: any = subscriptions[0].subscription_tiers
+              const tierDays = tier?.days_included || ''
+              subscriptionStatus = `${tierDays} Days (Full Day)`
+              subscriptionStartDate = subscriptions[0].created_at
+            }
           }
 
           return {
