@@ -165,7 +165,8 @@ export async function GET(request: NextRequest) {
     const errors: string[] = []
 
     // Send email to each user with their bookings
-    for (const [userId, userData] of userBookings) {
+    const userBookingsEntries = Array.from(userBookings.entries())
+    for (const [userId, userData] of userBookingsEntries) {
       const bookingsArray = Array.from(userData.bookings.values())
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
