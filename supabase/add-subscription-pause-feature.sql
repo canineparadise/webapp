@@ -19,13 +19,20 @@ ON subscriptions(is_paused)
 WHERE is_paused = true;
 
 -- Add check constraint to ensure pause period is max 28 days (4 weeks)
-ALTER TABLE subscriptions
-ADD CONSTRAINT IF NOT EXISTS check_pause_duration
-CHECK (
-  pause_end_date IS NULL OR
-  pause_start_date IS NULL OR
-  (pause_end_date - pause_start_date) <= INTERVAL '28 days'
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'check_pause_duration'
+  ) THEN
+    ALTER TABLE subscriptions
+    ADD CONSTRAINT check_pause_duration
+    CHECK (
+      pause_end_date IS NULL OR
+      pause_start_date IS NULL OR
+      (pause_end_date - pause_start_date) <= INTERVAL '28 days'
+    );
+  END IF;
+END $$;
 
 -- Verify columns were added
 SELECT

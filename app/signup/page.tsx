@@ -115,6 +115,28 @@ export default function SignUp() {
           // Continue anyway - user can still verify via email
         }
 
+        // Create/update profile with first and last name
+        try {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .upsert({
+              id: authData.user.id,
+              email: formData.email,
+              first_name: formData.firstName,
+              last_name: formData.lastName,
+              updated_at: new Date().toISOString(),
+            })
+
+          if (profileError) {
+            console.error('Failed to update profile:', profileError)
+          } else {
+            console.log('Profile created/updated successfully')
+          }
+        } catch (profileError) {
+          console.error('Profile update error:', profileError)
+          // Continue anyway
+        }
+
         // Send custom welcome email
         try {
           await fetch('/api/send-welcome-email', {
