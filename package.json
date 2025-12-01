@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "audit:subscriptions": "tsx scripts/audit-subscriptions-stripe.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.1.5",
@@ -36,6 +37,7 @@
     "eslint-config-next": "^14.2.5",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
+    "tsx": "^4.21.0",
     "typescript": "^5.5.0"
   }
 }
