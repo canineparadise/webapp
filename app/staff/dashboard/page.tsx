@@ -728,7 +728,20 @@ export default function StaffDashboard() {
 
   const fetchFeedingSchedule = async () => {
     try {
-      // Fetch from subscription bookings table
+      // Helper function to parse meal requirements from special_instructions text
+      const parseMealsFromInstructions = (instructions: string | null): { breakfast: boolean, lunch: boolean, dinner: boolean } => {
+        if (!instructions) return { breakfast: false, lunch: false, dinner: false }
+        const upperInstructions = instructions.toUpperCase()
+        // Check for "MEALS REQUIRED:" pattern or just meal names
+        return {
+          breakfast: upperInstructions.includes('BREAKFAST'),
+          lunch: upperInstructions.includes('LUNCH'),
+          dinner: upperInstructions.includes('DINNER')
+        }
+      }
+
+      // Fetch ALL confirmed bookings for today (not just those with boolean flags)
+      // because older bookings may have meal requirements in special_instructions text
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select(`
@@ -747,7 +760,6 @@ export default function StaffDashboard() {
         `)
         .eq('booking_date', currentDate)
         .eq('status', 'confirmed')
-        .or('needs_breakfast.eq.true,needs_lunch.eq.true,needs_dinner.eq.true')
 
       // Also fetch from individual_day_bookings table
       const { data: individualBookingsData } = await supabase
@@ -768,7 +780,6 @@ export default function StaffDashboard() {
         `)
         .eq('booking_date', currentDate)
         .eq('status', 'confirmed')
-        .or('needs_breakfast.eq.true,needs_lunch.eq.true,needs_dinner.eq.true')
 
       // Combine both booking types
       const allBookingsData = [
@@ -781,7 +792,7 @@ export default function StaffDashboard() {
         return
       }
 
-      // Get all dog IDs that need feeding
+      // Get all dog IDs
       const allDogIds = Array.from(new Set(allBookingsData.map(b => b.dog_id)))
 
       const { data: dogsData } = await supabase
@@ -805,6 +816,15 @@ export default function StaffDashboard() {
         const dog = dogsData?.find(d => d.id === booking.dog_id)
         if (!dog) return
 
+        // Check both boolean columns AND parse special_instructions text for meal requirements
+        const parsedMeals = parseMealsFromInstructions(booking.special_instructions)
+        const needsBreakfast = booking.needs_breakfast || parsedMeals.breakfast
+        const needsLunch = booking.needs_lunch || parsedMeals.lunch
+        const needsDinner = booking.needs_dinner || parsedMeals.dinner
+
+        // Skip if no meals needed
+        if (!needsBreakfast && !needsLunch && !needsDinner) return
+
         const owner = Array.isArray(dog.profiles) ? dog.profiles[0] : dog.profiles
         const feedingDog: FeedingDog = {
           dog_id: dog.id,
@@ -824,9 +844,9 @@ export default function StaffDashboard() {
           dinner_completed_at: booking.dinner_completed_at
         }
 
-        if (booking.needs_breakfast) breakfast.push(feedingDog)
-        if (booking.needs_lunch) lunch.push(feedingDog)
-        if (booking.needs_dinner) dinner.push(feedingDog)
+        if (needsBreakfast) breakfast.push(feedingDog)
+        if (needsLunch) lunch.push(feedingDog)
+        if (needsDinner) dinner.push(feedingDog)
       })
 
       setFeedingSchedule({ breakfast, lunch, dinner })
