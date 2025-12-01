@@ -14,8 +14,7 @@ BEGIN
   -- Find Karen's user ID
   SELECT id INTO karen_user_id
   FROM profiles
-  WHERE email ILIKE '%karen%jenkins%'
-     OR (first_name ILIKE '%karen%' AND last_name ILIKE '%jenkins%')
+  WHERE email = 'karenjenk@hotmail.co.uk'
   LIMIT 1;
 
   -- Find FIRST50 discount code ID
@@ -66,8 +65,7 @@ SELECT
   vip_granted_at,
   created_at
 FROM profiles
-WHERE email ILIKE '%karen%jenkins%'
-  OR (first_name ILIKE '%karen%' AND last_name ILIKE '%jenkins%');
+WHERE email = 'karenjenk@hotmail.co.uk';
 
 -- Show Karen's discount code usage
 SELECT
@@ -81,8 +79,7 @@ FROM discount_code_usage dcu
 JOIN discount_codes dc ON dcu.discount_code_id = dc.id
 WHERE dcu.user_id IN (
   SELECT id FROM profiles
-  WHERE email ILIKE '%karen%jenkins%'
-     OR (first_name ILIKE '%karen%' AND last_name ILIKE '%jenkins%')
+  WHERE email = 'karenjenk@hotmail.co.uk'
 );
 
 -- IMPORTANT: Karen will now see the Golden Paw badge on her dashboard
