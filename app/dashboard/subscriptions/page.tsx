@@ -17,6 +17,7 @@ import {
   ExclamationTriangleIcon,
   HeartIcon,
   TicketIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline'
 import { loadStripe } from '@stripe/stripe-js'
 
@@ -63,6 +64,14 @@ export default function SubscribeDogsPage() {
   const [subscriptionToCancel, setSubscriptionToCancel] = useState<any>(null)
   const [cancelReason, setCancelReason] = useState('')
   const [cancelling, setCancelling] = useState(false)
+
+  // Pause modal state
+  const [showPauseModal, setShowPauseModal] = useState(false)
+  const [subscriptionToPause, setSubscriptionToPause] = useState<any>(null)
+  const [pauseWeeks, setPauseWeeks] = useState(1)
+  const [pauseReason, setPauseReason] = useState('')
+  const [pausing, setPausing] = useState(false)
+  const [resuming, setResuming] = useState(false)
 
   useEffect(() => {
     init()
@@ -366,6 +375,74 @@ export default function SubscribeDogsPage() {
     }
   }
 
+  const handlePauseSubscription = async () => {
+    if (!subscriptionToPause) return
+
+    setPausing(true)
+    try {
+      const response = await fetch('/api/pause-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscriptionId: subscriptionToPause.id,
+          pauseWeeks,
+          pauseReason: pauseReason.trim() || null,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to pause subscription')
+      }
+
+      toast.success(data.message || `Subscription paused for ${pauseWeeks} week(s)`)
+
+      // Refresh subscriptions list
+      await init()
+
+      // Close modal and reset state
+      setShowPauseModal(false)
+      setSubscriptionToPause(null)
+      setPauseWeeks(1)
+      setPauseReason('')
+    } catch (error: any) {
+      console.error('Pause error:', error)
+      toast.error(error.message || 'Failed to pause subscription')
+    } finally {
+      setPausing(false)
+    }
+  }
+
+  const handleResumeSubscription = async (subscription: any) => {
+    setResuming(true)
+    try {
+      const response = await fetch('/api/resume-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscriptionId: subscription.id,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resume subscription')
+      }
+
+      toast.success(data.message || 'Subscription resumed successfully')
+
+      // Refresh subscriptions list
+      await init()
+    } catch (error: any) {
+      console.error('Resume error:', error)
+      toast.error(error.message || 'Failed to resume subscription')
+    } finally {
+      setResuming(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white flex items-center justify-center">
@@ -435,16 +512,30 @@ export default function SubscribeDogsPage() {
               {existingSubscriptions.map(sub => {
                 const dog = dogs.find(d => d.id === sub.dog_id)
                 const isCancelled = sub.cancelled_at !== null
+                const isPaused = sub.is_paused === true
                 return (
-                  <div key={sub.id} className={`bg-white rounded-xl p-4 border-2 ${isCancelled ? 'border-red-300' : 'border-green-300'}`}>
+                  <div key={sub.id} className={`bg-white rounded-xl p-4 border-2 ${
+                    isCancelled ? 'border-red-300' :
+                    isPaused ? 'border-yellow-300' :
+                    'border-green-300'
+                  }`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
-                        <HeartIcon className={`h-5 w-5 ${isCancelled ? 'text-red-600' : 'text-green-600'}`} />
+                        <HeartIcon className={`h-5 w-5 ${
+                          isCancelled ? 'text-red-600' :
+                          isPaused ? 'text-yellow-600' :
+                          'text-green-600'
+                        }`} />
                         <span className="font-bold text-gray-900">{dog?.name}</span>
                       </div>
                       {isCancelled && (
                         <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
                           CANCELLED
+                        </span>
+                      )}
+                      {isPaused && !isCancelled && (
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">
+                          PAUSED
                         </span>
                       )}
                     </div>
@@ -454,27 +545,57 @@ export default function SubscribeDogsPage() {
                     <p className="text-sm text-gray-600">
                       Days remaining: {sub.days_remaining} / {sub.subscription_tiers.days_included}
                     </p>
+
+                    {isPaused && sub.pause_end_date && (
+                      <p className="text-sm text-yellow-600 font-semibold mt-2">
+                        Paused until: {new Date(sub.pause_end_date).toLocaleDateString()}
+                      </p>
+                    )}
+
                     {isCancelled ? (
                       <p className="text-sm text-red-600 font-semibold mt-2">
                         Ends on: {new Date(sub.next_billing_date).toLocaleDateString()}
                       </p>
-                    ) : (
+                    ) : !isPaused && (
                       <p className="text-xs text-gray-500 mt-2">
                         Next billing: {new Date(sub.next_billing_date).toLocaleDateString()}
                       </p>
                     )}
 
                     {!isCancelled && (
-                      <button
-                        onClick={() => {
-                          setSubscriptionToCancel(sub)
-                          setShowCancelModal(true)
-                        }}
-                        className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors"
-                      >
-                        <XCircleIcon className="h-4 w-4" />
-                        Cancel
-                      </button>
+                      <div className="mt-3 space-y-2">
+                        {isPaused ? (
+                          <button
+                            onClick={() => handleResumeSubscription(sub)}
+                            disabled={resuming}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors disabled:opacity-50"
+                          >
+                            <CheckCircleIcon className="h-4 w-4" />
+                            {resuming ? 'Resuming...' : 'Resume'}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setSubscriptionToPause(sub)
+                              setShowPauseModal(true)
+                            }}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm font-semibold hover:bg-yellow-600 transition-colors"
+                          >
+                            <ClockIcon className="h-4 w-4" />
+                            Pause
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setSubscriptionToCancel(sub)
+                            setShowCancelModal(true)
+                          }}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors"
+                        >
+                          <XCircleIcon className="h-4 w-4" />
+                          Cancel
+                        </button>
+                      </div>
                     )}
                   </div>
                 )
@@ -868,6 +989,122 @@ export default function SubscribeDogsPage() {
                       <>
                         <XCircleIcon className="h-5 w-5" />
                         Yes, Cancel Subscription
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Pause Modal */}
+        <AnimatePresence>
+          {showPauseModal && subscriptionToPause && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => {
+                if (!pausing) {
+                  setShowPauseModal(false)
+                  setSubscriptionToPause(null)
+                  setPauseWeeks(1)
+                  setPauseReason('')
+                }
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8"
+              >
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="bg-yellow-100 rounded-full p-3">
+                    <ClockIcon className="h-8 w-8 text-yellow-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">Pause Subscription</h3>
+                    <p className="text-sm text-gray-600">Temporarily pause billing and days</p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                  <div className="flex gap-2">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-blue-900">
+                      <p className="font-semibold mb-1">How Pause Works:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        <li>No charges during pause period (max 4 weeks)</li>
+                        <li>Your days remain frozen - no days deducted</li>
+                        <li>Billing resumes automatically after pause ends</li>
+                        <li>You can resume anytime before pause ends</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Pause Duration
+                  </label>
+                  <select
+                    value={pauseWeeks}
+                    onChange={(e) => setPauseWeeks(parseInt(e.target.value))}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-yellow-500 outline-none"
+                    disabled={pausing}
+                  >
+                    <option value={1}>1 Week</option>
+                    <option value={2}>2 Weeks</option>
+                    <option value={3}>3 Weeks</option>
+                    <option value={4}>4 Weeks (Maximum)</option>
+                  </select>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Reason (optional)
+                  </label>
+                  <textarea
+                    value={pauseReason}
+                    onChange={(e) => setPauseReason(e.target.value)}
+                    placeholder="Going on holiday, temporary break, etc..."
+                    rows={3}
+                    className="w-full px-4 py-3 rounded-xl border-2 border-gray-300 focus:border-yellow-500 outline-none resize-none"
+                    disabled={pausing}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowPauseModal(false)
+                      setSubscriptionToPause(null)
+                      setPauseWeeks(1)
+                      setPauseReason('')
+                    }}
+                    disabled={pausing}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handlePauseSubscription}
+                    disabled={pausing}
+                    className="flex-1 px-6 py-3 bg-yellow-600 text-white rounded-xl font-semibold hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {pausing ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        Pausing...
+                      </>
+                    ) : (
+                      <>
+                        <ClockIcon className="h-5 w-5" />
+                        Pause for {pauseWeeks} Week{pauseWeeks > 1 ? 's' : ''}
                       </>
                     )}
                   </button>
