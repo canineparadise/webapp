@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { UserPlusIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
+import { supabase } from '@/lib/supabase'
 
 export default function UserManagementPage() {
   const [loading, setLoading] = useState(false)
@@ -20,9 +21,19 @@ export default function UserManagementPage() {
     setLoading(true)
 
     try {
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        throw new Error('Not authenticated. Please log in again.')
+      }
+
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify(formData)
       })
 
