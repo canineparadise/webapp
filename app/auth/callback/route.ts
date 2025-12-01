@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
   const next = requestUrl.searchParams.get('next')
+  const type = requestUrl.searchParams.get('type')
 
   if (code) {
     const cookieStore = cookies()
@@ -18,7 +19,12 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
-      // If there's a 'next' parameter (from password reset), redirect there
+      // If type is recovery (password reset), redirect to reset-password page
+      if (type === 'recovery') {
+        return NextResponse.redirect(`${requestUrl.origin}/reset-password`)
+      }
+
+      // If there's a 'next' parameter, redirect there
       if (next) {
         return NextResponse.redirect(`${requestUrl.origin}${next}`)
       }

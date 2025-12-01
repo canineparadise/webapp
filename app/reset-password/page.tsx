@@ -17,13 +17,16 @@ export default function ResetPasswordPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if we have the necessary hash/token
-    const hashParams = new URLSearchParams(window.location.hash.substring(1))
-    const type = hashParams.get('type')
+    // Check if user is authenticated (session should be established by auth callback)
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
 
-    if (type !== 'recovery') {
-      setError('Invalid or expired reset link. Please request a new password reset.')
+      if (!session) {
+        setError('Invalid or expired reset link. Please request a new password reset.')
+      }
     }
+
+    checkAuth()
   }, [])
 
   const handleResetPassword = async (e: React.FormEvent) => {
