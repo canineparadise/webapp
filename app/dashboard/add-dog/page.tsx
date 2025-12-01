@@ -151,28 +151,29 @@ export default function AddDogPage() {
   }, [])
 
   const checkAuthAndDogCount = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (error || !user) {
-      router.push('/login')
-      return
-    }
-    setUser(user)
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) {
+        router.push('/login')
+        return
+      }
+      setUser(user)
 
-    // Get user profile to get their full name
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('first_name, last_name')
-      .eq('id', user.id)
-      .single()
+      // Get user profile to get their full name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', user.id)
+        .single()
 
-    // Check if user has completed their profile
-    if (!profile || !profile.first_name || !profile.last_name) {
-      toast.error('Please complete your profile before adding a dog')
-      router.push('/dashboard/profile')
-      return
-    }
+      // Check if user has completed their profile
+      if (!profile || !profile.first_name || !profile.last_name) {
+        toast.error('Please complete your profile before adding a dog')
+        router.push('/dashboard/profile')
+        return
+      }
 
-    const fullName = `${profile.first_name} ${profile.last_name}`.trim()
+      const fullName = `${profile.first_name} ${profile.last_name}`.trim()
 
     // Check for existing draft
     const { data: draftDogs } = await supabase
@@ -213,8 +214,15 @@ export default function AddDogPage() {
           // Health Information
           vaccinated: draft.vaccinated || false,
           vaccination_expiry: draft.vaccination_expiry || '',
+          has_vaccination_docs: draft.has_vaccination_docs || false,
+          flea_treatment: draft.flea_treatment || false,
+          flea_treatment_date: draft.flea_treatment_date || '',
+          worming_treatment: draft.worming_treatment || false,
+          worming_treatment_date: draft.worming_treatment_date || '',
+          heartworm_prevention: draft.heartworm_prevention || false,
+          heartworm_prevention_date: draft.heartworm_prevention_date || '',
           medical_conditions: draft.medical_conditions || '',
-          current_medications: draft.current_medications || [],
+          current_medications: Array.isArray(draft.current_medications) ? draft.current_medications : [],
           medication_requirements: draft.medication_requirements || '',
           allergies: draft.allergies || '',
           can_be_given_treats: draft.can_be_given_treats !== undefined ? draft.can_be_given_treats : true,
@@ -222,6 +230,7 @@ export default function AddDogPage() {
           // Behavioral
           resource_guarding: draft.resource_guarding || false,
           separation_anxiety: draft.separation_anxiety || false,
+          excessive_barking: draft.excessive_barking || false,
           leash_pulling: draft.leash_pulling || false,
           house_trained: draft.house_trained !== undefined ? draft.house_trained : true,
           crate_trained: draft.crate_trained || false,
@@ -248,12 +257,17 @@ export default function AddDogPage() {
           emergency_medical_consent: draft.emergency_medical_consent || false,
           max_vet_cost_approval: draft.max_vet_cost_approval?.toString() || '',
 
+          // Care Instructions
+          feeding_schedule: draft.feeding_schedule || '',
+          special_requirements: draft.special_requirements || '',
+          favorite_activities: draft.favorite_activities || '',
+
           // Pickup & Dropoff
-          authorized_dropoff_people: draft.authorized_dropoff_people && draft.authorized_dropoff_people.length > 0 && draft.authorized_dropoff_people[0] !== 'null null'
-            ? draft.authorized_dropoff_people
+          authorized_dropoff_people: draft.authorized_dropoff_people && Array.isArray(draft.authorized_dropoff_people) && draft.authorized_dropoff_people.length > 0 && draft.authorized_dropoff_people[0] !== 'null null'
+            ? draft.authorized_dropoff_people.filter((name: string) => name && name !== 'null null')
             : (fullName ? [fullName] : []),
-          authorized_pickup_people: draft.authorized_pickup_people && draft.authorized_pickup_people.length > 0 && draft.authorized_pickup_people[0] !== 'null null'
-            ? draft.authorized_pickup_people
+          authorized_pickup_people: draft.authorized_pickup_people && Array.isArray(draft.authorized_pickup_people) && draft.authorized_pickup_people.length > 0 && draft.authorized_pickup_people[0] !== 'null null'
+            ? draft.authorized_pickup_people.filter((name: string) => name && name !== 'null null')
             : (fullName ? [fullName] : []),
           checkout_password: draft.checkout_password || '',
         }
@@ -293,6 +307,10 @@ export default function AddDogPage() {
         toast.error('You have reached the maximum of 4 dogs')
         router.push('/dashboard')
       }
+    }
+    } catch (error) {
+      console.error('Error loading dog form:', error)
+      toast.error('Failed to load form. Please refresh the page.')
     }
   }
 
