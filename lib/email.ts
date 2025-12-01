@@ -581,6 +581,397 @@ export async function sendDogRegistrationEmail({
   })
 }
 
+// Vaccination expiry reminder email
+export async function sendVaccinationExpiryReminder({
+  userEmail,
+  userName,
+  dogName,
+  expiringItems,
+}: {
+  userEmail: string
+  userName: string
+  dogName: string
+  expiringItems: Array<{
+    type: 'vaccination' | 'flea' | 'worming' | 'heartworm'
+    expiryDate: string
+    daysUntilExpiry: number
+  }>
+}) {
+  const typeLabels: Record<string, string> = {
+    vaccination: 'Vaccinations',
+    flea: 'Flea Treatment',
+    worming: 'Worming Treatment',
+    heartworm: 'Heartworm Prevention',
+  }
+
+  const typeIcons: Record<string, string> = {
+    vaccination: '💉',
+    flea: '🦟',
+    worming: '🐛',
+    heartworm: '❤️',
+  }
+
+  const itemsList = expiringItems.map(item => {
+    const formattedDate = new Date(item.expiryDate).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    })
+    const urgency = item.daysUntilExpiry <= 7 ? 'color: #dc3545; font-weight: bold;' : 'color: #856404;'
+    const daysText = item.daysUntilExpiry === 0
+      ? '<strong style="color: #dc3545;">TODAY!</strong>'
+      : item.daysUntilExpiry === 1
+        ? '<strong style="color: #dc3545;">TOMORROW!</strong>'
+        : `in <strong>${item.daysUntilExpiry} days</strong>`
+
+    return `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
+          ${typeIcons[item.type]} ${typeLabels[item.type]}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">${formattedDate}</td>
+        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; ${urgency}">Expires ${daysText}</td>
+      </tr>
+    `
+  }).join('')
+
+  const isUrgent = expiringItems.some(item => item.daysUntilExpiry <= 7)
+  const subject = isUrgent
+    ? `⚠️ URGENT: ${dogName}'s health records expiring soon!`
+    : `📋 Reminder: ${dogName}'s health records expiring in 30 days`
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: ${isUrgent ? 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)' : 'linear-gradient(135deg, #ffc107 0%, #e0a800 100%)'}; color: ${isUrgent ? 'white' : '#333'}; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          h1 { margin: 0; font-size: 24px; }
+          h2 { color: #1a3a52; margin-top: 0; }
+          .highlight { color: #a68756; font-weight: bold; }
+          .warning-box { background: ${isUrgent ? '#f8d7da' : '#fff3cd'}; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid ${isUrgent ? '#dc3545' : '#ffc107'}; }
+          .cta-button { display: inline-block; background: #a68756; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>${isUrgent ? '⚠️' : '📋'} Health Records Reminder</h1>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>This is a friendly reminder that some of <strong>${dogName}</strong>'s health records are ${isUrgent ? 'expiring very soon' : 'due for renewal'}.</p>
+
+            <div class="warning-box">
+              <h2 style="margin-top: 0; color: ${isUrgent ? '#721c24' : '#856404'};">
+                ${isUrgent ? '⚠️ Urgent Attention Required' : '📅 Upcoming Expirations'}
+              </h2>
+              <table>
+                <thead>
+                  <tr style="background: #f0f0f0;">
+                    <th style="padding: 10px; text-align: left;">Treatment</th>
+                    <th style="padding: 10px; text-align: left;">Expiry Date</th>
+                    <th style="padding: 10px; text-align: left;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsList}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="details-box">
+              <h2>Why This Matters</h2>
+              <p>For the safety of ${dogName} and all dogs at our daycare, we require up-to-date health records. Dogs with expired vaccinations or treatments may not be able to attend daycare until records are updated.</p>
+            </div>
+
+            <h2>What You Need To Do</h2>
+            <ol>
+              <li>Schedule an appointment with your vet to renew the expiring treatments</li>
+              <li>After your vet visit, log into your dashboard and update ${dogName}'s health information</li>
+              <li>Upload any new vaccination certificates</li>
+            </ol>
+
+            <p style="text-align: center;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/dogs" class="cta-button">Update ${dogName}'s Records</a>
+            </p>
+
+            <p>If you've already renewed these treatments, please update ${dogName}'s profile in your dashboard to avoid future reminders.</p>
+
+            <p>Questions? Contact us at admin@aldenhamdoggydaycare.com</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>This is an automated reminder from Aldenham Doggy Day Care.</p>
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}
+
+// Weekly booking reminder email
+export async function sendWeeklyBookingReminder({
+  userEmail,
+  userName,
+  bookings,
+  weekStartDate,
+  weekEndDate,
+}: {
+  userEmail: string
+  userName: string
+  bookings: Array<{
+    date: string
+    dogNames: string[]
+    needsBreakfast?: boolean
+    needsLunch?: boolean
+    needsDinner?: boolean
+    specialInstructions?: string | null
+  }>
+  weekStartDate: string
+  weekEndDate: string
+}) {
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    })
+  }
+
+  const formattedWeekStart = new Date(weekStartDate).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+  })
+  const formattedWeekEnd = new Date(weekEndDate).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+
+  const bookingRows = bookings.map(booking => {
+    const dogsText = booking.dogNames.join(', ')
+    const meals: string[] = []
+    if (booking.needsBreakfast) meals.push('Breakfast')
+    if (booking.needsLunch) meals.push('Lunch')
+    if (booking.needsDinner) meals.push('Dinner')
+    const mealsText = meals.length > 0 ? meals.join(', ') : 'None requested'
+
+    return `
+      <tr>
+        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; font-weight: bold;">
+          ${formatDate(booking.date)}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
+          ${dogsText}
+        </td>
+        <td style="padding: 12px; border-bottom: 1px solid #e0e0e0;">
+          ${mealsText}
+        </td>
+      </tr>
+      ${booking.specialInstructions ? `
+      <tr>
+        <td colspan="3" style="padding: 8px 12px; background: #f9f9f9; font-size: 13px; color: #666; border-bottom: 1px solid #e0e0e0;">
+          <em>📝 Note: ${booking.specialInstructions}</em>
+        </td>
+      </tr>
+      ` : ''}
+    `
+  }).join('')
+
+  const totalDays = bookings.length
+  const subject = `🐾 Your Week Ahead: ${totalDays} Daycare Day${totalDays > 1 ? 's' : ''} Booked (${formattedWeekStart} - ${formattedWeekEnd})`
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+          h1 { margin: 0; font-size: 24px; }
+          h2 { color: #1a3a52; margin-top: 0; }
+          .highlight { color: #a68756; font-weight: bold; }
+          .info-box { background: #e8f4f8; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #17a2b8; }
+          .cta-button { display: inline-block; background: #a68756; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🐾 Your Week at Aldenham</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.9;">${formattedWeekStart} - ${formattedWeekEnd}</p>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>Here's a reminder of your upcoming daycare bookings for this week. We're excited to see your furry friend${bookings.some(b => b.dogNames.length > 1) ? 's' : ''}!</p>
+
+            <div class="details-box">
+              <h2>📅 This Week's Bookings</h2>
+              <table>
+                <thead>
+                  <tr style="background: #f0f0f0;">
+                    <th style="padding: 10px; text-align: left;">Date</th>
+                    <th style="padding: 10px; text-align: left;">Dog(s)</th>
+                    <th style="padding: 10px; text-align: left;">Meals</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${bookingRows}
+                </tbody>
+              </table>
+              <p style="margin-top: 15px; font-size: 14px;">
+                <strong>Total Days This Week:</strong> <span class="highlight">${totalDays}</span>
+              </p>
+            </div>
+
+            <div class="info-box">
+              <h2 style="margin-top: 0; color: #0c5460;">⏰ Drop-off & Pick-up Times</h2>
+              <p style="margin-bottom: 0;">
+                <strong>Drop-off:</strong> 7:00 AM - 10:00 AM<br>
+                <strong>Pick-up:</strong> 3:00 PM - 7:00 PM
+              </p>
+            </div>
+
+            <h2>📋 Checklist for Each Visit</h2>
+            <ul>
+              <li>✓ Ensure your dog has had a toilet break before drop-off</li>
+              <li>✓ Bring any required medications with clear instructions</li>
+              <li>✓ Let us know if anything has changed (diet, behavior, health)</li>
+              <li>✓ Remember your checkout password for pick-up</li>
+            </ul>
+
+            <p>Need to make changes to your bookings? Log into your dashboard or contact us as soon as possible.</p>
+
+            <p style="text-align: center;">
+              <a href="${process.env.NEXT_PUBLIC_BASE_URL}/dashboard" class="cta-button">View Your Dashboard</a>
+            </p>
+
+            <p>If you have any questions, please contact us at admin@aldenhamdoggydaycare.com or call us directly.</p>
+
+            <p>We look forward to seeing you this week! 🐕</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>This is an automated weekly reminder from Aldenham Doggy Day Care.</p>
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}
+
+// Password reset email
+export async function sendPasswordResetEmail({
+  userEmail,
+  userName,
+  resetLink,
+}: {
+  userEmail: string
+  userName: string
+  resetLink: string
+}) {
+  const subject = 'Reset Your Password - Aldenham Doggy Day Care'
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          h1 { margin: 0; font-size: 28px; }
+          h2 { color: #1a3a52; margin-top: 0; }
+          .cta-button { display: inline-block; background: #a68756; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+          .warning-text { color: #856404; font-size: 13px; background: #fff3cd; padding: 10px; border-radius: 5px; margin-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔐 Password Reset Request</h1>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>We received a request to reset your password for your Aldenham Doggy Day Care account.</p>
+
+            <div class="details-box">
+              <h2>Reset Your Password</h2>
+              <p>Click the button below to set a new password:</p>
+              <p style="text-align: center;">
+                <a href="${resetLink}" class="cta-button">Reset Password</a>
+              </p>
+              <p style="font-size: 13px; color: #666;">Or copy and paste this link into your browser:</p>
+              <p style="font-size: 12px; word-break: break-all; color: #666;">${resetLink}</p>
+            </div>
+
+            <div class="warning-text">
+              <strong>⚠️ Security Notice:</strong> This link will expire in 1 hour. If you didn't request a password reset, please ignore this email or contact us if you have concerns about your account security.
+            </div>
+
+            <p>If you have any questions, please contact us at admin@aldenhamdoggydaycare.com</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>This is an automated email from Aldenham Doggy Day Care.</p>
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}
+
 // Dog approval notification email
 export async function sendDogApprovalEmail({
   userEmail,

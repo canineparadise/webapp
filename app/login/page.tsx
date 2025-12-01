@@ -68,25 +68,6 @@ export default function Login() {
     }
   }
 
-  const handleForgotPassword = async () => {
-    if (!formData.email) {
-      toast.error('Please enter your email address first')
-      return
-    }
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-        redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
-      })
-
-      if (error) throw error
-
-      toast.success('Password reset email sent! Check your inbox.')
-    } catch (error: any) {
-      toast.error('Failed to send reset email')
-    }
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-canine-sky to-canine-cream py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
@@ -163,13 +144,12 @@ export default function Login() {
             </div>
 
             <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleForgotPassword}
+              <Link
+                href="/forgot-password"
                 className="text-sm text-canine-gold hover:text-canine-light-gold transition-colors"
               >
                 Forgot your password?
-              </button>
+              </Link>
             </div>
 
             <motion.button
