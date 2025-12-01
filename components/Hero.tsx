@@ -2,15 +2,23 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import Image from 'next/image'
 import { SparklesIcon, HeartIcon, CheckCircleIcon } from '@heroicons/react/24/solid'
 
 export default function Hero() {
   return (
     <section className="relative min-h-[60vh] sm:min-h-[70vh] md:min-h-[80vh] flex items-center justify-center overflow-hidden">
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/hero-banner-outdoor.jpg)' }}
-      >
+      {/* Optimized background image with Next.js Image */}
+      <div className="absolute inset-0">
+        <Image
+          src="/hero-banner-outdoor.jpg"
+          alt="Dogs playing outdoors"
+          fill
+          priority
+          quality={75}
+          sizes="100vw"
+          className="object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-canine-navy/40 via-canine-navy/50 to-canine-navy/70"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-canine-gold/10 to-transparent"></div>
       </div>
