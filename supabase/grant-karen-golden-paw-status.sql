@@ -37,16 +37,18 @@ BEGIN
     INSERT INTO discount_code_usage (
       discount_code_id,
       user_id,
-      applied_to,
+      used_for,
+      original_amount,
       discount_amount,
-      used_at
+      final_amount
     )
     VALUES (
       first50_code_id,
       karen_user_id,
-      'retroactive_vip_grant',
+      'subscription',
+      0.00, -- No retroactive charges
       0.00, -- No actual discount applied retroactively, just VIP status
-      NOW()
+      0.00  -- No retroactive charges
     )
     ON CONFLICT DO NOTHING;
   END IF;
@@ -70,9 +72,11 @@ WHERE email = 'karenjenk@hotmail.co.uk';
 -- Show Karen's discount code usage
 SELECT
   dcu.id,
-  dcu.used_at,
-  dcu.applied_to,
+  dcu.created_at,
+  dcu.used_for,
+  dcu.original_amount,
   dcu.discount_amount,
+  dcu.final_amount,
   dc.code,
   dc.description
 FROM discount_code_usage dcu
