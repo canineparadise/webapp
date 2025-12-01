@@ -26,6 +26,7 @@ export default function BookingPage() {
   const [selectedDates, setSelectedDates] = useState<string[]>([])
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [subscription, setSubscription] = useState<any>(null)
+  const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [bookedDates, setBookedDates] = useState<string[]>([])
   const [mealOptions, setMealOptions] = useState({ breakfast: false, lunch: false, dinner: false })
   const [specialNotes, setSpecialNotes] = useState('')
@@ -55,22 +56,28 @@ export default function BookingPage() {
 
       setDogs(dogsData || [])
 
-      // Load subscription with tier info
-      const { data: subData } = await supabase
+      // Load ALL active subscriptions (one per dog)
+      const { data: subsData } = await supabase
         .from('subscriptions')
         .select(`
           *,
-          subscription_tiers(name)
+          subscription_tiers(name),
+          dogs(name)
         `)
         .eq('user_id', user.id)
         .eq('is_active', true)
-        .single()
 
-      if (subData) {
-        setSubscription({
-          ...subData,
-          tier_name: subData.subscription_tiers?.name || 'Subscription'
-        })
+      if (subsData && subsData.length > 0) {
+        const mappedSubs = subsData.map(sub => ({
+          ...sub,
+          tier_name: sub.subscription_tiers?.name || 'Subscription',
+          dog_name: sub.dogs?.name || 'Unknown Dog'
+        }))
+        setSubscriptions(mappedSubs)
+
+        // For backward compatibility, set the first subscription as "the" subscription
+        // This is used for pricing and tier display
+        setSubscription(mappedSubs[0])
       }
 
       // Load existing bookings
@@ -232,10 +239,22 @@ export default function BookingPage() {
       return
     }
 
-    // Calculate included vs extra days
-    const daysRemaining = subscription.days_remaining || 0
-    const includedDays = Math.min(selectedDates.length, daysRemaining)
-    const extraDays = Math.max(0, selectedDates.length - daysRemaining)
+    // Calculate total days remaining across ALL selected dogs' subscriptions
+    let totalDaysRemaining = 0
+    const dogSubscriptions: Record<string, any> = {}
+
+    for (const dogId of selectedDogs) {
+      const dogSub = subscriptions.find(s => s.dog_id === dogId)
+      if (dogSub) {
+        dogSubscriptions[dogId] = dogSub
+        totalDaysRemaining += (dogSub.days_remaining || 0)
+      }
+    }
+
+    // Total booking days needed = dates × dogs
+    const totalBookingDays = selectedDates.length * selectedDogs.length
+    const includedDays = Math.min(totalBookingDays, totalDaysRemaining)
+    const extraDays = Math.max(0, totalBookingDays - totalDaysRemaining)
 
     // If there are extra days, we'll need to charge at subscription rate
     if (extraDays > 0) {
@@ -243,12 +262,18 @@ export default function BookingPage() {
       const totalExtraCost = extraDays * extraDayCost
 
       // Show confirmation that extra days will be charged
-      if (!window.confirm(
-        `You have ${daysRemaining} days remaining in your subscription.\n\n` +
-        `• ${includedDays} day${includedDays !== 1 ? 's' : ''} will use your included days (FREE)\n` +
-        `• ${extraDays} extra day${extraDays !== 1 ? 's' : ''} will be charged at £${extraDayCost}/day = £${totalExtraCost.toFixed(2)}\n\n` +
-        `Continue to payment?`
-      )) {
+      const confirmMessage = selectedDogs.length > 1
+        ? `You're booking ${selectedDates.length} day${selectedDates.length !== 1 ? 's' : ''} for ${selectedDogs.length} dogs (${totalBookingDays} total bookings).\n\n` +
+          `Total days remaining across all selected dogs: ${totalDaysRemaining}\n\n` +
+          `• ${includedDays} booking${includedDays !== 1 ? 's' : ''} will use your included days (FREE)\n` +
+          `• ${extraDays} extra booking${extraDays !== 1 ? 's' : ''} will be charged at £${extraDayCost}/day = £${totalExtraCost.toFixed(2)}\n\n` +
+          `Continue to payment?`
+        : `You have ${totalDaysRemaining} days remaining in your subscription.\n\n` +
+          `• ${includedDays} day${includedDays !== 1 ? 's' : ''} will use your included days (FREE)\n` +
+          `• ${extraDays} extra day${extraDays !== 1 ? 's' : ''} will be charged at £${extraDayCost}/day = £${totalExtraCost.toFixed(2)}\n\n` +
+          `Continue to payment?`
+
+      if (!window.confirm(confirmMessage)) {
         return
       }
 
@@ -307,15 +332,16 @@ export default function BookingPage() {
       // Combine meal requirements with special notes
       const fullInstructions = mealText + (specialNotes || '')
 
-      // Create bookings for each selected date and dog (OLD SCHEMA: one row per dog per date)
+      // Create bookings for each selected date and dog
       const bookings = []
       for (const date of selectedDates) {
         for (const dogId of selectedDogs) {
+          const dogSub = dogSubscriptions[dogId]
           bookings.push({
             user_id: user.id,
             dog_id: dogId,
             booking_date: date,
-            subscription_id: subscription.id,
+            subscription_id: dogSub?.id || subscription.id,
             status: 'confirmed',
             special_instructions: fullInstructions.trim() || null
           })
@@ -328,16 +354,26 @@ export default function BookingPage() {
 
       if (bookingError) throw bookingError
 
-      // Update subscription days remaining
-      const { error: subError } = await supabase
-        .from('subscriptions')
-        .update({
-          days_remaining: daysRemaining - selectedDates.length,
-          days_used: (subscription.days_used || 0) + selectedDates.length
-        })
-        .eq('id', subscription.id)
+      // Update each dog's subscription days remaining
+      for (const dogId of selectedDogs) {
+        const dogSub = dogSubscriptions[dogId]
+        if (dogSub) {
+          const daysToDeduct = Math.min(selectedDates.length, dogSub.days_remaining || 0)
+          if (daysToDeduct > 0) {
+            const { error: subError } = await supabase
+              .from('subscriptions')
+              .update({
+                days_remaining: (dogSub.days_remaining || 0) - daysToDeduct,
+                days_used: (dogSub.days_used || 0) + daysToDeduct
+              })
+              .eq('id', dogSub.id)
 
-      if (subError) throw subError
+            if (subError) {
+              console.error(`Error updating subscription for dog ${dogId}:`, subError)
+            }
+          }
+        }
+      }
 
       toast.success(`Successfully booked ${selectedDates.length} day${selectedDates.length > 1 ? 's' : ''}! 🎉`)
 
@@ -373,7 +409,10 @@ export default function BookingPage() {
 
   const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth)
   const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })
-  const daysRemaining = subscription.days_remaining || 0
+
+  // Calculate total days remaining across all active subscriptions
+  const totalDaysRemaining = subscriptions.reduce((total, sub) => total + (sub.days_remaining || 0), 0)
+  const daysRemaining = subscription ? (subscription.days_remaining || 0) : 0
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white py-12">
