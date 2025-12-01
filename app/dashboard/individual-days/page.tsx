@@ -45,7 +45,6 @@ function IndividualDaysContent() {
   const [availabilityMap, setAvailabilityMap] = useState<Map<string, CapacityInfo>>(new Map())
   const [bookings, setBookings] = useState<Booking[]>([])
   const [pricePerDay, setPricePerDay] = useState<number>(50)
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
   const [loading, setLoading] = useState(false)
   const [checkingAvailability, setCheckingAvailability] = useState(false)
   const [closedDays, setClosedDays] = useState<Set<string>>(new Set())
@@ -385,11 +384,8 @@ function IndividualDaysContent() {
       }
 
       // Otherwise, proceed with payment
-      const apiEndpoint = paymentMethod === 'stripe'
-        ? '/api/create-individual-day-checkout'
-        : '/api/create-individual-day-checkout-paypal'
-
-      const response = await fetch(apiEndpoint, {
+      // Create Stripe checkout
+      const response = await fetch('/api/create-individual-day-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -411,23 +407,15 @@ function IndividualDaysContent() {
         throw new Error(data.error || 'Failed to create checkout')
       }
 
-      if (paymentMethod === 'stripe') {
-        const stripe = await stripePromise
-        if (!stripe) throw new Error('Stripe not loaded')
+      // Redirect to Stripe checkout
+      const stripe = await stripePromise
+      if (!stripe) throw new Error('Stripe not loaded')
 
-        const { error } = await stripe.redirectToCheckout({
-          sessionId: data.sessionId
-        })
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: data.sessionId
+      })
 
-        if (error) throw error
-      } else {
-        // Redirect to PayPal approval URL
-        if (data.approvalUrl) {
-          window.location.href = data.approvalUrl
-        } else {
-          throw new Error('No approval URL received from PayPal')
-        }
-      }
+      if (error) throw error
     } catch (error: any) {
       console.error('Checkout error:', error)
       toast.error(error.message || 'Failed to start checkout')
@@ -739,35 +727,6 @@ function IndividualDaysContent() {
                     {discountError && (
                       <p className="text-xs text-red-600 mt-1">{discountError}</p>
                     )}
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Payment Method
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => setPaymentMethod('stripe')}
-                        className={`p-3 rounded-lg border-2 transition-all ${
-                          paymentMethod === 'stripe'
-                            ? 'border-canine-gold bg-canine-gold/10'
-                            : 'border-gray-200 hover:border-canine-gold/50'
-                        }`}
-                      >
-                        <CreditCardIcon className="h-6 w-6 mx-auto mb-1" />
-                        <span className="text-xs font-medium">Card</span>
-                      </button>
-                      <button
-                        onClick={() => setPaymentMethod('paypal')}
-                        className={`p-3 rounded-lg border-2 transition-all ${
-                          paymentMethod === 'paypal'
-                            ? 'border-canine-gold bg-canine-gold/10'
-                            : 'border-gray-200 hover:border-canine-gold/50'
-                        }`}
-                      >
-                        <div className="text-lg font-bold text-[#0070ba] mb-1">PayPal</div>
-                      </button>
-                    </div>
                   </div>
 
                   <button

@@ -58,9 +58,6 @@ export default function SubscribeDogsPage() {
   const [appliedDiscount, setAppliedDiscount] = useState<any>(null)
   const [validatingCode, setValidatingCode] = useState(false)
 
-  // Payment method selection
-  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe')
-
   // Cancellation modal state
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [subscriptionToCancel, setSubscriptionToCancel] = useState<any>(null)
@@ -298,12 +295,8 @@ export default function SubscribeDogsPage() {
         return
       }
 
-      const apiEndpoint = paymentMethod === 'stripe'
-        ? '/api/create-subscription-checkout'
-        : '/api/create-subscription-checkout-paypal'
-
-      // Create checkout session with per-dog subscriptions
-      const response = await fetch(apiEndpoint, {
+      // Create Stripe checkout session with per-dog subscriptions
+      const response = await fetch('/api/create-subscription-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -323,16 +316,10 @@ export default function SubscribeDogsPage() {
 
       const data = await response.json()
 
-      if (paymentMethod === 'stripe') {
-        const stripe = await stripePromise
-        if (stripe) {
-          await stripe.redirectToCheckout({ sessionId: data.sessionId })
-        }
-      } else {
-        // Redirect to PayPal approval URL
-        if (data.approvalUrl) {
-          window.location.href = data.approvalUrl
-        }
+      // Redirect to Stripe checkout
+      const stripe = await stripePromise
+      if (stripe) {
+        await stripe.redirectToCheckout({ sessionId: data.sessionId })
       }
     } catch (error: any) {
       console.error('Checkout error:', error)
@@ -709,42 +696,6 @@ export default function SubscribeDogsPage() {
               )}
             </motion.div>
 
-            {/* Payment Method Selection */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-xl p-6 mb-8"
-            >
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Select Payment Method</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setPaymentMethod('stripe')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    paymentMethod === 'stripe'
-                      ? 'border-canine-gold bg-canine-gold/10'
-                      : 'border-gray-200 hover:border-canine-gold/50'
-                  }`}
-                >
-                  <CreditCardIcon className="h-8 w-8 mx-auto mb-2 text-canine-navy" />
-                  <p className="font-bold text-gray-900">Credit Card</p>
-                  <p className="text-xs text-gray-600">Pay with Stripe</p>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod('paypal')}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    paymentMethod === 'paypal'
-                      ? 'border-canine-gold bg-canine-gold/10'
-                      : 'border-gray-200 hover:border-canine-gold/50'
-                  }`}
-                >
-                  <svg className="h-8 w-8 mx-auto mb-2" viewBox="0 0 24 24" fill="#003087">
-                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.77.77 0 0 1 .76-.633h7.316c2.224 0 3.751.464 4.54 1.38.777.904.976 2.224.588 3.92-.012.056-.024.112-.04.172a5.513 5.513 0 0 1-5.436 4.412H9.81a.77.77 0 0 0-.76.633l-.576 3.655-.024.132-.48 3.046a.641.641 0 0 1-.633.555.76.76 0 0 1-.261.045zm12.217-13.967a5.14 5.14 0 0 1-2.072 4.152c-1.236.94-2.98 1.38-5.188 1.38h-.904l-.74 4.7h2.98c.384 0 .708-.28.76-.656l.032-.168.608-3.855.04-.22a.77.77 0 0 1 .76-.656h.48c2.6 0 4.632-1.056 5.228-4.108.248-1.268.12-2.328-.54-3.084a2.56 2.56 0 0 0-.444-.385z"/>
-                  </svg>
-                  <p className="font-bold text-gray-900">PayPal</p>
-                  <p className="text-xs text-gray-600">Pay with PayPal</p>
-                </button>
-              </div>
-            </motion.div>
 
             {/* Summary & Checkout */}
             <motion.div
