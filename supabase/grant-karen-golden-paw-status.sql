@@ -72,7 +72,6 @@ WHERE email = 'karenjenk@hotmail.co.uk';
 -- Show Karen's discount code usage
 SELECT
   dcu.id,
-  dcu.created_at,
   dcu.used_for,
   dcu.original_amount,
   dcu.discount_amount,
