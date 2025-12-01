@@ -32,6 +32,7 @@ export default function Dashboard() {
   const [dogs, setDogs] = useState<any[]>([])
   const [legalAgreements, setLegalAgreements] = useState<any>(null)
   const [subscription, setSubscription] = useState<any>(null)
+  const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [upcomingBookings, setUpcomingBookings] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'dogs' | 'bookings' | 'documents'>('dogs')
   const [selectedDates, setSelectedDates] = useState<string[]>([])
@@ -69,7 +70,7 @@ export default function Dashboard() {
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('legal_agreements').select('*').eq('user_id', user.id).maybeSingle(),
         supabase.from('dogs').select('*').eq('owner_id', user.id).order('created_at', { ascending: true }),
-        supabase.from('subscriptions').select('*, subscription_tiers:tier_id(name)').eq('user_id', user.id).eq('is_active', true).maybeSingle(),
+        supabase.from('subscriptions').select('*, subscription_tiers:tier_id(name), dogs(name)').eq('user_id', user.id).eq('is_active', true),
         supabase.from('bookings').select('*').eq('user_id', user.id).gte('booking_date', new Date().toISOString().split('T')[0]).order('booking_date', { ascending: true }).limit(3),
         supabase.from('bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }),
         supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).gte('booking_date', new Date().toISOString().split('T')[0]).order('booking_date', { ascending: true }).limit(3),
@@ -79,7 +80,27 @@ export default function Dashboard() {
       setProfile(profileRes.data)
       setLegalAgreements(legalRes.data)
       setDogs(dogsRes.data || [])
-      setSubscription(subscriptionRes.data)
+
+      // Handle multiple subscriptions (one per dog)
+      const activeSubs = subscriptionRes.data || []
+      setSubscriptions(activeSubs)
+
+      // For display, aggregate total days remaining across all subscriptions
+      if (activeSubs.length > 0) {
+        const totalDaysRemaining = activeSubs.reduce((sum, sub) => sum + (sub.days_remaining || 0), 0)
+        const totalDaysIncluded = activeSubs.reduce((sum, sub) => sum + (sub.days_included || 0), 0)
+
+        // Use the first subscription for tier info and billing date
+        const primarySub = activeSubs[0]
+        setSubscription({
+          ...primarySub,
+          days_remaining: totalDaysRemaining,
+          days_included: totalDaysIncluded,
+          subscription_count: activeSubs.length
+        })
+      } else {
+        setSubscription(null)
+      }
 
       // Merge subscription bookings and individual day bookings
       const upcomingBookingsCombined = [
