@@ -18,6 +18,10 @@ export async function POST(request: NextRequest) {
       discountCodeId,
       totalAmount,
       discountAmount,
+      needsBreakfast,
+      needsLunch,
+      needsDinner,
+      specialInstructions,
     } = await request.json()
 
     if (!userId || !dogId || !dates || !dates.length) {
@@ -71,6 +75,10 @@ export async function POST(request: NextRequest) {
       payment_status: 'paid', // Mark as paid since discount covered full cost
       status: 'confirmed',
       created_at: new Date().toISOString(),
+      needs_breakfast: needsBreakfast || false,
+      needs_lunch: needsLunch || false,
+      needs_dinner: needsDinner || false,
+      special_instructions: specialInstructions || null,
     }))
 
     const { data: createdBookings, error: bookingError } = await supabase

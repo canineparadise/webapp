@@ -49,6 +49,12 @@ function IndividualDaysContent() {
   const [checkingAvailability, setCheckingAvailability] = useState(false)
   const [closedDays, setClosedDays] = useState<Set<string>>(new Set())
 
+  // Meal requirements state
+  const [needsBreakfast, setNeedsBreakfast] = useState(false)
+  const [needsLunch, setNeedsLunch] = useState(false)
+  const [needsDinner, setNeedsDinner] = useState(false)
+  const [specialInstructions, setSpecialInstructions] = useState('')
+
   // Discount code state
   const [discountCode, setDiscountCode] = useState('')
   const [discountCodeId, setDiscountCodeId] = useState<string | null>(null)
@@ -369,6 +375,10 @@ function IndividualDaysContent() {
             discountCodeId: discountCodeId || undefined,
             totalAmount: totalBeforeDiscount,
             discountAmount: discountAmount,
+            needsBreakfast,
+            needsLunch,
+            needsDinner,
+            specialInstructions: specialInstructions || undefined,
           })
         })
 
@@ -397,7 +407,11 @@ function IndividualDaysContent() {
           discountCodeId: discountCodeId || undefined,
           totalAmount: totalBeforeDiscount,
           discountAmount: discountAmount,
-          finalAmount: finalAmount
+          finalAmount: finalAmount,
+          needsBreakfast,
+          needsLunch,
+          needsDinner,
+          specialInstructions: specialInstructions || undefined,
         })
       })
 
@@ -655,6 +669,78 @@ function IndividualDaysContent() {
                     <div className="w-6 h-6 bg-red-100 rounded"></div>
                     <span>Closed</span>
                   </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Meal Requirements Section */}
+            {selectedDog && selectedDates.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="bg-white rounded-xl p-6 shadow-lg mt-6"
+              >
+                <h2 className="text-xl font-semibold text-canine-navy mb-4">
+                  Meal Requirements
+                </h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  Let us know if your dog needs meals during their stay. These selections will apply to all selected dates.
+                </p>
+
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={needsBreakfast}
+                      onChange={(e) => setNeedsBreakfast(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300 text-canine-gold focus:ring-canine-gold"
+                    />
+                    <div>
+                      <span className="font-medium text-canine-navy">Breakfast</span>
+                      <span className="text-sm text-gray-500 ml-2">(Before 9am)</span>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={needsLunch}
+                      onChange={(e) => setNeedsLunch(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300 text-canine-gold focus:ring-canine-gold"
+                    />
+                    <div>
+                      <span className="font-medium text-canine-navy">Lunch</span>
+                      <span className="text-sm text-gray-500 ml-2">(12pm - 1pm)</span>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={needsDinner}
+                      onChange={(e) => setNeedsDinner(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300 text-canine-gold focus:ring-canine-gold"
+                    />
+                    <div>
+                      <span className="font-medium text-canine-navy">Dinner</span>
+                      <span className="text-sm text-gray-500 ml-2">(After 5pm)</span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Special Instructions */}
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Special Instructions (Optional)
+                  </label>
+                  <textarea
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                    placeholder="Any dietary requirements, allergies, or feeding instructions..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent text-sm"
+                  />
                 </div>
               </motion.div>
             )}

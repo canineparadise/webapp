@@ -22,7 +22,11 @@ export async function POST(request: NextRequest) {
       discountCodeId,
       totalAmount,
       discountAmount,
-      finalAmount
+      finalAmount,
+      needsBreakfast,
+      needsLunch,
+      needsDinner,
+      specialInstructions,
     } = await request.json()
 
     if (!userId || !dogId || !dates || !dates.length || !pricePerDay) {
@@ -115,6 +119,10 @@ export async function POST(request: NextRequest) {
         totalAmount: totalAmount || calculatedTotal,
         discountAmount: discountAmount || 0,
         finalAmount: finalAmount || calculatedTotal,
+        needsBreakfast: needsBreakfast ? 'true' : 'false',
+        needsLunch: needsLunch ? 'true' : 'false',
+        needsDinner: needsDinner ? 'true' : 'false',
+        specialInstructions: specialInstructions || '',
       },
     })
 

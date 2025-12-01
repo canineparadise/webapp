@@ -343,7 +343,10 @@ export default function BookingPage() {
             booking_date: date,
             subscription_id: dogSub?.id || subscription.id,
             status: 'confirmed',
-            special_instructions: fullInstructions.trim() || null
+            special_instructions: fullInstructions.trim() || null,
+            needs_breakfast: mealOptions.breakfast,
+            needs_lunch: mealOptions.lunch,
+            needs_dinner: mealOptions.dinner
           })
         }
       }

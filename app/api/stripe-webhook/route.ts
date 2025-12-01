@@ -185,7 +185,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   } else if (metadata.type === 'individual_days') {
     // Handle individual day bookings
-    const { dogId, dates, pricePerDay } = metadata
+    const { dogId, dates, pricePerDay, needsBreakfast, needsLunch, needsDinner, specialInstructions } = metadata
     const datesArray = dates.split(',')
 
     // Get dog details
@@ -210,7 +210,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       payment_status: 'paid',
       payment_method: 'stripe',
       stripe_session_id: session.id,
-      status: 'confirmed'
+      status: 'confirmed',
+      needs_breakfast: needsBreakfast === 'true',
+      needs_lunch: needsLunch === 'true',
+      needs_dinner: needsDinner === 'true',
+      special_instructions: specialInstructions || null,
     }))
 
     const { error } = await supabase
@@ -282,7 +286,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         payment_status: 'paid',
         subscription_id: subscriptionId,
         is_subscription_booking: true,
-        special_instructions: fullInstructions.trim() || null
+        special_instructions: fullInstructions.trim() || null,
+        needs_breakfast: mealBreakfast === 'true',
+        needs_lunch: mealLunch === 'true',
+        needs_dinner: mealDinner === 'true'
       }))
 
       const { error: includedError } = await supabase
@@ -317,7 +324,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         subscription_id: subscriptionId,
         is_subscription_booking: false, // Extra days, not subscription days
         stripe_session_id: session.id,
-        special_instructions: fullInstructions.trim() || null
+        special_instructions: fullInstructions.trim() || null,
+        needs_breakfast: mealBreakfast === 'true',
+        needs_lunch: mealLunch === 'true',
+        needs_dinner: mealDinner === 'true'
       }))
 
       const { error: extraError } = await supabase

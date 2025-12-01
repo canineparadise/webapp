@@ -132,6 +132,7 @@ interface FeedingDog {
   dog_photo_url?: string
   owner_name: string
   booking_id: string
+  booking_type: 'subscription' | 'individual'
   feeding_schedule?: string
   dietary_requirements?: string
   breakfast_completed?: boolean
@@ -725,6 +726,7 @@ export default function StaffDashboard() {
 
   const fetchFeedingSchedule = async () => {
     try {
+      // Fetch from subscription bookings table
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select(`
@@ -744,13 +746,39 @@ export default function StaffDashboard() {
         .eq('status', 'confirmed')
         .or('needs_breakfast.eq.true,needs_lunch.eq.true,needs_dinner.eq.true')
 
-      if (!bookingsData || bookingsData.length === 0) {
+      // Also fetch from individual_day_bookings table
+      const { data: individualBookingsData } = await supabase
+        .from('individual_day_bookings')
+        .select(`
+          id,
+          dog_id,
+          needs_breakfast,
+          needs_lunch,
+          needs_dinner,
+          breakfast_completed,
+          breakfast_completed_at,
+          lunch_completed,
+          lunch_completed_at,
+          dinner_completed,
+          dinner_completed_at
+        `)
+        .eq('booking_date', currentDate)
+        .eq('status', 'confirmed')
+        .or('needs_breakfast.eq.true,needs_lunch.eq.true,needs_dinner.eq.true')
+
+      // Combine both booking types
+      const allBookingsData = [
+        ...(bookingsData || []).map(b => ({ ...b, booking_type: 'subscription' })),
+        ...(individualBookingsData || []).map(b => ({ ...b, booking_type: 'individual' }))
+      ]
+
+      if (allBookingsData.length === 0) {
         setFeedingSchedule({ breakfast: [], lunch: [], dinner: [] })
         return
       }
 
-      // Get all dog IDs that need feeding (OLD SCHEMA: dog_id not dog_ids)
-      const allDogIds = Array.from(new Set(bookingsData.map(b => b.dog_id)))
+      // Get all dog IDs that need feeding
+      const allDogIds = Array.from(new Set(allBookingsData.map(b => b.dog_id)))
 
       const { data: dogsData } = await supabase
         .from('dogs')
@@ -768,8 +796,8 @@ export default function StaffDashboard() {
       const lunch: FeedingDog[] = []
       const dinner: FeedingDog[] = []
 
-      // OLD SCHEMA: Process each booking with single dog_id (not dog_ids array)
-      bookingsData.forEach(booking => {
+      // Process each booking (both subscription and individual)
+      allBookingsData.forEach(booking => {
         const dog = dogsData?.find(d => d.id === booking.dog_id)
         if (!dog) return
 
@@ -780,6 +808,7 @@ export default function StaffDashboard() {
           dog_photo_url: dog.photo_url,
           owner_name: `${owner?.first_name} ${owner?.last_name}`,
           booking_id: booking.id,
+          booking_type: booking.booking_type as 'subscription' | 'individual',
           feeding_schedule: dog.feeding_schedule,
           dietary_requirements: dog.special_dietary_requirements,
           breakfast_completed: booking.breakfast_completed,
@@ -1086,7 +1115,7 @@ export default function StaffDashboard() {
     }
   }
 
-  const handleMarkMealComplete = async (mealType: 'breakfast' | 'lunch' | 'dinner', bookingId: string) => {
+  const handleMarkMealComplete = async (mealType: 'breakfast' | 'lunch' | 'dinner', bookingId: string, bookingType: 'subscription' | 'individual' = 'subscription') => {
     if (!staffId) return
 
     try {
@@ -1095,8 +1124,11 @@ export default function StaffDashboard() {
       updateData[`${mealType}_completed_at`] = new Date().toISOString()
       updateData[`${mealType}_completed_by_staff_id`] = staffId
 
+      // Use the correct table based on booking type
+      const tableName = bookingType === 'individual' ? 'individual_day_bookings' : 'bookings'
+
       const { error } = await supabase
-        .from('bookings')
+        .from(tableName)
         .update(updateData)
         .eq('id', bookingId)
 
@@ -2582,7 +2614,7 @@ export default function StaffDashboard() {
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => handleMarkMealComplete('breakfast', dog.booking_id)}
+                                  onClick={() => handleMarkMealComplete('breakfast', dog.booking_id, dog.booking_type)}
                                   className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
                                 >
                                   Mark Complete
@@ -2644,7 +2676,7 @@ export default function StaffDashboard() {
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => handleMarkMealComplete('lunch', dog.booking_id)}
+                                  onClick={() => handleMarkMealComplete('lunch', dog.booking_id, dog.booking_type)}
                                   className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
                                 >
                                   Mark Complete
@@ -2706,7 +2738,7 @@ export default function StaffDashboard() {
                                 </div>
                               ) : (
                                 <button
-                                  onClick={() => handleMarkMealComplete('dinner', dog.booking_id)}
+                                  onClick={() => handleMarkMealComplete('dinner', dog.booking_id, dog.booking_type)}
                                   className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
                                 >
                                   Mark Complete
