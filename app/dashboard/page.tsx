@@ -720,7 +720,7 @@ export default function Dashboard() {
                         key={dog.id}
                         onClick={() => {
                           if (dog.is_draft) {
-                            router.push('/dashboard/add-dog')
+                            router.push(`/dashboard/add-dog?draft=${dog.id}`)
                           } else {
                             router.push(`/dashboard/dogs/${dog.id}`)
                           }

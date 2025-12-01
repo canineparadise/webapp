@@ -114,38 +114,26 @@ export default function AddDogPage() {
   const [newPickupPerson, setNewPickupPerson] = useState('')
 
   useEffect(() => {
-    // Check if this is a new dog request (not resuming draft)
+    // Check URL parameters
     const urlParams = new URLSearchParams(window.location.search)
     const isNew = urlParams.get('new') === 'true'
+    const specificDraftId = urlParams.get('draft')
 
     if (isNew) {
       // Clear localStorage for a fresh start
       localStorage.removeItem('dogFormDraft')
       localStorage.removeItem('dogFormSection')
-      // Note: We don't store photos in localStorage anymore due to size limits
+      localStorage.removeItem('dogFormDraftId')
       toast.success('Starting fresh dog profile')
-    } else {
-      // Load from localStorage ONLY if not a new request
-      const savedFormData = localStorage.getItem('dogFormDraft')
-      const savedSection = localStorage.getItem('dogFormSection')
-
-      if (savedFormData) {
-        const parsed = JSON.parse(savedFormData)
-
-        // Clean up any "null null" entries from old drafts
-        if (parsed.authorized_dropoff_people) {
-          parsed.authorized_dropoff_people = parsed.authorized_dropoff_people.filter((name: string) => name !== 'null null' && name.trim() !== '')
-        }
-        if (parsed.authorized_pickup_people) {
-          parsed.authorized_pickup_people = parsed.authorized_pickup_people.filter((name: string) => name !== 'null null' && name.trim() !== '')
-        }
-
-        setFormData(parsed)
-        if (savedSection) setCurrentSection(parseInt(savedSection))
-        // Note: Photo preview is loaded from database draft, not localStorage
-        toast.success('Loaded your saved progress')
-      }
+    } else if (specificDraftId) {
+      // Loading a SPECIFIC draft by ID - clear localStorage to force database load
+      localStorage.removeItem('dogFormDraft')
+      localStorage.removeItem('dogFormSection')
+      localStorage.removeItem('dogFormDraftId')
+      // Store the specific draft ID we want to load
+      setDraftDogId(specificDraftId)
     }
+    // If no params, checkAuthAndDogCount will handle loading most recent draft
 
     checkAuthAndDogCount()
   }, [])
@@ -175,28 +163,17 @@ export default function AddDogPage() {
 
       const fullName = `${profile.first_name} ${profile.last_name}`.trim()
 
-    // Check for existing draft
-    const { data: draftDogs } = await supabase
-      .from('dogs')
-      .select('*')
-      .eq('owner_id', user.id)
-      .eq('is_draft', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      // Check URL for specific draft ID
+      const urlParams = new URLSearchParams(window.location.search)
+      const specificDraftId = urlParams.get('draft')
 
-    if (draftDogs && draftDogs.length > 0) {
-      const draft = draftDogs[0]
-      console.log('DRAFT DOG DATA:', draft)
-      setDraftDogId(draft.id)
-
-      // ONLY load from database if localStorage is EMPTY
-      const hasLocalStorage = localStorage.getItem('dogFormDraft')
-      if (!hasLocalStorage) {
-        // Load the section they were on
+      // Helper function to load draft data into form
+      const loadDraftIntoForm = (draft: any) => {
+        console.log('Loading SPECIFIC draft:', draft.id, draft.name)
+        setDraftDogId(draft.id)
         setCurrentSection(draft.draft_section || 0)
         setLastSavedSection(draft.draft_section || 0)
 
-        // Load draft data into form - ALL FIELDS FROM DATABASE
         const loadedData = {
           // Basic Information
           name: draft.name || '',
@@ -272,42 +249,68 @@ export default function AddDogPage() {
           checkout_password: draft.checkout_password || '',
         }
 
-        setFormData(prev => ({
-          ...prev,
-          ...loadedData
-        }))
+        setFormData(loadedData)
 
         if (draft.photo_url) {
           setPhotoPreview(draft.photo_url)
         }
-        toast.success(`Loaded draft from database`)
+        toast.success(`Resuming ${draft.name || 'draft'} profile`)
+      }
+
+      // If a specific draft ID is provided in URL, load THAT draft
+      if (specificDraftId) {
+        const { data: specificDraft, error: draftError } = await supabase
+          .from('dogs')
+          .select('*')
+          .eq('id', specificDraftId)
+          .eq('owner_id', user.id)
+          .eq('is_draft', true)
+          .single()
+
+        if (specificDraft && !draftError) {
+          loadDraftIntoForm(specificDraft)
+        } else {
+          toast.error('Draft not found or access denied')
+          router.push('/dashboard')
+          return
+        }
       } else {
-        toast.success(`Loaded from your browser - all fields preserved!`)
-      }
-    } else {
-      // Auto-add the user's name to pickup and dropoff lists for new forms
-      if (fullName) {
-        setFormData(prev => ({
-          ...prev,
-          authorized_dropoff_people: [fullName],
-          authorized_pickup_people: [fullName]
-        }))
-      }
-    }
+        // No specific draft - check for most recent draft (original behavior)
+        const { data: draftDogs } = await supabase
+          .from('dogs')
+          .select('*')
+          .eq('owner_id', user.id)
+          .eq('is_draft', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
 
-    const { data: dogs } = await supabase
-      .from('dogs')
-      .select('id')
-      .eq('owner_id', user.id)
-      .eq('is_draft', false)
-
-    if (dogs) {
-      setDogCount(dogs.length)
-      if (dogs.length >= 4) {
-        toast.error('You have reached the maximum of 4 dogs')
-        router.push('/dashboard')
+        if (draftDogs && draftDogs.length > 0) {
+          loadDraftIntoForm(draftDogs[0])
+        } else {
+          // No drafts - Auto-add the user's name to pickup and dropoff lists for new forms
+          if (fullName) {
+            setFormData(prev => ({
+              ...prev,
+              authorized_dropoff_people: [fullName],
+              authorized_pickup_people: [fullName]
+            }))
+          }
+        }
       }
-    }
+
+      const { data: dogs } = await supabase
+        .from('dogs')
+        .select('id')
+        .eq('owner_id', user.id)
+        .eq('is_draft', false)
+
+      if (dogs) {
+        setDogCount(dogs.length)
+        if (dogs.length >= 4) {
+          toast.error('You have reached the maximum of 4 dogs')
+          router.push('/dashboard')
+        }
+      }
     } catch (error) {
       console.error('Error loading dog form:', error)
       toast.error('Failed to load form. Please refresh the page.')
