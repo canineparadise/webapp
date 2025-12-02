@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 400 })
   }
 
+  console.log(`📩 Webhook received: ${event.type}`)
+
   // Handle the event
   switch (event.type) {
     case 'checkout.session.completed':
@@ -36,9 +38,29 @@ export async function POST(req: NextRequest) {
       await handleCheckoutCompleted(session)
       break
 
+    case 'customer.subscription.created':
+      const newSubscription = event.data.object as Stripe.Subscription
+      console.log('📦 Subscription created in Stripe:', newSubscription.id, 'Status:', newSubscription.status)
+      break
+
+    case 'customer.subscription.updated':
+      const updatedSubscription = event.data.object as Stripe.Subscription
+      await handleSubscriptionUpdated(updatedSubscription)
+      break
+
     case 'customer.subscription.deleted':
-      const subscription = event.data.object as Stripe.Subscription
-      await handleSubscriptionDeleted(subscription)
+      const deletedSubscription = event.data.object as Stripe.Subscription
+      await handleSubscriptionDeleted(deletedSubscription)
+      break
+
+    case 'invoice.payment_failed':
+      const failedInvoice = event.data.object as Stripe.Invoice
+      await handlePaymentFailed(failedInvoice)
+      break
+
+    case 'invoice.paid':
+      const paidInvoice = event.data.object as Stripe.Invoice
+      console.log('✅ Invoice paid:', paidInvoice.id, 'for subscription:', paidInvoice.subscription)
       break
 
     default:
@@ -345,13 +367,95 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 }
 
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  console.log('📝 Subscription updated:', subscription.id, 'Status:', subscription.status)
+
+  // Update subscription status based on Stripe status
+  let isActive = true
+  let paymentStatus = 'paid'
+
+  switch (subscription.status) {
+    case 'active':
+      isActive = true
+      paymentStatus = 'paid'
+      break
+    case 'past_due':
+      isActive = true // Keep active but mark payment as failed
+      paymentStatus = 'past_due'
+      console.warn('⚠️ Subscription past due:', subscription.id)
+      break
+    case 'unpaid':
+      isActive = false
+      paymentStatus = 'unpaid'
+      console.warn('⚠️ Subscription unpaid:', subscription.id)
+      break
+    case 'canceled':
+      isActive = false
+      paymentStatus = 'canceled'
+      console.log('❌ Subscription canceled:', subscription.id)
+      break
+    case 'incomplete':
+    case 'incomplete_expired':
+      isActive = false
+      paymentStatus = 'incomplete'
+      console.warn('⚠️ Subscription incomplete:', subscription.id)
+      break
+    default:
+      console.log('Unknown subscription status:', subscription.status)
+  }
+
+  const { error } = await supabase
+    .from('subscriptions')
+    .update({
+      is_active: isActive,
+      payment_status: paymentStatus,
+      updated_at: new Date().toISOString()
+    })
+    .eq('stripe_subscription_id', subscription.id)
+
+  if (error) {
+    console.error('Error updating subscription status:', error)
+  } else {
+    console.log(`Subscription ${subscription.id} updated: active=${isActive}, status=${paymentStatus}`)
+  }
+}
+
+async function handlePaymentFailed(invoice: Stripe.Invoice) {
+  console.error('❌ Payment failed for invoice:', invoice.id)
+  console.error('Subscription:', invoice.subscription)
+  console.error('Customer:', invoice.customer)
+  console.error('Attempt count:', invoice.attempt_count)
+
+  if (invoice.subscription) {
+    // Mark the subscription as having a payment issue
+    const { error } = await supabase
+      .from('subscriptions')
+      .update({
+        payment_status: 'failed',
+        updated_at: new Date().toISOString()
+      })
+      .eq('stripe_subscription_id', invoice.subscription as string)
+
+    if (error) {
+      console.error('Error updating subscription payment status:', error)
+    } else {
+      console.log('Subscription marked as payment failed:', invoice.subscription)
+    }
+  }
+}
+
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  console.log('🗑️ Subscription deleted:', subscription.id)
+  console.log('Cancellation reason:', subscription.cancellation_details?.reason || 'Not specified')
+
   // Mark subscription as inactive
   const { error } = await supabase
     .from('subscriptions')
     .update({
       is_active: false,
-      auto_renew: false
+      auto_renew: false,
+      payment_status: 'canceled',
+      updated_at: new Date().toISOString()
     })
     .eq('stripe_subscription_id', subscription.id)
 
