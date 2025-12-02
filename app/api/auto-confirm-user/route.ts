@@ -15,6 +15,30 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify the request is from an admin
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token)
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Check if user is admin
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', authUser.id)
+      .single()
+
+    if (!profile || profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+    }
+
     const { userId } = await request.json()
 
     if (!userId) {
@@ -38,7 +62,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('User auto-confirmed:', userId)
+    console.log('User auto-confirmed by admin:', authUser.id, 'for user:', userId)
     return NextResponse.json({ success: true, user: data.user })
 
   } catch (error: any) {

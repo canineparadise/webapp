@@ -9,6 +9,19 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify the request is from an authenticated user
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
     const { userId } = await request.json()
 
     if (!userId) {
@@ -16,6 +29,19 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields' },
         { status: 400 }
       )
+    }
+
+    // Security: Users can only send welcome emails to themselves, admins can send to anyone
+    if (userId !== authUser.id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .single()
+
+      if (!profile || profile.role !== 'admin') {
+        return NextResponse.json({ error: 'Cannot send emails for other users' }, { status: 403 })
+      }
     }
 
     // Get user profile

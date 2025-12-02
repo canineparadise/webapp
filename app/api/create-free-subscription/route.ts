@@ -8,14 +8,61 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    // Log which key is being used (without exposing the actual key)
-    const usingServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY
-    console.log('🔑 Using service role key:', usingServiceRole)
+    // Verify the request is from an authenticated user
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
 
     const body = await request.json()
-    console.log('📥 Received free subscription request:', JSON.stringify(body, null, 2))
-
     const { userId, dogSubscriptions, discountCode, discountCodeId, totalAmount, discountAmount } = body
+
+    // Security: Ensure user can only create subscriptions for themselves
+    if (userId !== authUser.id) {
+      // Check if admin is creating for someone else
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .single()
+
+      if (!profile || profile.role !== 'admin') {
+        return NextResponse.json({ error: 'Cannot create subscriptions for other users' }, { status: 403 })
+      }
+    }
+
+    // Verify that a valid 100% discount code is being used (free subscriptions require full discount)
+    if (!discountCodeId) {
+      return NextResponse.json({ error: 'Discount code required for free subscriptions' }, { status: 400 })
+    }
+
+    // Verify the discount code is valid and gives 100% off
+    const { data: discountData } = await supabase
+      .from('discount_codes')
+      .select('discount_percent, is_active, current_uses, max_uses')
+      .eq('id', discountCodeId)
+      .single()
+
+    if (!discountData || !discountData.is_active) {
+      return NextResponse.json({ error: 'Invalid discount code' }, { status: 400 })
+    }
+
+    if (discountData.discount_percent !== 100) {
+      return NextResponse.json({ error: 'This endpoint requires a 100% discount code' }, { status: 400 })
+    }
+
+    if (discountData.max_uses && discountData.current_uses >= discountData.max_uses) {
+      return NextResponse.json({ error: 'Discount code has reached maximum uses' }, { status: 400 })
+    }
+
+    console.log('Creating free subscription for user:', userId, 'by:', authUser.id)
 
     if (!userId || !dogSubscriptions || !Array.isArray(dogSubscriptions) || dogSubscriptions.length === 0) {
       console.error('❌ Validation failed:', { userId, dogSubscriptions })
