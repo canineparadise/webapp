@@ -4,12 +4,38 @@ import { sendAssessmentConfirmation } from '@/lib/email'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify the request is from an authenticated user
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
     const { userId, slotId, dogIds, amountPaid } = await request.json()
+
+    // Security: Users can only send confirmations to themselves
+    if (userId !== authUser.id) {
+      const { data: authProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .single()
+
+      if (!authProfile || authProfile.role !== 'admin') {
+        return NextResponse.json({ error: 'Cannot send confirmations for other users' }, { status: 403 })
+      }
+    }
 
     if (!userId || !slotId || !dogIds || !Array.isArray(dogIds)) {
       return NextResponse.json(

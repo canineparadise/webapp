@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function POST(request: NextRequest) {
@@ -62,10 +62,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Discount code has reached maximum uses' }, { status: 400 })
     }
 
-    console.log('Creating free subscription for user:', userId, 'by:', authUser.id)
-
     if (!userId || !dogSubscriptions || !Array.isArray(dogSubscriptions) || dogSubscriptions.length === 0) {
-      console.error('❌ Validation failed:', { userId, dogSubscriptions })
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -92,19 +89,14 @@ export async function POST(request: NextRequest) {
       next_billing_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Date only
     }))
 
-    console.log('📤 Inserting subscriptions:', JSON.stringify(subscriptions, null, 2))
-
     const { data: createdSubscriptions, error: subError } = await supabase
       .from('subscriptions')
       .insert(subscriptions)
       .select()
 
     if (subError) {
-      console.error('❌ Error creating subscriptions:', subError)
       throw subError
     }
-
-    console.log('✅ Successfully created subscriptions:', createdSubscriptions)
 
     // If discount code was used, record the usage
     if (discountCodeId) {
@@ -137,8 +129,7 @@ export async function POST(request: NextRequest) {
       subscriptions: createdSubscriptions,
     })
   } catch (error: any) {
-    console.error('❌ Error creating free subscription:', error)
-    console.error('❌ Error details:', JSON.stringify(error, null, 2))
+    console.error('Error creating free subscription:', error.message)
     return NextResponse.json(
       {
         error: error.message || 'Failed to create subscription',

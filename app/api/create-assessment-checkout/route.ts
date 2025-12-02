@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 // Use service role key to bypass RLS in API routes
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function POST(request: NextRequest) {
@@ -14,6 +14,19 @@ export async function POST(request: NextRequest) {
     apiVersion: '2025-08-27.basil',
   })
   try {
+    // Verify the request is from an authenticated user
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
     const {
       userId,
       dogIds,
@@ -25,6 +38,19 @@ export async function POST(request: NextRequest) {
       discountAmount,
       finalAmount
     } = await request.json()
+
+    // Security: Users can only create checkouts for themselves
+    if (userId !== authUser.id) {
+      const { data: authProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .single()
+
+      if (!authProfile || authProfile.role !== 'admin') {
+        return NextResponse.json({ error: 'Cannot create checkout for other users' }, { status: 403 })
+      }
+    }
 
     // Support both old format (requestedDate) and new format (slotId)
     if (!userId || !dogIds || (!requestedDate && !slotId)) {

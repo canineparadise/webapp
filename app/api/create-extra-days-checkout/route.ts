@@ -1,13 +1,31 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
-export async function POST(request: Request) {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+export async function POST(request: NextRequest) {
   // Initialize Stripe lazily to avoid build-time errors
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
     apiVersion: '2025-08-27.basil',
   })
   try {
+    // Verify the request is from an authenticated user
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
     const {
       userId,
       extraDaysPurchases,
@@ -17,6 +35,19 @@ export async function POST(request: Request) {
       discountAmount,
       finalAmount
     } = await request.json()
+
+    // Security: Users can only create checkouts for themselves
+    if (userId !== authUser.id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .single()
+
+      if (!profile || profile.role !== 'admin') {
+        return NextResponse.json({ error: 'Cannot create checkout for other users' }, { status: 403 })
+      }
+    }
 
     if (!userId || !extraDaysPurchases || extraDaysPurchases.length === 0) {
       return NextResponse.json(

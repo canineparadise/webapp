@@ -13,6 +13,19 @@ export async function POST(request: NextRequest) {
   })
 
   try {
+    // Verify the request is from an authenticated user
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token)
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
     const { subscriptionId, pauseWeeks, pauseReason } = await request.json()
 
     // Validate pause duration (max 4 weeks)
@@ -26,12 +39,25 @@ export async function POST(request: NextRequest) {
     // Get subscription from database
     const { data: subscription, error: fetchError } = await supabase
       .from('subscriptions')
-      .select('*, stripe_subscription_id')
+      .select('*, stripe_subscription_id, user_id')
       .eq('id', subscriptionId)
       .single()
 
     if (fetchError || !subscription) {
       return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
+    }
+
+    // Security: Users can only pause their own subscriptions
+    if (subscription.user_id !== authUser.id) {
+      const { data: authProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .single()
+
+      if (!authProfile || authProfile.role !== 'admin') {
+        return NextResponse.json({ error: 'Cannot pause other users\' subscriptions' }, { status: 403 })
+      }
     }
 
     // Check if already paused

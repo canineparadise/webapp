@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 400 })
   }
 
-  console.log(`📩 Webhook received: ${event.type}`)
+  // Webhook received
 
   // Handle the event
   switch (event.type) {
@@ -39,8 +39,7 @@ export async function POST(req: NextRequest) {
       break
 
     case 'customer.subscription.created':
-      const newSubscription = event.data.object as Stripe.Subscription
-      console.log('📦 Subscription created in Stripe:', newSubscription.id, 'Status:', newSubscription.status)
+      // Subscription created in Stripe - handled by checkout.session.completed
       break
 
     case 'customer.subscription.updated':
@@ -63,7 +62,7 @@ export async function POST(req: NextRequest) {
       break
 
     default:
-      console.log(`Unhandled event type ${event.type}`)
+      // Unhandled event type
   }
 
   return NextResponse.json({ received: true })
@@ -79,8 +78,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   const userId = metadata.userId || client_reference_id
 
-  console.log('Processing checkout session:', session.id)
-  console.log('Metadata:', JSON.stringify(metadata))
+  // Processing checkout session
 
   // NEW FORMAT: dogSubscriptions in metadata
   if (metadata.dogSubscriptions) {
@@ -90,19 +88,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       const endDate = new Date(startDate)
       endDate.setDate(endDate.getDate() + 30)
 
-      console.log('Creating subscriptions for dogs:', dogSubscriptions)
-
       for (const dogSub of dogSubscriptions) {
-        console.log('Inserting subscription with data:', {
-          user_id: userId,
-          dog_id: dogSub.dogId,
-          tier_id: dogSub.tierId,
-          days_included: parseInt(dogSub.daysIncluded),
-          days_remaining: parseInt(dogSub.daysIncluded),
-          stripe_subscription_id: subscription
-        })
-
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('subscriptions')
           .insert({
             user_id: userId,
@@ -126,15 +113,11 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           .select()
 
         if (error) {
-          console.error('❌ ERROR creating subscription for dog:', dogSub.dogId)
-          console.error('Error details:', JSON.stringify(error, null, 2))
-        } else {
-          console.log('✅ Subscription created successfully for dog:', dogSub.dogId)
-          console.log('Created subscription data:', JSON.stringify(data, null, 2))
+          console.error('Error creating subscription for dog:', dogSub.dogId, error.message)
         }
       }
     } catch (error) {
-      console.error('Error parsing dogSubscriptions:', error)
+      console.error('Error parsing dogSubscriptions')
     }
   } else if (metadata.type === 'subscription') {
     // Handle new subscription
@@ -168,9 +151,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       })
 
     if (error) {
-      console.error('Error creating subscription:', error)
-    } else {
-      console.log('Subscription created successfully for user:', userId)
+      console.error('Error creating subscription:', error.message)
     }
 
   } else if (metadata.type === 'extra_days') {
@@ -184,8 +165,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     })
 
     if (error) {
-      console.error('Error adding extra days:', error)
-
       // Fallback: manual update
       const { data: sub } = await supabase
         .from('subscriptions')
@@ -201,8 +180,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           })
           .eq('id', subscriptionId)
       }
-    } else {
-      console.log('Extra days added successfully for subscription:', subscriptionId)
     }
   } else if (metadata.type === 'individual_days') {
     // Handle individual day bookings
@@ -243,9 +220,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       .insert(bookings)
 
     if (error) {
-      console.error('Error creating individual day bookings:', error)
-    } else {
-      console.log('Individual day bookings created successfully for user:', userId)
+      console.error('Error creating individual day bookings:', error.message)
     }
   } else if (metadata.type === 'subscription_extra_days') {
     // Handle subscription extra days purchase with bookings
@@ -318,7 +293,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         .insert(includedBookings)
 
       if (includedError) {
-        console.error('Error creating included day bookings:', includedError)
+        console.error('Error creating included day bookings:', includedError.message)
       }
 
       // Update subscription days remaining for included days
@@ -356,18 +331,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         .insert(extraBookings)
 
       if (extraError) {
-        console.error('Error creating extra day bookings:', extraError)
-      } else {
-        console.log('Extra day bookings created successfully:', extraDates.length)
+        console.error('Error creating extra day bookings:', extraError.message)
       }
     }
-
-    console.log(`Subscription extra days handled: ${includedDates.length} included, ${extraDates.length} extra`)
   }
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  console.log('📝 Subscription updated:', subscription.id, 'Status:', subscription.status)
+  // Subscription updated
 
   // Update subscription status based on Stripe status
   let isActive = true
@@ -381,26 +352,23 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     case 'past_due':
       isActive = true // Keep active but mark payment as failed
       paymentStatus = 'past_due'
-      console.warn('⚠️ Subscription past due:', subscription.id)
       break
     case 'unpaid':
       isActive = false
       paymentStatus = 'unpaid'
-      console.warn('⚠️ Subscription unpaid:', subscription.id)
       break
     case 'canceled':
       isActive = false
       paymentStatus = 'canceled'
-      console.log('❌ Subscription canceled:', subscription.id)
       break
     case 'incomplete':
     case 'incomplete_expired':
       isActive = false
       paymentStatus = 'incomplete'
-      console.warn('⚠️ Subscription incomplete:', subscription.id)
       break
     default:
-      console.log('Unknown subscription status:', subscription.status)
+      // Unknown status - default to keeping current state
+      break
   }
 
   const { error } = await supabase
@@ -413,15 +381,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     .eq('stripe_subscription_id', subscription.id)
 
   if (error) {
-    console.error('Error updating subscription status:', error)
-  } else {
-    console.log(`Subscription ${subscription.id} updated: active=${isActive}, status=${paymentStatus}`)
+    console.error('Error updating subscription status:', error.message)
   }
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  console.error('❌ Payment failed for invoice:', invoice.id)
-
   // Get subscription ID from invoice - use type assertion for API compatibility
   const invoiceData = invoice as unknown as { subscription?: string | { id: string } | null }
   const subscriptionId = typeof invoiceData.subscription === 'string'
@@ -439,15 +403,12 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
       .eq('stripe_subscription_id', subscriptionId)
 
     if (error) {
-      console.error('Error updating subscription payment status:', error)
+      console.error('Error updating subscription payment status:', error.message)
     }
   }
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  console.log('🗑️ Subscription deleted:', subscription.id)
-  console.log('Cancellation reason:', subscription.cancellation_details?.reason || 'Not specified')
-
   // Mark subscription as inactive
   const { error } = await supabase
     .from('subscriptions')
@@ -460,8 +421,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     .eq('stripe_subscription_id', subscription.id)
 
   if (error) {
-    console.error('Error deleting subscription:', error)
-  } else {
-    console.log('Subscription marked as inactive:', subscription.id)
+    console.error('Error marking subscription as inactive:', error.message)
   }
 }
