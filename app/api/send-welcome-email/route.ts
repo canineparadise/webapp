@@ -33,13 +33,13 @@ export async function POST(request: NextRequest) {
 
     // Security: Users can only send welcome emails to themselves, admins can send to anyone
     if (userId !== authUser.id) {
-      const { data: profile } = await supabase
+      const { data: authProfile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', authUser.id)
         .single()
 
-      if (!profile || profile.role !== 'admin') {
+      if (!authProfile || authProfile.role !== 'admin') {
         return NextResponse.json({ error: 'Cannot send emails for other users' }, { status: 403 })
       }
     }
@@ -51,7 +51,9 @@ export async function POST(request: NextRequest) {
       .eq('id', userId)
       .single()
 
-    console.log('Profile data:', profile, 'Error:', profileError)
+    if (profileError) {
+      console.error('Error fetching profile for welcome email')
+    }
 
     if (!profile || !profile.email) {
       // If profile doesn't exist yet, get email from auth user

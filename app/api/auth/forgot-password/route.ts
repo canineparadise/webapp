@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Generated reset link for:', normalizedEmail)
+    // Reset link generated successfully
 
     // Send the password reset email using OUR custom SMTP
     const userName = profile.first_name
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Password reset email sent successfully to ${normalizedEmail}`)
+    // Password reset email sent successfully
 
     return NextResponse.json({
       success: true,

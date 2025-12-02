@@ -59,8 +59,7 @@ export async function POST(req: NextRequest) {
       break
 
     case 'invoice.paid':
-      const paidInvoice = event.data.object as Stripe.Invoice
-      console.log('✅ Invoice paid:', paidInvoice.id, 'for subscription:', paidInvoice.subscription)
+      // Invoice paid successfully - subscription should remain active
       break
 
     default:
@@ -422,11 +421,14 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   console.error('❌ Payment failed for invoice:', invoice.id)
-  console.error('Subscription:', invoice.subscription)
-  console.error('Customer:', invoice.customer)
-  console.error('Attempt count:', invoice.attempt_count)
 
-  if (invoice.subscription) {
+  // Get subscription ID from invoice - use type assertion for API compatibility
+  const invoiceData = invoice as unknown as { subscription?: string | { id: string } | null }
+  const subscriptionId = typeof invoiceData.subscription === 'string'
+    ? invoiceData.subscription
+    : invoiceData.subscription?.id
+
+  if (subscriptionId) {
     // Mark the subscription as having a payment issue
     const { error } = await supabase
       .from('subscriptions')
@@ -434,12 +436,10 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
         payment_status: 'failed',
         updated_at: new Date().toISOString()
       })
-      .eq('stripe_subscription_id', invoice.subscription as string)
+      .eq('stripe_subscription_id', subscriptionId)
 
     if (error) {
       console.error('Error updating subscription payment status:', error)
-    } else {
-      console.log('Subscription marked as payment failed:', invoice.subscription)
     }
   }
 }

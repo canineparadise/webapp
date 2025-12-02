@@ -11,6 +11,30 @@ export async function POST(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY || ''
   )
   try {
+    // Verify the request is from an admin or staff
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: authUser }, error: authError } = await supabaseAdmin.auth.getUser(token)
+
+    if (authError || !authUser) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+
+    // Check if user is admin or staff
+    const { data: authProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', authUser.id)
+      .single()
+
+    if (!authProfile || !['admin', 'staff'].includes(authProfile.role)) {
+      return NextResponse.json({ error: 'Admin or staff access required' }, { status: 403 })
+    }
+
     const { userEmail, userName, dogName, status, notes } = await request.json()
 
     if (!userEmail || !userName || !dogName || !status) {
@@ -110,12 +134,7 @@ export async function POST(request: NextRequest) {
       `
 
     // In production, you would use a proper email service like SendGrid, Resend, or Supabase Edge Functions
-    // For now, we'll log the email (you can integrate with your email provider)
-    console.log('Sending email:', {
-      to: userEmail,
-      subject,
-      html: emailContent
-    })
+    // For now, we'll log a minimal notification (actual email content not logged for privacy)
 
     // TODO: Integrate with actual email service
     // Example with Resend or SendGrid:

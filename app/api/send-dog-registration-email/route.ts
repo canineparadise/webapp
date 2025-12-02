@@ -33,13 +33,13 @@ export async function POST(request: NextRequest) {
 
     // Security: Users can only send emails for themselves, admins can send to anyone
     if (userId !== authUser.id) {
-      const { data: profile } = await supabase
+      const { data: authProfile } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', authUser.id)
         .single()
 
-      if (!profile || profile.role !== 'admin') {
+      if (!authProfile || authProfile.role !== 'admin') {
         return NextResponse.json({ error: 'Cannot send emails for other users' }, { status: 403 })
       }
     }
