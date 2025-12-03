@@ -594,11 +594,11 @@ function IndividualDaysContent() {
 
                         {/* Calendar grid */}
                         <div className="grid grid-cols-7 gap-2">
-                          {/* Add empty cells for days before the first date of the month */}
-                          {monthDates[0].getDate() === 1 && (() => {
-                            // Get day of week for first day of month (0 = Sunday, 1 = Monday, etc.)
+                          {/* Add empty cells for days before the first date shown */}
+                          {(() => {
+                            // Get day of week for first date in this month's range (0 = Sunday, 1 = Monday, etc.)
                             const firstDayOfWeek = monthDates[0].getDay()
-                            // No offset needed - Sunday is already 0, which means first column
+                            // Add empty cells to align the first date to its correct day column
                             return Array.from({ length: firstDayOfWeek }).map((_, i) => (
                               <div key={`empty-${i}`} />
                             ))
