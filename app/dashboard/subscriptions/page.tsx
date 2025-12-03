@@ -278,11 +278,20 @@ export default function SubscribeDogsPage() {
     try {
       const finalAmount = calculateFinalAmount()
 
+      // Get auth token for API calls
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Please log in to continue')
+      }
+
       // If final amount is 0, create subscriptions directly without payment
       if (finalAmount === 0) {
         const response = await fetch('/api/create-free-subscription', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({
             userId: user.id,
             dogSubscriptions: selectedDogs,
@@ -307,7 +316,10 @@ export default function SubscribeDogsPage() {
       // Create Stripe checkout session with per-dog subscriptions
       const response = await fetch('/api/create-subscription-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           userId: user.id,
           dogSubscriptions: selectedDogs,
@@ -380,9 +392,17 @@ export default function SubscribeDogsPage() {
 
     setPausing(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Please log in to continue')
+      }
+
       const response = await fetch('/api/pause-subscription', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           subscriptionId: subscriptionToPause.id,
           pauseWeeks,
@@ -417,9 +437,17 @@ export default function SubscribeDogsPage() {
   const handleResumeSubscription = async (subscription: any) => {
     setResuming(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Please log in to continue')
+      }
+
       const response = await fetch('/api/resume-subscription', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           subscriptionId: subscription.id,
         }),
