@@ -7,6 +7,74 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Helper function to process discount code usage and grant VIP membership
+async function processDiscountCodeUsage({
+  userId,
+  discountCode,
+  discountCodeId,
+  usedFor,
+  totalAmount,
+  discountAmount,
+  finalAmount,
+}: {
+  userId: string
+  discountCode?: string
+  discountCodeId?: string
+  usedFor: string
+  totalAmount: number
+  discountAmount: number
+  finalAmount: number
+}) {
+  if (!discountCodeId) return
+
+  try {
+    // Record discount code usage
+    await supabase.from('discount_code_usage').insert({
+      discount_code_id: discountCodeId,
+      user_id: userId,
+      used_for: usedFor,
+      original_amount: totalAmount,
+      discount_amount: discountAmount,
+      final_amount: finalAmount,
+    })
+
+    // Increment usage count
+    const { data: discountCodeData } = await supabase
+      .from('discount_codes')
+      .select('current_uses, code')
+      .eq('id', discountCodeId)
+      .single()
+
+    if (discountCodeData) {
+      await supabase
+        .from('discount_codes')
+        .update({ current_uses: discountCodeData.current_uses + 1 })
+        .eq('id', discountCodeId)
+
+      // Grant Golden Paw VIP Founders Club badge if using FIRST50
+      if (discountCodeData.code === 'FIRST50' || discountCode?.toUpperCase() === 'FIRST50') {
+        console.log('[Stripe Webhook] Granting VIP membership for FIRST50 user:', userId)
+        const { error: vipError } = await supabase
+          .from('profiles')
+          .update({
+            is_vip_member: true,
+            vip_badge_type: 'golden_paw_founders',
+            vip_granted_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+
+        if (vipError) {
+          console.error('[Stripe Webhook] Error granting VIP membership:', vipError.message)
+        } else {
+          console.log('[Stripe Webhook] VIP membership granted successfully')
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Stripe Webhook] Error processing discount code:', err)
+  }
+}
+
 // Helper function to record financial transactions
 async function recordFinancialTransaction({
   userId,
@@ -61,6 +129,8 @@ async function recordFinancialTransaction({
 }
 
 export async function POST(req: NextRequest) {
+  console.log('[Stripe Webhook] Received webhook request')
+
   // Initialize Stripe lazily to avoid build-time errors
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
     apiVersion: '2025-08-27.basil',
@@ -68,6 +138,9 @@ export async function POST(req: NextRequest) {
 
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')!
+
+  console.log('[Stripe Webhook] Signature present:', !!sig)
+  console.log('[Stripe Webhook] Body length:', body.length)
 
   let event: Stripe.Event
 
@@ -78,16 +151,20 @@ export async function POST(req: NextRequest) {
       process.env.STRIPE_WEBHOOK_SECRET!
     )
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message)
+    console.error('[Stripe Webhook] Signature verification failed:', err.message)
     return NextResponse.json({ error: err.message }, { status: 400 })
   }
 
-  // Webhook received
+  console.log('[Stripe Webhook] Event type:', event.type)
+  console.log('[Stripe Webhook] Event ID:', event.id)
 
   // Handle the event
   switch (event.type) {
     case 'checkout.session.completed':
       const session = event.data.object as Stripe.Checkout.Session
+      console.log('[Stripe Webhook] Processing checkout.session.completed')
+      console.log('[Stripe Webhook] Session ID:', session.id)
+      console.log('[Stripe Webhook] Metadata:', JSON.stringify(session.metadata))
       await handleCheckoutCompleted(session)
       break
 
@@ -182,6 +259,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             description: `Subscription for dog - ${dogSub.daysIncluded} days`,
           })
         }
+      }
+      // Process discount code usage and VIP membership after successful subscription creation
+      if (metadata.discountCodeId) {
+        await processDiscountCodeUsage({
+          userId,
+          discountCode: metadata.discountCode,
+          discountCodeId: metadata.discountCodeId,
+          usedFor: 'subscription',
+          totalAmount: parseFloat(metadata.totalAmount || '0'),
+          discountAmount: parseFloat(metadata.discountAmount || '0'),
+          finalAmount: parseFloat(metadata.finalAmount || '0'),
+        })
       }
     } catch (error) {
       console.error('Error parsing dogSubscriptions')
@@ -278,22 +367,43 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       description: `Extra days purchase - ${numDays} days`,
     })
 
+    // Process discount code usage if applicable
+    if (metadata.discountCodeId) {
+      await processDiscountCodeUsage({
+        userId,
+        discountCode: metadata.discountCode,
+        discountCodeId: metadata.discountCodeId,
+        usedFor: 'extra_days',
+        totalAmount: parseFloat(metadata.totalAmount || '0'),
+        discountAmount: parseFloat(metadata.discountAmount || '0'),
+        finalAmount: parseFloat(metadata.finalAmount || '0'),
+      })
+    }
+
   } else if (metadata.type === 'individual_days') {
     // Handle individual day bookings
+    console.log('[Stripe Webhook] Processing individual_days booking')
     const { dogId, dates, pricePerDay, needsBreakfast, needsLunch, needsDinner, specialInstructions } = metadata
+    console.log('[Stripe Webhook] Individual days - dogId:', dogId, 'dates:', dates, 'pricePerDay:', pricePerDay)
     const datesArray = dates.split(',')
 
     // Get dog details
-    const { data: dog } = await supabase
+    const { data: dog, error: dogError } = await supabase
       .from('dogs')
       .select('size')
       .eq('id', dogId)
       .single()
 
+    if (dogError) {
+      console.error('[Stripe Webhook] Error fetching dog:', dogError.message)
+    }
+
     if (!dog) {
-      console.error('Dog not found for individual day booking')
+      console.error('[Stripe Webhook] Dog not found for individual day booking, dogId:', dogId)
       return
     }
+
+    console.log('[Stripe Webhook] Dog size:', dog.size)
 
     // Create individual day bookings
     const bookings = datesArray.map((date: string) => ({
@@ -312,13 +422,17 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       special_instructions: specialInstructions || null,
     }))
 
-    const { error } = await supabase
+    console.log('[Stripe Webhook] Creating bookings:', JSON.stringify(bookings))
+
+    const { error, data: insertedBookings } = await supabase
       .from('individual_day_bookings')
       .insert(bookings)
+      .select()
 
     if (error) {
-      console.error('Error creating individual day bookings:', error.message)
+      console.error('[Stripe Webhook] Error creating individual day bookings:', error.message, error.details, error.hint)
     } else {
+      console.log('[Stripe Webhook] Successfully created individual day bookings:', insertedBookings?.length)
       // Record financial transaction for individual days
       const amount = session.amount_total ? session.amount_total / 100 : 0
       await recordFinancialTransaction({
@@ -331,6 +445,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         status: 'completed',
         description: `Individual day booking - ${datesArray.length} day${datesArray.length > 1 ? 's' : ''}`,
       })
+      console.log('[Stripe Webhook] Financial transaction recorded for individual days')
+
+      // Process discount code usage if applicable
+      if (metadata.discountCodeId) {
+        await processDiscountCodeUsage({
+          userId,
+          discountCode: metadata.discountCode,
+          discountCodeId: metadata.discountCodeId,
+          usedFor: 'individual_days',
+          totalAmount: parseFloat(metadata.totalAmount || '0'),
+          discountAmount: parseFloat(metadata.discountAmount || '0'),
+          finalAmount: parseFloat(metadata.finalAmount || '0'),
+        })
+      }
     }
   } else if (metadata.type === 'subscription_extra_days') {
     // Handle subscription extra days purchase with bookings
@@ -473,6 +601,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       status: 'completed',
       description: `Assessment booking - ${dogIds.length} dog${dogIds.length > 1 ? 's' : ''}`,
     })
+
+    // Process discount code usage if applicable
+    if (metadata.discountCodeId) {
+      await processDiscountCodeUsage({
+        userId,
+        discountCode: metadata.discountCode,
+        discountCodeId: metadata.discountCodeId,
+        usedFor: 'assessment',
+        totalAmount: parseFloat(metadata.totalAmount || '0'),
+        discountAmount: parseFloat(metadata.discountAmount || '0'),
+        finalAmount: parseFloat(metadata.finalAmount || '0'),
+      })
+    }
   }
 }
 

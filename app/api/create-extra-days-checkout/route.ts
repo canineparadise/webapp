@@ -33,7 +33,9 @@ export async function POST(request: NextRequest) {
       discountCodeId,
       totalAmount,
       discountAmount,
-      finalAmount
+      finalAmount,
+      isVipMember,
+      vipDiscountAmount
     } = await request.json()
 
     // Security: Users can only create checkouts for themselves
@@ -84,17 +86,31 @@ export async function POST(request: NextRequest) {
         totalAmount: totalAmount.toString(),
         discountAmount: discountAmount.toString(),
         finalAmount: finalAmount.toString(),
+        isVipMember: isVipMember ? 'true' : 'false',
+        vipDiscountAmount: (vipDiscountAmount || 0).toString(),
         type: 'extra_days',
       },
     }
 
-    // Add discount if applicable
-    if (discountCode && discountAmount > 0) {
+    // Add discount if applicable (either discount code or VIP discount or both)
+    if (discountAmount > 0) {
+      // Build coupon name based on discount sources
+      let couponName = ''
+      if (discountCode && vipDiscountAmount > 0) {
+        couponName = `Discount: ${discountCode} + Golden Paw VIP 10%`
+      } else if (discountCode) {
+        couponName = `Discount Code: ${discountCode}`
+      } else if (isVipMember && vipDiscountAmount > 0) {
+        couponName = 'Golden Paw VIP 10% Discount'
+      } else {
+        couponName = 'Discount'
+      }
+
       const coupon = await stripe.coupons.create({
         amount_off: Math.round(discountAmount * 100), // Convert to pence
         currency: 'gbp',
         duration: 'once',
-        name: `Discount Code: ${discountCode}`,
+        name: couponName,
       })
 
       sessionParams.discounts = [{ coupon: coupon.id }]
@@ -125,31 +141,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Record discount code usage if applicable
-    if (discountCodeId) {
-      await supabase.from('discount_code_usage').insert({
-        discount_code_id: discountCodeId,
-        user_id: userId,
-        used_for: 'extra_days',
-        original_amount: totalAmount,
-        discount_amount: discountAmount,
-        final_amount: finalAmount,
-      })
-
-      // Increment usage count
-      const { data: discountCode } = await supabase
-        .from('discount_codes')
-        .select('current_uses')
-        .eq('id', discountCodeId)
-        .single()
-      
-      if (discountCode) {
-        await supabase
-          .from('discount_codes')
-          .update({ current_uses: discountCode.current_uses + 1 })
-          .eq('id', discountCodeId)
-      }
-    }
+    // Note: Discount code usage is handled by the webhook after payment confirmation
 
     return NextResponse.json({ sessionId: session.id })
   } catch (error: any) {

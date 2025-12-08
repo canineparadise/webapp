@@ -167,19 +167,23 @@ export default function SubscribeDogsPage() {
   }
 
   const handleTierSelection = (dogId: string, tier: any, sessionType: 'full_day' | 'half_day') => {
-    // Calculate dog index (0-based) for multi-dog discount
-    const dogIndex = dogsWithoutSubs.findIndex(d => d.id === dogId)
+    // Count how many dogs already have a tier selected (excluding current dog)
+    const dogsWithTierSelected = Object.values(dogSelections).filter(
+      selection => selection.tierId !== null && selection.dogId !== dogId
+    ).length
 
     // Base price per day
     let basePricePerDay = tier.price_per_day
 
     // Apply session type discount (half day is same price structure)
     // Note: Half-day pricing is typically handled by different tier selection
-    // For now, keeping same price for both
     const pricePerDay = basePricePerDay
 
-    // Apply multi-dog discount: First dog full price, dogs 2-4 get 5% off
-    const discountMultiplier = dogIndex === 0 ? 1.0 : 0.95 // 5% off for dogs 2-4
+    // Multi-dog discount: First dog = full price, 2nd+ dogs get 5% off
+    // If this is the first dog being selected (no other dogs have tiers), no discount
+    // If there are already dogs with tiers selected, this dog gets 5% off
+    const isFirstDog = dogsWithTierSelected === 0
+    const discountMultiplier = isFirstDog ? 1.0 : 0.95 // 5% off for dogs 2+
     const discountedPricePerDay = pricePerDay * discountMultiplier
 
     const monthlyPrice = discountedPricePerDay * tier.days_included
@@ -194,7 +198,7 @@ export default function SubscribeDogsPage() {
         pricePerDay: discountedPricePerDay,
         monthlyPrice,
         sessionType,
-        isFirstDog: dogIndex === 0,
+        isFirstDog,
       }
     }))
   }

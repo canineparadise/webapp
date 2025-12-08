@@ -103,43 +103,8 @@ export async function POST(request: NextRequest) {
     // Note: Subscription will be created by the webhook after successful payment
     // Removed duplicate subscription creation here to avoid conflicts
 
-    // Record discount code usage if applicable
-    if (discountCodeId) {
-      await supabase.from('discount_code_usage').insert({
-        discount_code_id: discountCodeId,
-        user_id: userId,
-        used_for: 'subscription',
-        original_amount: totalAmount,
-        discount_amount: discountAmount,
-        final_amount: finalAmount,
-      })
-
-      // Increment usage count and check for VIP badge eligibility
-      const { data: discountCodeData } = await supabase
-        .from('discount_codes')
-        .select('current_uses, code')
-        .eq('id', discountCodeId)
-        .single()
-
-      if (discountCodeData) {
-        await supabase
-          .from('discount_codes')
-          .update({ current_uses: discountCodeData.current_uses + 1 })
-          .eq('id', discountCodeId)
-
-        // Grant Golden Paw VIP Founders Club badge if using FIRST50
-        if (discountCodeData.code === 'FIRST50') {
-          await supabase
-            .from('profiles')
-            .update({
-              is_vip_member: true,
-              vip_badge_type: 'golden_paw_founders',
-              vip_granted_at: new Date().toISOString()
-            })
-            .eq('id', userId)
-        }
-      }
-    }
+    // Note: Discount code usage and VIP membership are now handled by the webhook
+    // after payment is confirmed to prevent granting benefits before payment completes
 
     return NextResponse.json({ sessionId: session.id })
   } catch (error: any) {

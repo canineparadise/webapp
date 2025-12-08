@@ -36,7 +36,9 @@ export async function POST(request: NextRequest) {
       discountCodeId,
       totalAmount,
       discountAmount,
-      finalAmount
+      finalAmount,
+      isVipMember,
+      vipDiscountAmount
     } = await request.json()
 
     // Security: Users can only create checkouts for themselves
@@ -115,9 +117,19 @@ export async function POST(request: NextRequest) {
     }
 
     const dogCount = dogIds.length
-    const description = dogCount === 1
+
+    // Build description with discount info
+    let description = dogCount === 1
       ? `Dog Assessment - ${dateDisplay}`
       : `Dog Assessment for ${dogCount} dogs - ${dateDisplay}`
+
+    if (discountCode && vipDiscountAmount > 0) {
+      description = `${description} (Discount: ${discountCode} + Golden Paw VIP 10%)`
+    } else if (discountCode) {
+      description = `${description} (Discount: ${discountCode})`
+    } else if (isVipMember && vipDiscountAmount > 0) {
+      description = `${description} (Golden Paw VIP 10% Discount)`
+    }
 
     // Calculate amount to charge
     const calculatedTotal = assessmentFee * dogCount
@@ -132,9 +144,7 @@ export async function POST(request: NextRequest) {
             currency: 'gbp',
             product_data: {
               name: 'Dog Assessment Day',
-              description: discountCode
-                ? `${description} (Discount: ${discountCode})`
-                : description,
+              description,
               images: [], // Can add your logo URL here
             },
             unit_amount: Math.round(amountToCharge * 100), // Apply discount if provided
@@ -159,37 +169,15 @@ export async function POST(request: NextRequest) {
         type: 'assessment',
         discountCode: discountCode || '',
         discountCodeId: discountCodeId || '',
-        totalAmount: totalAmount || calculatedTotal,
-        discountAmount: discountAmount || 0,
-        finalAmount: finalAmount || calculatedTotal,
+        totalAmount: (totalAmount || calculatedTotal).toString(),
+        discountAmount: (discountAmount || 0).toString(),
+        finalAmount: (finalAmount || calculatedTotal).toString(),
+        isVipMember: isVipMember ? 'true' : 'false',
+        vipDiscountAmount: (vipDiscountAmount || 0).toString(),
       },
     })
 
-    // Record discount code usage if applicable
-    if (discountCodeId) {
-      await supabase.from('discount_code_usage').insert({
-        discount_code_id: discountCodeId,
-        user_id: userId,
-        used_for: 'assessment',
-        original_amount: totalAmount || calculatedTotal,
-        discount_amount: discountAmount || 0,
-        final_amount: finalAmount || calculatedTotal,
-      })
-
-      // Increment usage count
-      const { data: discountCodeData } = await supabase
-        .from('discount_codes')
-        .select('current_uses')
-        .eq('id', discountCodeId)
-        .single()
-
-      if (discountCodeData) {
-        await supabase
-          .from('discount_codes')
-          .update({ current_uses: discountCodeData.current_uses + 1 })
-          .eq('id', discountCodeId)
-      }
-    }
+    // Note: Discount code usage is handled by the webhook after payment confirmation
 
     return NextResponse.json({ sessionId: session.id, url: session.url })
   } catch (error: any) {

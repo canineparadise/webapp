@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
       needsLunch,
       needsDinner,
       specialInstructions,
+      isVipMember,
+      vipDiscountAmount,
     } = await request.json()
 
     // Security: Users can only create checkouts for themselves
@@ -110,7 +112,16 @@ export async function POST(request: NextRequest) {
 
     const calculatedTotal = pricePerDay * dates.length
     const amountToCharge = finalAmount || calculatedTotal
-    const description = `Individual Day Booking for ${dog.name} - ${dates.length} day${dates.length > 1 ? 's' : ''}`
+
+    // Build description with discount info
+    let description = `Individual Day Booking for ${dog.name} - ${dates.length} day${dates.length > 1 ? 's' : ''}`
+    if (discountCode && vipDiscountAmount > 0) {
+      description = `${description} (Discount: ${discountCode} + Golden Paw VIP 10%)`
+    } else if (discountCode) {
+      description = `${description} (Discount: ${discountCode})`
+    } else if (isVipMember && vipDiscountAmount > 0) {
+      description = `${description} (Golden Paw VIP 10% Discount)`
+    }
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
@@ -121,9 +132,7 @@ export async function POST(request: NextRequest) {
             currency: 'gbp',
             product_data: {
               name: 'Individual Day Care',
-              description: discountCode
-                ? `${description} (Discount: ${discountCode})`
-                : description,
+              description,
             },
             unit_amount: Math.round(amountToCharge * 100),
           },
@@ -142,9 +151,11 @@ export async function POST(request: NextRequest) {
         pricePerDay: pricePerDay.toString(),
         discountCode: discountCode || '',
         discountCodeId: discountCodeId || '',
-        totalAmount: totalAmount || calculatedTotal,
-        discountAmount: discountAmount || 0,
-        finalAmount: finalAmount || calculatedTotal,
+        totalAmount: (totalAmount || calculatedTotal).toString(),
+        discountAmount: (discountAmount || 0).toString(),
+        finalAmount: (finalAmount || calculatedTotal).toString(),
+        isVipMember: isVipMember ? 'true' : 'false',
+        vipDiscountAmount: (vipDiscountAmount || 0).toString(),
         needsBreakfast: needsBreakfast ? 'true' : 'false',
         needsLunch: needsLunch ? 'true' : 'false',
         needsDinner: needsDinner ? 'true' : 'false',
@@ -152,31 +163,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Record discount code usage if applicable
-    if (discountCodeId) {
-      await supabase.from('discount_code_usage').insert({
-        discount_code_id: discountCodeId,
-        user_id: userId,
-        used_for: 'individual_days',
-        original_amount: totalAmount || calculatedTotal,
-        discount_amount: discountAmount || 0,
-        final_amount: finalAmount || calculatedTotal,
-      })
-
-      // Increment usage count
-      const { data: discountCodeData } = await supabase
-        .from('discount_codes')
-        .select('current_uses')
-        .eq('id', discountCodeId)
-        .single()
-
-      if (discountCodeData) {
-        await supabase
-          .from('discount_codes')
-          .update({ current_uses: discountCodeData.current_uses + 1 })
-          .eq('id', discountCodeId)
-      }
-    }
+    // Note: Discount code usage is handled by the webhook after payment confirmation
 
     return NextResponse.json({ sessionId: session.id, url: session.url })
   } catch (error: any) {
