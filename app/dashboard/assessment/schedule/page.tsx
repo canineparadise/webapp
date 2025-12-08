@@ -913,8 +913,14 @@ export default function ScheduleAssessment() {
                           </div>
                           {appliedDiscount && (
                             <div className="flex justify-between text-green-600 font-semibold">
-                              <span>Discount</span>
+                              <span>Discount ({appliedDiscount.code})</span>
                               <span>-£{appliedDiscount.discountAmount.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {isVipMember && (
+                            <div className="flex justify-between text-amber-600 font-semibold">
+                              <span>🏆 Golden Paw VIP (10%)</span>
+                              <span>-£{((assessmentFee * selectedDogIds.length) * 0.10).toFixed(2)}</span>
                             </div>
                           )}
                           <div className="flex justify-between text-xl font-bold text-canine-navy pt-2 border-t-2 border-gray-200">

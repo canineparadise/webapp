@@ -540,8 +540,14 @@ export default function BuyExtraDaysPage() {
               </div>
               {appliedDiscount && (
                 <div className="flex justify-between items-center text-green-300">
-                  <span>Discount:</span>
+                  <span>Discount ({appliedDiscount.code}):</span>
                   <span className="font-bold">-£{appliedDiscount.discountAmount.toFixed(2)}</span>
+                </div>
+              )}
+              {isVipMember && calculateTotal() > 0 && (
+                <div className="flex justify-between items-center text-amber-300">
+                  <span>🏆 Golden Paw VIP (10%):</span>
+                  <span className="font-bold">-£{(calculateTotal() * 0.10).toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between items-center text-2xl mt-2">

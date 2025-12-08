@@ -499,7 +499,9 @@ function IndividualDaysContent() {
   }
 
   const totalPrice = selectedDates.length * pricePerDay
-  const finalPrice = totalPrice - discountAmount
+  const vipDiscountAmount = isVipMember ? totalPrice * 0.10 : 0
+  const totalDiscount = discountAmount + vipDiscountAmount
+  const finalPrice = totalPrice - totalDiscount
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white py-12">
@@ -821,6 +823,12 @@ function IndividualDaysContent() {
                       <div className="flex justify-between text-sm text-green-600">
                         <span>Discount ({discountCode}):</span>
                         <span className="font-semibold">-£{discountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {isVipMember && vipDiscountAmount > 0 && (
+                      <div className="flex justify-between text-sm text-amber-600">
+                        <span>🏆 Golden Paw VIP (10%):</span>
+                        <span className="font-semibold">-£{vipDiscountAmount.toFixed(2)}</span>
                       </div>
                     )}
                     <div className="border-t pt-2 mt-2">
