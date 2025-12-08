@@ -40,6 +40,10 @@ export default function ScheduleAssessment() {
   const [appliedDiscount, setAppliedDiscount] = useState<any>(null)
   const [validatingCode, setValidatingCode] = useState(false)
 
+  // Session and VIP status
+  const [session, setSession] = useState<any>(null)
+  const [isVipMember, setIsVipMember] = useState(false)
+
   useEffect(() => {
     init()
 
@@ -67,6 +71,12 @@ export default function ScheduleAssessment() {
 
   const init = async () => {
     try {
+      // Get session for auth token
+      const { data: { session: userSession } } = await supabase.auth.getSession()
+      if (userSession) {
+        setSession(userSession)
+      }
+
       // Check auth
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) {
@@ -74,6 +84,18 @@ export default function ScheduleAssessment() {
         return
       }
       setUser(user)
+
+      // Check if user is a Golden Paw VIP member
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_vip_member')
+        .eq('id', user.id)
+        .single()
+
+      if (profileData?.is_vip_member) {
+        setIsVipMember(true)
+        console.log('User is a Golden Paw VIP member - 10% discount applies')
+      }
 
       // Fetch assessment fee from admin settings
       const { data: feeData } = await supabase
@@ -340,10 +362,19 @@ export default function ScheduleAssessment() {
 
   const calculateTotalPrice = () => {
     const baseTotal = assessmentFee * selectedDogIds.length
+    let finalAmount = baseTotal
+
+    // Apply discount code if present
     if (appliedDiscount) {
-      return Math.max(0, baseTotal - appliedDiscount.discountAmount)
+      finalAmount = finalAmount - appliedDiscount.discountAmount
     }
-    return baseTotal
+
+    // Apply VIP 10% discount if applicable
+    if (isVipMember) {
+      finalAmount = finalAmount - (baseTotal * 0.10)
+    }
+
+    return Math.max(0, finalAmount)
   }
 
   const handleBookAssessment = async () => {
@@ -359,6 +390,11 @@ export default function ScheduleAssessment() {
 
     if (!user) {
       toast.error('Invalid booking data')
+      return
+    }
+
+    if (!session?.access_token) {
+      toast.error('Session expired. Please refresh the page.')
       return
     }
 
@@ -389,12 +425,16 @@ export default function ScheduleAssessment() {
 
       // Create Stripe checkout session
       const baseTotal = assessmentFee * selectedDogIds.length
+      const vipDiscountAmount = isVipMember ? baseTotal * 0.10 : 0
+      const codeDiscountAmount = appliedDiscount?.discountAmount || 0
+      const totalDiscount = codeDiscountAmount + vipDiscountAmount
       const finalTotal = calculateTotalPrice()
 
       const response = await fetch('/api/create-assessment-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify({
           userId: user.id,
@@ -406,8 +446,10 @@ export default function ScheduleAssessment() {
           discountCode: appliedDiscount?.code || null,
           discountCodeId: appliedDiscount?.discountCodeId || null,
           totalAmount: baseTotal,
-          discountAmount: appliedDiscount?.discountAmount || 0,
+          discountAmount: totalDiscount,
           finalAmount: finalTotal,
+          isVipMember: isVipMember,
+          vipDiscountAmount: vipDiscountAmount,
         }),
       })
 

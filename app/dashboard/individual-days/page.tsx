@@ -63,6 +63,8 @@ function IndividualDaysContent() {
   const [isValidatingDiscount, setIsValidatingDiscount] = useState(false)
   const [discountError, setDiscountError] = useState('')
   const [activeSubscription, setActiveSubscription] = useState<any>(null)
+  const [session, setSession] = useState<any>(null)
+  const [isVipMember, setIsVipMember] = useState(false)
 
   // Generate next 60 days for calendar grouped by month
   const generateCalendarDates = () => {
@@ -121,10 +123,28 @@ function IndividualDaysContent() {
   const loadUserAndDogs = async () => {
     console.log('=== loadUserAndDogs CALLED ===')
     try {
+      // Get session for auth token
+      const { data: { session: userSession } } = await supabase.auth.getSession()
+      if (userSession) {
+        setSession(userSession)
+      }
+
       const { data: { user } } = await supabase.auth.getUser()
       console.log('Got user:', user?.id)
       if (user) {
         setUser(user)
+
+        // Check if user is a Golden Paw VIP member
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('is_vip_member')
+          .eq('id', user.id)
+          .single()
+
+        if (profileData?.is_vip_member) {
+          setIsVipMember(true)
+          console.log('User is a Golden Paw VIP member - 10% discount applies')
+        }
 
         // Check for active subscription
         const { data: subData } = await supabase
@@ -356,16 +376,33 @@ function IndividualDaysContent() {
       return
     }
 
+    if (!session?.access_token) {
+      toast.error('Session expired. Please refresh the page.')
+      return
+    }
+
     setLoading(true)
     try {
       const totalBeforeDiscount = selectedDates.length * pricePerDay
-      const finalAmount = totalBeforeDiscount - discountAmount
+
+      // Calculate VIP discount if applicable (10% for Golden Paw members)
+      let vipDiscountAmount = 0
+      if (isVipMember) {
+        vipDiscountAmount = totalBeforeDiscount * 0.10
+      }
+
+      // Total discount is code discount + VIP discount
+      const totalDiscount = discountAmount + vipDiscountAmount
+      const finalAmount = totalBeforeDiscount - totalDiscount
 
       // If 100% discount (free), create booking directly without payment
       if (finalAmount <= 0) {
         const response = await fetch('/api/create-free-individual-day-booking', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
           body: JSON.stringify({
             userId: user.id,
             dogId: selectedDog,
@@ -374,7 +411,9 @@ function IndividualDaysContent() {
             discountCode: discountCode || undefined,
             discountCodeId: discountCodeId || undefined,
             totalAmount: totalBeforeDiscount,
-            discountAmount: discountAmount,
+            discountAmount: totalDiscount,
+            isVipMember: isVipMember,
+            vipDiscountAmount: vipDiscountAmount,
             needsBreakfast,
             needsLunch,
             needsDinner,
@@ -397,7 +436,10 @@ function IndividualDaysContent() {
       // Create Stripe checkout
       const response = await fetch('/api/create-individual-day-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           userId: user.id,
           dogId: selectedDog,
@@ -406,8 +448,10 @@ function IndividualDaysContent() {
           discountCode: discountCode || undefined,
           discountCodeId: discountCodeId || undefined,
           totalAmount: totalBeforeDiscount,
-          discountAmount: discountAmount,
+          discountAmount: totalDiscount,
           finalAmount: finalAmount,
+          isVipMember: isVipMember,
+          vipDiscountAmount: vipDiscountAmount,
           needsBreakfast,
           needsLunch,
           needsDinner,

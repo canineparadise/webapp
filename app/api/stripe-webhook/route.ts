@@ -7,6 +7,59 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Helper function to record financial transactions
+async function recordFinancialTransaction({
+  userId,
+  transactionType,
+  amount,
+  stripePaymentIntentId,
+  stripeChargeId,
+  stripeCustomerId,
+  paymentMethod,
+  subscriptionId,
+  bookingId,
+  status,
+  description,
+}: {
+  userId: string
+  transactionType: 'subscription' | 'assessment' | 'individual_days' | 'extra_days' | 'subscription_extra_days' | 'late_fee' | 'refund'
+  amount: number
+  stripePaymentIntentId?: string
+  stripeChargeId?: string
+  stripeCustomerId?: string
+  paymentMethod?: string
+  subscriptionId?: string
+  bookingId?: string
+  status: 'pending' | 'completed' | 'failed' | 'refunded'
+  description?: string
+}) {
+  try {
+    const { error } = await supabase
+      .from('financial_transactions')
+      .insert({
+        user_id: userId,
+        transaction_type: transactionType,
+        amount,
+        currency: 'GBP',
+        stripe_payment_intent_id: stripePaymentIntentId,
+        stripe_charge_id: stripeChargeId,
+        stripe_customer_id: stripeCustomerId,
+        payment_method: paymentMethod || 'card',
+        subscription_id: subscriptionId,
+        booking_id: bookingId,
+        status,
+        payment_date: new Date().toISOString(),
+        description,
+      })
+
+    if (error) {
+      console.error('Error recording financial transaction:', error.message)
+    }
+  } catch (err) {
+    console.error('Failed to record financial transaction:', err)
+  }
+}
+
 export async function POST(req: NextRequest) {
   // Initialize Stripe lazily to avoid build-time errors
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -89,7 +142,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       endDate.setDate(endDate.getDate() + 30)
 
       for (const dogSub of dogSubscriptions) {
-        const { error } = await supabase
+        const { error, data: newSub } = await supabase
           .from('subscriptions')
           .insert({
             user_id: userId,
@@ -111,9 +164,23 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
             payment_status: 'paid',
           })
           .select()
+          .single()
 
         if (error) {
           console.error('Error creating subscription for dog:', dogSub.dogId, error.message)
+        } else {
+          // Record financial transaction for this subscription
+          await recordFinancialTransaction({
+            userId,
+            transactionType: 'subscription',
+            amount: parseFloat(dogSub.monthlyPrice),
+            stripePaymentIntentId: session.payment_intent as string,
+            stripeCustomerId: session.customer as string,
+            paymentMethod: 'card',
+            subscriptionId: newSub?.id,
+            status: 'completed',
+            description: `Subscription for dog - ${dogSub.daysIncluded} days`,
+          })
         }
       }
     } catch (error) {
@@ -130,7 +197,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     endDate.setDate(endDate.getDate() + 30) // Monthly billing = 30 days
 
     // Create subscription in database
-    const { error } = await supabase
+    const { error, data: newSub } = await supabase
       .from('subscriptions')
       .insert({
         user_id: userId,
@@ -149,14 +216,30 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         stripe_subscription_id: subscription as string,
         payment_status: 'paid',
       })
+      .select()
+      .single()
 
     if (error) {
       console.error('Error creating subscription:', error.message)
+    } else {
+      // Record financial transaction
+      await recordFinancialTransaction({
+        userId,
+        transactionType: 'subscription',
+        amount,
+        stripePaymentIntentId: session.payment_intent as string,
+        stripeCustomerId: session.customer as string,
+        paymentMethod: 'card',
+        subscriptionId: newSub?.id,
+        status: 'completed',
+        description: `Subscription - ${days} days`,
+      })
     }
 
   } else if (metadata.type === 'extra_days') {
     // Handle extra days purchase
     const { subscriptionId, numDays } = metadata
+    const amount = session.amount_total ? session.amount_total / 100 : 0
 
     // Add days to existing subscription
     const { error } = await supabase.rpc('add_subscription_days', {
@@ -181,6 +264,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
           .eq('id', subscriptionId)
       }
     }
+
+    // Record financial transaction for extra days
+    await recordFinancialTransaction({
+      userId,
+      transactionType: 'extra_days',
+      amount,
+      stripePaymentIntentId: session.payment_intent as string,
+      stripeCustomerId: session.customer as string,
+      paymentMethod: 'card',
+      subscriptionId,
+      status: 'completed',
+      description: `Extra days purchase - ${numDays} days`,
+    })
+
   } else if (metadata.type === 'individual_days') {
     // Handle individual day bookings
     const { dogId, dates, pricePerDay, needsBreakfast, needsLunch, needsDinner, specialInstructions } = metadata
@@ -221,6 +318,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
     if (error) {
       console.error('Error creating individual day bookings:', error.message)
+    } else {
+      // Record financial transaction for individual days
+      const amount = session.amount_total ? session.amount_total / 100 : 0
+      await recordFinancialTransaction({
+        userId,
+        transactionType: 'individual_days',
+        amount,
+        stripePaymentIntentId: session.payment_intent as string,
+        stripeCustomerId: session.customer as string,
+        paymentMethod: 'card',
+        status: 'completed',
+        description: `Individual day booking - ${datesArray.length} day${datesArray.length > 1 ? 's' : ''}`,
+      })
     }
   } else if (metadata.type === 'subscription_extra_days') {
     // Handle subscription extra days purchase with bookings
@@ -332,8 +442,37 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
       if (extraError) {
         console.error('Error creating extra day bookings:', extraError.message)
+      } else {
+        // Record financial transaction for subscription extra days
+        const amount = session.amount_total ? session.amount_total / 100 : 0
+        await recordFinancialTransaction({
+          userId,
+          transactionType: 'subscription_extra_days',
+          amount,
+          stripePaymentIntentId: session.payment_intent as string,
+          stripeCustomerId: session.customer as string,
+          paymentMethod: 'card',
+          subscriptionId,
+          status: 'completed',
+          description: `Subscription extra days - ${extraDates.length} day${extraDates.length > 1 ? 's' : ''}`,
+        })
       }
     }
+  } else if (metadata.type === 'assessment') {
+    // Handle assessment payment
+    const amount = session.amount_total ? session.amount_total / 100 : 0
+    const dogIds = metadata.dogIds?.split(',') || []
+
+    await recordFinancialTransaction({
+      userId,
+      transactionType: 'assessment',
+      amount,
+      stripePaymentIntentId: session.payment_intent as string,
+      stripeCustomerId: session.customer as string,
+      paymentMethod: 'card',
+      status: 'completed',
+      description: `Assessment booking - ${dogIds.length} dog${dogIds.length > 1 ? 's' : ''}`,
+    })
   }
 }
 

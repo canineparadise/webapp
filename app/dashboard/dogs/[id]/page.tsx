@@ -21,7 +21,8 @@ import {
   SparklesIcon,
   FireIcon,
   BoltIcon,
-  StarIcon
+  StarIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid'
 import toast from 'react-hot-toast'
@@ -36,6 +37,8 @@ export default function DogProfilePage() {
   const [owner, setOwner] = useState<any>(null)
   const [documents, setDocuments] = useState<any[]>([])
   const [visits, setVisits] = useState<any[]>([])
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (params.id) {
@@ -119,6 +122,58 @@ export default function DogProfilePage() {
       return `${years} year${years !== 1 ? 's' : ''}`
     } else {
       return `${years} year${years !== 1 ? 's' : ''} ${months} month${months !== 1 ? 's' : ''}`
+    }
+  }
+
+  const handleDeleteDog = async () => {
+    if (!dog) return
+
+    setDeleting(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('You must be logged in')
+        return
+      }
+
+      // Delete dog from database
+      const { error } = await supabase
+        .from('dogs')
+        .delete()
+        .eq('id', dog.id)
+        .eq('owner_id', user.id) // Security: ensure user owns the dog
+
+      if (error) {
+        console.error('Error deleting dog:', error)
+        toast.error('Failed to delete dog. Please try again.')
+        return
+      }
+
+      // Also try to delete any vaccination documents from storage
+      try {
+        const { data: files } = await supabase.storage
+          .from('dog-vaccinations')
+          .list(`${dog.id}`)
+
+        if (files && files.length > 0) {
+          const filePaths = files.map(f => `${dog.id}/${f.name}`)
+          await supabase.storage
+            .from('dog-vaccinations')
+            .remove(filePaths)
+        }
+      } catch (storageError) {
+        console.error('Error deleting dog documents:', storageError)
+        // Don't fail the whole operation if storage cleanup fails
+      }
+
+      toast.success(`${dog.name} has been removed from your account`)
+      router.push('/dashboard')
+    } catch (error) {
+      console.error('Error deleting dog:', error)
+      toast.error('An error occurred. Please try again.')
+    } finally {
+      setDeleting(false)
+      setShowDeleteModal(false)
     }
   }
 
@@ -235,17 +290,28 @@ export default function DogProfilePage() {
               </div>
             </div>
 
-            {/* Edit Button */}
-            <Link href={`/dashboard/dogs/${dog.id}/edit`}>
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
+              <Link href={`/dashboard/dogs/${dog.id}/edit`}>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="bg-canine-gold hover:bg-canine-light-gold text-white px-6 py-3 rounded-xl font-bold shadow-xl flex items-center gap-2 transition-colors w-full"
+                >
+                  <PencilSquareIcon className="h-6 w-6" />
+                  Edit Profile
+                </motion.button>
+              </Link>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-canine-gold hover:bg-canine-light-gold text-white px-6 py-3 rounded-xl font-bold shadow-xl flex items-center gap-2 transition-colors"
+                onClick={() => setShowDeleteModal(true)}
+                className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl font-bold shadow-xl flex items-center gap-2 transition-colors"
               >
-                <PencilSquareIcon className="h-6 w-6" />
-                Edit Profile
+                <TrashIcon className="h-6 w-6" />
+                Delete Dog
               </motion.button>
-            </Link>
+            </div>
           </div>
         </motion.div>
 
@@ -705,6 +771,57 @@ export default function DogProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8"
+          >
+            <div className="text-center">
+              <div className="bg-red-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <TrashIcon className="h-10 w-10 text-red-600" />
+              </div>
+              <h3 className="text-2xl font-display font-bold text-gray-900 mb-3">
+                Delete {dog?.name}?
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to remove <strong>{dog?.name}</strong> from your account?
+                This action cannot be undone and will delete all associated data including
+                vaccination records and booking history.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deleting}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-xl font-bold transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteDog}
+                  disabled={deleting}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-xl font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {deleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <TrashIcon className="h-5 w-5" />
+                      Delete
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

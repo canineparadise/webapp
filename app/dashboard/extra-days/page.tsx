@@ -57,12 +57,22 @@ export default function BuyExtraDaysPage() {
   const [appliedDiscount, setAppliedDiscount] = useState<any>(null)
   const [validatingCode, setValidatingCode] = useState(false)
 
+  // Session and VIP status
+  const [session, setSession] = useState<any>(null)
+  const [isVipMember, setIsVipMember] = useState(false)
+
   useEffect(() => {
     init()
   }, [])
 
   const init = async () => {
     try {
+      // Get session for auth token
+      const { data: { session: userSession } } = await supabase.auth.getSession()
+      if (userSession) {
+        setSession(userSession)
+      }
+
       // Check auth
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) {
@@ -70,6 +80,18 @@ export default function BuyExtraDaysPage() {
         return
       }
       setUser(user)
+
+      // Check if user is a Golden Paw VIP member
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_vip_member')
+        .eq('id', user.id)
+        .single()
+
+      if (profileData?.is_vip_member) {
+        setIsVipMember(true)
+        console.log('User is a Golden Paw VIP member - 10% discount applies')
+      }
 
       // Get all dogs with active subscriptions
       const { data: dogsData, error: dogsError } = await supabase
@@ -224,10 +246,19 @@ export default function BuyExtraDaysPage() {
 
   const calculateFinalAmount = () => {
     const total = calculateTotal()
+    let finalAmount = total
+
+    // Apply discount code if present
     if (appliedDiscount) {
-      return total - appliedDiscount.discountAmount
+      finalAmount = finalAmount - appliedDiscount.discountAmount
     }
-    return total
+
+    // Apply VIP 10% discount if applicable
+    if (isVipMember) {
+      finalAmount = finalAmount - (total * 0.10)
+    }
+
+    return Math.max(0, finalAmount)
   }
 
   const handleCheckout = async () => {
@@ -235,6 +266,11 @@ export default function BuyExtraDaysPage() {
     const selectedDogs = dogs.filter(dog => (dogQuantities[dog.id] || 0) > 0)
     if (selectedDogs.length === 0) {
       toast.error('Please select at least one extra day to purchase')
+      return
+    }
+
+    if (!session?.access_token) {
+      toast.error('Session expired. Please refresh the page.')
       return
     }
 
@@ -257,18 +293,29 @@ export default function BuyExtraDaysPage() {
         }
       })
 
+      // Calculate VIP discount
+      const total = calculateTotal()
+      const vipDiscountAmount = isVipMember ? total * 0.10 : 0
+      const codeDiscountAmount = appliedDiscount?.discountAmount || 0
+      const totalDiscount = codeDiscountAmount + vipDiscountAmount
+
       // Create checkout session
       const response = await fetch('/api/create-extra-days-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify({
           userId: user.id,
           extraDaysPurchases,
           discountCode: appliedDiscount?.code || null,
           discountCodeId: appliedDiscount?.discountCodeId || null,
-          totalAmount: calculateTotal(),
-          discountAmount: appliedDiscount?.discountAmount || 0,
+          totalAmount: total,
+          discountAmount: totalDiscount,
           finalAmount: calculateFinalAmount(),
+          isVipMember: isVipMember,
+          vipDiscountAmount: vipDiscountAmount,
         }),
       })
 
