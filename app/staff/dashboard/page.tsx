@@ -64,6 +64,7 @@ interface DogWithBooking extends Dog {
   booking_id: string
   checked_in_at?: string
   checked_out_at?: string
+  checkout_password?: string
 }
 
 interface PlayGroup {
@@ -256,6 +257,8 @@ export default function StaffDashboard() {
   const [showCheckOutModal, setShowCheckOutModal] = useState(false)
   const [selectedBookingDog, setSelectedBookingDog] = useState<DogWithBooking | null>(null)
   const [showApprovalModal, setShowApprovalModal] = useState(false)
+  const [checkoutPasswordInput, setCheckoutPasswordInput] = useState('')
+  const [checkoutPasswordError, setCheckoutPasswordError] = useState('')
   const [showDeclineModal, setShowDeclineModal] = useState(false)
   const [approvalNotes, setApprovalNotes] = useState('')
   const [declineNotes, setDeclineNotes] = useState('')
@@ -358,12 +361,12 @@ export default function StaffDashboard() {
           .from('bookings')
           .select('dog_id')
           .eq('booking_date', currentDate)
-          .eq('status', 'confirmed'),
+          .in('status', ['confirmed', 'checked_in', 'completed']),
         supabase
           .from('individual_day_bookings')
           .select('dog_id')
           .eq('booking_date', currentDate)
-          .eq('status', 'confirmed')
+          .in('status', ['confirmed', 'checked_in', 'completed'])
       ])
 
       const subscriptionDogIds = bookingsData?.map(b => b.dog_id) || []
@@ -396,12 +399,12 @@ export default function StaffDashboard() {
           .from('bookings')
           .select('*')
           .eq('booking_date', currentDate)
-          .eq('status', 'confirmed'),
+          .in('status', ['confirmed', 'checked_in', 'completed']),
         supabase
           .from('individual_day_bookings')
           .select('*')
           .eq('booking_date', currentDate)
-          .eq('status', 'confirmed')
+          .in('status', ['confirmed', 'checked_in', 'completed'])
       ])
 
       // Organize dogs by check-in/out status
@@ -1010,6 +1013,18 @@ export default function StaffDashboard() {
   const handleCheckOut = async () => {
     if (!selectedBookingDog || !staffId) return
 
+    // Verify checkout password if the dog has one set
+    if (selectedBookingDog.checkout_password) {
+      if (!checkoutPasswordInput) {
+        setCheckoutPasswordError('Please enter the pickup password')
+        return
+      }
+      if (checkoutPasswordInput.toLowerCase() !== selectedBookingDog.checkout_password.toLowerCase()) {
+        setCheckoutPasswordError('Incorrect password. Please verify with the person picking up.')
+        return
+      }
+    }
+
     try {
       const { error } = await supabase
         .from('bookings')
@@ -1026,6 +1041,8 @@ export default function StaffDashboard() {
       toast.success(`${selectedBookingDog.name} checked out successfully!`)
       setShowCheckOutModal(false)
       setSelectedBookingDog(null)
+      setCheckoutPasswordInput('')
+      setCheckoutPasswordError('')
       fetchTodayData()
     } catch (error) {
       console.error('Error checking out:', error)
@@ -3469,7 +3486,11 @@ export default function StaffDashboard() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setShowCheckOutModal(false)}
+            onClick={() => {
+              setShowCheckOutModal(false)
+              setCheckoutPasswordInput('')
+              setCheckoutPasswordError('')
+            }}
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           >
             <motion.div
@@ -3484,6 +3505,42 @@ export default function StaffDashboard() {
               </div>
               <div className="p-6">
                 <p className="text-lg mb-4">Check out <strong>{selectedBookingDog.name}</strong>?</p>
+
+                {/* Pickup Password Verification */}
+                {selectedBookingDog.checkout_password && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Pickup Password Required
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Ask the person picking up for the password set by the owner.
+                    </p>
+                    <input
+                      type="text"
+                      value={checkoutPasswordInput}
+                      onChange={(e) => {
+                        setCheckoutPasswordInput(e.target.value)
+                        setCheckoutPasswordError('')
+                      }}
+                      placeholder="Enter pickup password"
+                      className={`w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                        checkoutPasswordError ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    />
+                    {checkoutPasswordError && (
+                      <p className="text-red-500 text-sm mt-1">{checkoutPasswordError}</p>
+                    )}
+                  </div>
+                )}
+
+                {!selectedBookingDog.checkout_password && (
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p className="text-amber-700 text-sm">
+                      No pickup password set for this dog.
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex space-x-3">
                   <button
                     onClick={handleCheckOut}
@@ -3492,7 +3549,11 @@ export default function StaffDashboard() {
                     Confirm Check Out
                   </button>
                   <button
-                    onClick={() => setShowCheckOutModal(false)}
+                    onClick={() => {
+                      setShowCheckOutModal(false)
+                      setCheckoutPasswordInput('')
+                      setCheckoutPasswordError('')
+                    }}
                     className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-4 rounded-xl transition-all"
                   >
                     Cancel
