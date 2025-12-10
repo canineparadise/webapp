@@ -743,8 +743,9 @@ export default function StaffDashboard() {
         }
       }
 
-      // Fetch ALL confirmed bookings for today (not just those with boolean flags)
+      // Fetch ALL active bookings for today (not just those with boolean flags)
       // because older bookings may have meal requirements in special_instructions text
+      // Include confirmed AND checked_in status - dogs still need feeding when checked in!
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select(`
@@ -762,9 +763,10 @@ export default function StaffDashboard() {
           special_instructions
         `)
         .eq('booking_date', currentDate)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'checked_in'])
 
       // Also fetch from individual_day_bookings table
+      // Include confirmed AND checked_in status - dogs still need feeding when checked in!
       const { data: individualBookingsData } = await supabase
         .from('individual_day_bookings')
         .select(`
@@ -782,7 +784,7 @@ export default function StaffDashboard() {
           special_instructions
         `)
         .eq('booking_date', currentDate)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'checked_in'])
 
       // Combine both booking types
       const allBookingsData = [
