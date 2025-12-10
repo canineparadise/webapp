@@ -34,6 +34,7 @@ export default function Dashboard() {
   const [subscription, setSubscription] = useState<any>(null)
   const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [upcomingBookings, setUpcomingBookings] = useState<any[]>([])
+  const [assessmentBookings, setAssessmentBookings] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'dogs' | 'bookings' | 'documents'>('dogs')
   const [selectedDates, setSelectedDates] = useState<string[]>([])
   const [selectedDogs, setSelectedDogs] = useState<string[]>([])
@@ -65,7 +66,8 @@ export default function Dashboard() {
         bookingsRes,
         allBookingsRes,
         individualDayBookingsRes,
-        allIndividualDayBookingsRes
+        allIndividualDayBookingsRes,
+        assessmentBookingsRes
       ] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('legal_agreements').select('*').eq('user_id', user.id).maybeSingle(),
@@ -74,12 +76,26 @@ export default function Dashboard() {
         supabase.from('bookings').select('*').eq('user_id', user.id).gte('booking_date', new Date().toISOString().split('T')[0]).order('booking_date', { ascending: true }).limit(3),
         supabase.from('bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }),
         supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).gte('booking_date', new Date().toISOString().split('T')[0]).order('booking_date', { ascending: true }).limit(3),
-        supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false })
+        supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }),
+        supabase.from('assessment_bookings').select(`
+          *,
+          assessment_slots (
+            assessment_date,
+            start_time,
+            end_time
+          ),
+          dogs (
+            id,
+            name,
+            breed
+          )
+        `).eq('user_id', user.id).in('booking_status', ['confirmed', 'pending']).order('booked_at', { ascending: false })
       ])
 
       setProfile(profileRes.data)
       setLegalAgreements(legalRes.data)
       setDogs(dogsRes.data || [])
+      setAssessmentBookings(assessmentBookingsRes.data || [])
 
       // Handle multiple subscriptions (one per dog)
       const activeSubs = subscriptionRes.data || []
@@ -314,7 +330,7 @@ export default function Dashboard() {
   // Onboarding checklist steps
   const hasFilledProfile = profile?.first_name && profile?.last_name && profile?.phone && profile?.address
   const hasAddedDogs = dogs.length > 0
-  const hasBookedAssessment = dogs.some(dog => dog.assessment_completed || dog.assessment_date || dog.assessment_slot_id)
+  const hasBookedAssessment = assessmentBookings.length > 0 || dogs.some(dog => dog.assessment_completed || dog.assessment_date || dog.assessment_slot_id)
   const hasSubscription = !!subscription
   const hasBookedDays = upcomingBookingsList.length > 0
 
@@ -493,6 +509,59 @@ export default function Dashboard() {
             </button>
           </Link>
         </div>
+
+        {/* Assessment Booking Banner - Show if user has upcoming assessment */}
+        {assessmentBookings.length > 0 && (() => {
+          // Get the first assessment booking with slot details
+          const upcomingAssessment = assessmentBookings.find(b => b.assessment_slots)
+          if (!upcomingAssessment?.assessment_slots) return null
+
+          const slot = upcomingAssessment.assessment_slots
+          const assessmentDate = new Date(slot.assessment_date)
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+
+          // Only show if assessment is in the future
+          if (assessmentDate < today) return null
+
+          const formattedDate = assessmentDate.toLocaleDateString('en-GB', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+          })
+
+          // Group dogs for this slot
+          const dogsForSlot = assessmentBookings
+            .filter(b => b.slot_id === upcomingAssessment.slot_id)
+            .map(b => b.dogs?.name)
+            .filter(Boolean)
+
+          return (
+            <div className="mb-6 sm:mb-8 bg-gradient-to-r from-canine-navy to-[#2a5a7a] rounded-2xl shadow-lg p-6 sm:p-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-canine-gold/20 rounded-xl">
+                    <CalendarDaysIcon className="h-8 w-8 text-canine-gold" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-1">Upcoming Assessment</h3>
+                    <p className="text-2xl font-bold text-canine-gold">{formattedDate}</p>
+                    <p className="text-white/80 mt-1">
+                      {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)} • {dogsForSlot.join(', ')}
+                    </p>
+                  </div>
+                </div>
+                <Link href="/dashboard/assessment/view">
+                  <button className="w-full md:w-auto bg-canine-gold text-white px-6 py-3 rounded-xl font-semibold hover:bg-canine-light-gold transition-all flex items-center justify-center gap-2">
+                    View Details
+                    <ArrowRightIcon className="h-5 w-5" />
+                  </button>
+                </Link>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* At-a-Glance Status Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">

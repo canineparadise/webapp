@@ -588,9 +588,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     }
   } else if (metadata.type === 'assessment') {
     // Handle assessment payment
+    console.log('[Stripe Webhook] Processing assessment booking')
     const amount = session.amount_total ? session.amount_total / 100 : 0
     const dogIds = metadata.dogIds?.split(',') || []
+    const slotId = metadata.slotId
 
+    // Record financial transaction
     await recordFinancialTransaction({
       userId,
       transactionType: 'assessment',
@@ -601,6 +604,75 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       status: 'completed',
       description: `Assessment booking - ${dogIds.length} dog${dogIds.length > 1 ? 's' : ''}`,
     })
+
+    // Create assessment bookings if slotId is provided
+    // This is a backup in case the success page fails to create bookings
+    if (slotId && dogIds.length > 0) {
+      console.log('[Stripe Webhook] Creating assessment bookings for slot:', slotId, 'dogs:', dogIds)
+
+      // Get slot details
+      const { data: slot } = await supabase
+        .from('assessment_slots')
+        .select('*')
+        .eq('id', slotId)
+        .single()
+
+      if (slot) {
+        // Check if bookings already exist (success page may have created them)
+        const { data: existingBookings } = await supabase
+          .from('assessment_bookings')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('slot_id', slotId)
+          .in('booking_status', ['confirmed', 'pending'])
+
+        if (!existingBookings || existingBookings.length === 0) {
+          console.log('[Stripe Webhook] No existing bookings found, creating new ones')
+
+          // Create bookings for each dog
+          for (const dogId of dogIds) {
+            const { error: bookingError } = await supabase
+              .from('assessment_bookings')
+              .insert({
+                slot_id: slotId,
+                dog_id: dogId,
+                user_id: userId,
+                booking_status: 'confirmed',
+              })
+
+            if (bookingError) {
+              console.error('[Stripe Webhook] Error creating assessment booking for dog:', dogId, bookingError.message)
+            }
+          }
+
+          // Mark slot as booked
+          await supabase
+            .from('assessment_slots')
+            .update({
+              booked_by_user_id: userId,
+              is_available: false
+            })
+            .eq('id', slotId)
+
+          // Update dogs with assessment info
+          for (const dogId of dogIds) {
+            await supabase
+              .from('dogs')
+              .update({
+                assessment_date: slot.assessment_date,
+                assessment_slot_id: slotId
+              })
+              .eq('id', dogId)
+          }
+
+          console.log('[Stripe Webhook] Assessment bookings created successfully')
+        } else {
+          console.log('[Stripe Webhook] Bookings already exist, skipping creation')
+        }
+      } else {
+        console.error('[Stripe Webhook] Assessment slot not found:', slotId)
+      }
+    }
 
     // Process discount code usage if applicable
     if (metadata.discountCodeId) {

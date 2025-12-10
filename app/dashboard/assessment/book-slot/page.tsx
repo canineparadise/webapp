@@ -69,12 +69,9 @@ export default function BookAssessmentSlot() {
 
       if (error) throw error
 
-      // Filter slots that aren't full
-      const availableSlots = (data || []).filter(
-        slot => slot.booked_count < slot.max_dogs
-      )
-
-      setSlots(availableSlots)
+      // Only show slots that are available (is_available = true means no user has booked it yet)
+      // Each slot is for ONE user only (regardless of how many dogs they have)
+      setSlots(data || [])
     } catch (error) {
       console.error('Error fetching slots:', error)
       toast.error('Failed to load available slots')
@@ -415,7 +412,7 @@ export default function BookAssessmentSlot() {
                     <span>{slot.start_time.slice(0, 5)}</span>
                   </div>
                   <div className="text-[10px] mt-0.5">
-                    {slot.max_dogs - slot.booked_count} spots
+                    Available
                   </div>
                 </button>
               ))}

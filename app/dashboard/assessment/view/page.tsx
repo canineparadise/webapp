@@ -16,18 +16,39 @@ import {
   CheckCircleIcon,
   ClockIcon,
   ExclamationTriangleIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
+
+interface AssessmentBooking {
+  id: string
+  slot_id: string
+  dog_id: string
+  user_id: string
+  booking_status: string
+  booked_at: string
+  assessment_slots?: {
+    assessment_date: string
+    start_time: string
+    end_time: string
+  }
+  dogs?: {
+    id: string
+    name: string
+    breed: string
+  }
+}
 
 export default function ViewAssessmentPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [assessmentForm, setAssessmentForm] = useState<any>(null)
+  const [assessmentBookings, setAssessmentBookings] = useState<AssessmentBooking[]>([])
 
   useEffect(() => {
-    fetchAssessmentForm()
+    fetchAssessmentData()
   }, [])
 
-  const fetchAssessmentForm = async () => {
+  const fetchAssessmentData = async () => {
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) {
@@ -35,6 +56,31 @@ export default function ViewAssessmentPage() {
         return
       }
 
+      // Fetch assessment bookings with slot and dog details
+      const { data: bookings } = await supabase
+        .from('assessment_bookings')
+        .select(`
+          *,
+          assessment_slots (
+            assessment_date,
+            start_time,
+            end_time
+          ),
+          dogs (
+            id,
+            name,
+            breed
+          )
+        `)
+        .eq('user_id', user.id)
+        .in('booking_status', ['confirmed', 'pending'])
+        .order('booked_at', { ascending: false })
+
+      if (bookings && bookings.length > 0) {
+        setAssessmentBookings(bookings)
+      }
+
+      // Also fetch the assessment form for reference
       const { data: formData } = await supabase
         .from('assessment_forms')
         .select('*')
@@ -43,15 +89,17 @@ export default function ViewAssessmentPage() {
         .limit(1)
         .single()
 
-      if (!formData) {
-        router.push('/dashboard/assessment')
-        return
+      if (formData) {
+        setAssessmentForm(formData)
       }
 
-      setAssessmentForm(formData)
+      // If no bookings and no form, redirect to assessment page
+      if ((!bookings || bookings.length === 0) && !formData) {
+        router.push('/dashboard/assessment/schedule')
+        return
+      }
     } catch (error) {
-      console.error('Error fetching assessment form:', error)
-      router.push('/dashboard')
+      console.error('Error fetching assessment data:', error)
     } finally {
       setLoading(false)
     }
@@ -65,7 +113,10 @@ export default function ViewAssessmentPage() {
     )
   }
 
-  if (!assessmentForm) {
+  // If we have bookings OR a form, show the page
+  const hasContent = assessmentBookings.length > 0 || assessmentForm
+
+  if (!hasContent) {
     return null
   }
 
@@ -113,24 +164,132 @@ export default function ViewAssessmentPage() {
             <div className="flex justify-between items-start mt-4">
               <div>
                 <h1 className="text-3xl font-display font-bold text-canine-navy">
-                  Your Assessment Form
+                  {assessmentBookings.length > 0 ? 'Your Assessment Booking' : 'Your Assessment Form'}
                 </h1>
-                <p className="text-gray-600 mt-2">
-                  Submitted on {new Date(assessmentForm.created_at).toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </p>
+                {assessmentBookings.length > 0 ? (
+                  <p className="text-gray-600 mt-2">
+                    Booked on {new Date(assessmentBookings[0].booked_at).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </p>
+                ) : assessmentForm ? (
+                  <p className="text-gray-600 mt-2">
+                    Submitted on {new Date(assessmentForm.created_at).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </p>
+                ) : null}
               </div>
-              <div className={`px-4 py-2 rounded-full border ${getStatusColor(assessmentForm.status)} flex items-center gap-2`}>
-                {getStatusIcon(assessmentForm.status)}
-                <span className="font-semibold capitalize">{assessmentForm.status}</span>
-              </div>
+              {assessmentBookings.length > 0 ? (
+                <div className="px-4 py-2 rounded-full border bg-green-100 text-green-800 border-green-300 flex items-center gap-2">
+                  <CheckCircleIcon className="h-5 w-5" />
+                  <span className="font-semibold">Confirmed</span>
+                </div>
+              ) : assessmentForm ? (
+                <div className={`px-4 py-2 rounded-full border ${getStatusColor(assessmentForm.status)} flex items-center gap-2`}>
+                  {getStatusIcon(assessmentForm.status)}
+                  <span className="font-semibold capitalize">{assessmentForm.status}</span>
+                </div>
+              ) : null}
             </div>
           </div>
 
-          {/* Form Content */}
+          {/* Booked Assessment Section - Show this prominently if there are bookings */}
+          {assessmentBookings.length > 0 && (
+            <div className="bg-gradient-to-r from-canine-navy to-[#2a5a7a] rounded-2xl shadow-lg p-8 mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <CalendarDaysIcon className="h-8 w-8 text-canine-gold" />
+                <h2 className="text-2xl font-display font-bold text-white">
+                  Your Booked Assessment
+                </h2>
+              </div>
+
+              {(() => {
+                // Group bookings by slot (in case multiple dogs on same slot)
+                const slotGroups: { [key: string]: AssessmentBooking[] } = {}
+                assessmentBookings.forEach(booking => {
+                  const key = booking.slot_id
+                  if (!slotGroups[key]) {
+                    slotGroups[key] = []
+                  }
+                  slotGroups[key].push(booking)
+                })
+
+                return Object.entries(slotGroups).map(([slotId, bookings]) => {
+                  const slot = bookings[0].assessment_slots
+                  const dogs = bookings.map(b => b.dogs).filter(Boolean)
+
+                  if (!slot) return null
+
+                  const formattedDate = new Date(slot.assessment_date).toLocaleDateString('en-GB', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })
+
+                  return (
+                    <div key={slotId} className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-4 last:mb-0">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                          <p className="text-canine-gold font-semibold text-sm mb-1">Assessment Day</p>
+                          <p className="text-2xl font-bold text-white">{formattedDate}</p>
+                          <p className="text-white/80 mt-1">
+                            {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-col items-start md:items-end gap-2">
+                          <span className="px-4 py-2 bg-green-500 text-white rounded-full font-semibold text-sm flex items-center gap-2">
+                            <CheckCircleIcon className="h-5 w-5" />
+                            Confirmed
+                          </span>
+                          <p className="text-white/80 text-sm">
+                            {dogs.length} dog{dogs.length !== 1 ? 's' : ''}: {dogs.map(d => d?.name).join(', ')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-6 pt-6 border-t border-white/20">
+                        <h4 className="text-white font-semibold mb-3">What to bring:</h4>
+                        <ul className="grid md:grid-cols-2 gap-2 text-white/90 text-sm">
+                          <li className="flex items-center gap-2">
+                            <CheckCircleIcon className="h-4 w-4 text-canine-gold" />
+                            Your dog(s) on a lead
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <CheckCircleIcon className="h-4 w-4 text-canine-gold" />
+                            Vaccination records
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <CheckCircleIcon className="h-4 w-4 text-canine-gold" />
+                            Any medications needed
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <CheckCircleIcon className="h-4 w-4 text-canine-gold" />
+                            Your dog's favourite treats
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  )
+                })
+              })()}
+
+              <div className="mt-6 p-4 bg-amber-500/20 rounded-lg border border-amber-500/30">
+                <p className="text-amber-200 text-sm">
+                  <strong>Important:</strong> Please arrive 10 minutes before your scheduled time. If you need to reschedule, contact us at least 24 hours in advance.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Form Content - Only show if form exists */}
+          {assessmentForm && (
           <div className="bg-white rounded-2xl shadow-lg p-8 space-y-8">
 
             {/* Owner Information */}
@@ -380,6 +539,7 @@ export default function ViewAssessmentPage() {
               </div>
             )}
           </div>
+          )}
 
           {/* Actions */}
           <div className="mt-8 flex justify-between items-center">
@@ -388,12 +548,18 @@ export default function ViewAssessmentPage() {
                 Back to Dashboard
               </button>
             </Link>
-            {assessmentForm.status === 'pending' && (
-              <div className="text-amber-600 font-medium">
-                Your assessment is under review. We'll contact you soon!
+            {assessmentBookings.length > 0 && (
+              <div className="text-green-600 font-medium flex items-center gap-2">
+                <CheckCircleIcon className="h-5 w-5" />
+                Assessment booked and confirmed!
               </div>
             )}
-            {assessmentForm.status === 'approved' && (
+            {!assessmentBookings.length && assessmentForm?.status === 'pending' && (
+              <div className="text-amber-600 font-medium">
+                Your assessment form is under review. We'll contact you soon!
+              </div>
+            )}
+            {assessmentForm?.status === 'approved' && (
               <Link href="/dashboard/booking">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
