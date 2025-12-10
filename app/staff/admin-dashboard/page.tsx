@@ -743,7 +743,7 @@ export default function AdminDashboard() {
           profiles:user_id (first_name, last_name, phone)
         `)
         .eq('booking_date', today)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'checked_in', 'completed'])
 
       const { data: todayIndividualBookings } = await supabase
         .from('individual_day_bookings')
@@ -753,7 +753,7 @@ export default function AdminDashboard() {
           dogs:dog_id (id, name, breed, photo_url, owner_id, profiles:owner_id (first_name, last_name, email, phone))
         `)
         .eq('booking_date', today)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'checked_in', 'completed'])
 
       // Process subscription bookings (OLD SCHEMA: dog_id not dog_ids)
       const subscriptionWithDogs = await Promise.all(
@@ -775,7 +775,7 @@ export default function AdminDashboard() {
         ...booking,
         dogs: booking.dogs ? [booking.dogs] : [],
         booking_type: 'individual',
-        session_type: 'full_day' // Individual bookings are always full day
+        session_type: booking.session_type || 'full_day'
       }))
 
       // Combine both types

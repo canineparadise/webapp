@@ -29,8 +29,10 @@ interface Booking {
   checked_in_at: string | null
   checked_out_at: string | null
   dog_ids: string[]
+  dog_id?: string
   total_dogs: number
   user_id: string
+  booking_type: 'subscription' | 'individual'
   profiles: {
     first_name: string
     last_name: string
@@ -91,35 +93,79 @@ export default function CheckInPage() {
   const fetchBookings = async () => {
     setLoading(true)
     try {
-      // Fetch today's bookings
-      const { data: bookingsData, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          profiles:user_id (first_name, last_name, phone, email)
-        `)
-        .eq('booking_date', selectedDate)
-        .in('status', ['confirmed', 'checked_in', 'completed'])
-        .order('session_start_time', { ascending: true })
+      // Fetch subscription bookings and individual day bookings
+      const [{ data: subscriptionBookings, error: subError }, { data: individualBookings, error: indError }] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select(`
+            *,
+            profiles:user_id (first_name, last_name, phone, email)
+          `)
+          .eq('booking_date', selectedDate)
+          .in('status', ['confirmed', 'checked_in', 'completed'])
+          .order('session_start_time', { ascending: true }),
+        supabase
+          .from('individual_day_bookings')
+          .select(`
+            *,
+            profiles:user_id (first_name, last_name, phone, email)
+          `)
+          .eq('booking_date', selectedDate)
+          .in('status', ['confirmed', 'checked_in', 'completed'])
+          .order('created_at', { ascending: true })
+      ])
 
-      if (error) throw error
+      if (subError) throw subError
+      if (indError) throw indError
 
-      // Fetch dog details for each booking
-      const bookingsWithDogs = await Promise.all(
-        (bookingsData || []).map(async (booking) => {
+      // Process subscription bookings (uses dog_ids array)
+      const subscriptionWithDogs = await Promise.all(
+        (subscriptionBookings || []).map(async (booking) => {
+          const dogIds = booking.dog_ids || (booking.dog_id ? [booking.dog_id] : [])
           const { data: dogsData } = await supabase
             .from('dogs')
             .select('id, name, breed, photo_url')
-            .in('id', booking.dog_ids)
+            .in('id', dogIds)
 
           return {
             ...booking,
-            dogs: dogsData || []
+            dogs: dogsData || [],
+            total_dogs: dogsData?.length || 0,
+            booking_type: 'subscription' as const
           }
         })
       )
 
-      setBookings(bookingsWithDogs)
+      // Process individual day bookings (uses dog_id singular)
+      const individualWithDogs = await Promise.all(
+        (individualBookings || []).map(async (booking) => {
+          const { data: dogsData } = await supabase
+            .from('dogs')
+            .select('id, name, breed, photo_url')
+            .eq('id', booking.dog_id)
+
+          return {
+            ...booking,
+            dogs: dogsData || [],
+            total_dogs: dogsData?.length || 0,
+            dog_ids: booking.dog_id ? [booking.dog_id] : [],
+            session_type: booking.session_type || 'full_day',
+            session_start_time: booking.session_type === 'half_day' ? '10:00' : '07:00',
+            session_end_time: booking.session_type === 'half_day' ? '14:00' : '19:00',
+            booking_type: 'individual' as const
+          }
+        })
+      )
+
+      // Combine and sort all bookings
+      const allBookings = [...subscriptionWithDogs, ...individualWithDogs]
+      allBookings.sort((a, b) => {
+        const timeA = a.session_start_time || '07:00'
+        const timeB = b.session_start_time || '07:00'
+        return timeA.localeCompare(timeB)
+      })
+
+      setBookings(allBookings)
     } catch (error) {
       console.error('Error fetching bookings:', error)
       toast.error('Failed to load bookings')
@@ -128,22 +174,26 @@ export default function CheckInPage() {
     }
   }
 
-  const handleCheckIn = async (bookingId: string) => {
+  const handleCheckIn = async (booking: Booking) => {
     setProcessing(true)
     try {
-      const { data, error } = await supabase.rpc('check_in_dog', {
-        p_booking_id: bookingId,
-        p_staff_id: staffId
-      })
+      // Determine which table to update based on booking type
+      const table = booking.booking_type === 'individual' ? 'individual_day_bookings' : 'bookings'
+
+      const { error } = await supabase
+        .from(table)
+        .update({
+          checked_in: true,
+          checked_in_at: new Date().toISOString(),
+          checked_in_by: staffId,
+          status: 'checked_in'
+        })
+        .eq('id', booking.id)
 
       if (error) throw error
 
-      if (data.success) {
-        toast.success(data.message)
-        fetchBookings() // Refresh
-      } else {
-        toast.error(data.error)
-      }
+      toast.success('Dog(s) checked in successfully!')
+      fetchBookings() // Refresh
     } catch (error: any) {
       console.error('Check-in error:', error)
       toast.error(error.message || 'Failed to check in')
@@ -163,23 +213,27 @@ export default function CheckInPage() {
 
     setProcessing(true)
     try {
-      const { data, error } = await supabase.rpc('check_out_dog', {
-        p_booking_id: selectedBooking.id,
-        p_staff_id: staffId,
-        p_notes: checkOutNotes || null
-      })
+      // Determine which table to update based on booking type
+      const table = selectedBooking.booking_type === 'individual' ? 'individual_day_bookings' : 'bookings'
+
+      const { error } = await supabase
+        .from(table)
+        .update({
+          checked_out: true,
+          checked_out_at: new Date().toISOString(),
+          checked_out_by: staffId,
+          staff_notes: checkOutNotes || null,
+          status: 'completed'
+        })
+        .eq('id', selectedBooking.id)
 
       if (error) throw error
 
-      if (data.success) {
-        toast.success(data.message)
-        setShowCheckOutModal(false)
-        setSelectedBooking(null)
-        setCheckOutNotes('')
-        fetchBookings() // Refresh
-      } else {
-        toast.error(data.error)
-      }
+      toast.success('Dog(s) checked out successfully!')
+      setShowCheckOutModal(false)
+      setSelectedBooking(null)
+      setCheckOutNotes('')
+      fetchBookings() // Refresh
     } catch (error: any) {
       console.error('Check-out error:', error)
       toast.error(error.message || 'Failed to check out')
@@ -306,7 +360,7 @@ export default function CheckInPage() {
                     <div className="flex gap-2">
                       {!booking.checked_in && (
                         <button
-                          onClick={() => handleCheckIn(booking.id)}
+                          onClick={() => handleCheckIn(booking)}
                           disabled={processing}
                           className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                         >

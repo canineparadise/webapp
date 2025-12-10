@@ -532,7 +532,7 @@ export default function StaffDashboard() {
           `)
           .gte('booking_date', currentDate)
           .lte('booking_date', endDate.toISOString().split('T')[0])
-          .eq('status', 'confirmed')
+          .in('status', ['confirmed', 'checked_in', 'completed'])
           .order('booking_date', { ascending: true }),
         supabase
           .from('individual_day_bookings')
@@ -543,7 +543,7 @@ export default function StaffDashboard() {
           `)
           .gte('booking_date', currentDate)
           .lte('booking_date', endDate.toISOString().split('T')[0])
-          .eq('status', 'confirmed')
+          .in('status', ['confirmed', 'checked_in', 'completed'])
           .order('booking_date', { ascending: true })
       ])
 
