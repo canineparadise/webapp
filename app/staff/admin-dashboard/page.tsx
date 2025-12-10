@@ -393,7 +393,7 @@ export default function AdminDashboard() {
 
   // Assessment calendar state
   const [assessmentCalendarMonth, setAssessmentCalendarMonth] = useState(new Date())
-  const [scheduledAssessments, setScheduledAssessments] = useState<{date: string, dogs: Dog[]}[]>([])
+  const [scheduledAssessments, setScheduledAssessments] = useState<{date: string, start_time?: string, end_time?: string, dogs: (Dog & {assessment_time?: string})[]}[]>([])
   const [allDogs, setAllDogs] = useState<Dog[]>([])
   const [filteredDogs, setFilteredDogs] = useState<Dog[]>([])
   const [dogSearchQuery, setDogSearchQuery] = useState('')
@@ -1550,6 +1550,7 @@ export default function AdminDashboard() {
             ...dogRes.data,
             assessment_date: slotRes.data?.assessment_date,
             assessment_time: slotRes.data?.start_time,
+            assessment_end_time: slotRes.data?.end_time,
             booking_id: booking.id
           }
         })
@@ -1562,21 +1563,28 @@ export default function AdminDashboard() {
         dog.assessment_date <= endOfMonth.toISOString().split('T')[0]
       )
 
-      // Group dogs by assessment date
-      const grouped: { [date: string]: Dog[] } = {}
-      dogsInMonth.forEach((dog) => {
+      // Group dogs by assessment date and time
+      const grouped: { [key: string]: { date: string, start_time?: string, end_time?: string, dogs: any[] } } = {}
+      dogsInMonth.forEach((dog: any) => {
         if (dog.assessment_date) {
-          if (!grouped[dog.assessment_date]) {
-            grouped[dog.assessment_date] = []
+          const key = `${dog.assessment_date}_${dog.assessment_time || ''}`
+          if (!grouped[key]) {
+            grouped[key] = {
+              date: dog.assessment_date,
+              start_time: dog.assessment_time,
+              end_time: dog.assessment_end_time,
+              dogs: []
+            }
           }
-          grouped[dog.assessment_date].push(dog)
+          grouped[key].dogs.push(dog)
         }
       })
 
-      const assessmentsList = Object.keys(grouped).map(date => ({
-        date,
-        dogs: grouped[date]
-      }))
+      const assessmentsList = Object.values(grouped).sort((a, b) => {
+        const dateCompare = a.date.localeCompare(b.date)
+        if (dateCompare !== 0) return dateCompare
+        return (a.start_time || '').localeCompare(b.start_time || '')
+      })
 
       setScheduledAssessments(assessmentsList)
     } catch (error) {
@@ -3430,12 +3438,19 @@ export default function AdminDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {scheduledAssessments.map((assessment) => (
-                      <div key={assessment.date} className="bg-canine-cream rounded-lg p-4 border-2 border-canine-gold/30">
+                    {scheduledAssessments.map((assessment, idx) => (
+                      <div key={`${assessment.date}_${idx}`} className="bg-canine-cream rounded-lg p-4 border-2 border-canine-gold/30">
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-bold text-canine-navy">
-                            {new Date(assessment.date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long' })}
-                          </h4>
+                          <div>
+                            <h4 className="font-bold text-canine-navy">
+                              {new Date(assessment.date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long' })}
+                            </h4>
+                            {assessment.start_time && (
+                              <p className="text-sm text-canine-gold font-semibold">
+                                {assessment.start_time.slice(0, 5)} - {assessment.end_time?.slice(0, 5) || ''}
+                              </p>
+                            )}
+                          </div>
                           <span className="bg-canine-gold text-white px-3 py-1 rounded-full text-sm font-semibold">
                             {assessment.dogs.length} dog{assessment.dogs.length !== 1 ? 's' : ''}
                           </span>
