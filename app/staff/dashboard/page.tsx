@@ -62,8 +62,8 @@ interface Dog {
 
 interface DogWithBooking extends Dog {
   booking_id: string
-  check_in_time?: string
-  check_out_time?: string
+  checked_in_at?: string
+  checked_out_at?: string
 }
 
 interface PlayGroup {
@@ -416,14 +416,14 @@ export default function StaffDashboard() {
           const dogWithBooking: DogWithBooking = {
             ...dog,
             booking_id: booking.id,
-            check_in_time: booking.check_in_time,
-            check_out_time: booking.check_out_time,
+            checked_in_at: booking.checked_in_at,
+            checked_out_at: booking.checked_out_at,
             special_instructions: booking.special_instructions
           }
 
-          if (booking.check_out_time) {
+          if (booking.checked_out_at) {
             checkedOut.push(dogWithBooking)
-          } else if (booking.check_in_time) {
+          } else if (booking.checked_in_at) {
             checkedIn.push(dogWithBooking)
           } else {
             notCheckedIn.push(dogWithBooking)
@@ -438,14 +438,14 @@ export default function StaffDashboard() {
           const dogWithBooking: DogWithBooking = {
             ...dog,
             booking_id: booking.id,
-            check_in_time: booking.check_in_time,
-            check_out_time: booking.check_out_time,
+            checked_in_at: booking.checked_in_at,
+            checked_out_at: booking.checked_out_at,
             special_instructions: booking.special_instructions || booking.notes
           }
 
-          if (booking.check_out_time) {
+          if (booking.checked_out_at) {
             checkedOut.push(dogWithBooking)
-          } else if (booking.check_in_time) {
+          } else if (booking.checked_in_at) {
             checkedIn.push(dogWithBooking)
           } else {
             notCheckedIn.push(dogWithBooking)
@@ -988,7 +988,10 @@ export default function StaffDashboard() {
       const { error } = await supabase
         .from('bookings')
         .update({
-          check_in_time: new Date().toISOString()
+          checked_in: true,
+          checked_in_at: new Date().toISOString(),
+          checked_in_by: staffId,
+          status: 'checked_in'
         })
         .eq('id', selectedBookingDog.booking_id)
 
@@ -1011,7 +1014,10 @@ export default function StaffDashboard() {
       const { error } = await supabase
         .from('bookings')
         .update({
-          check_out_time: new Date().toISOString()
+          checked_out: true,
+          checked_out_at: new Date().toISOString(),
+          checked_out_by: staffId,
+          status: 'completed'
         })
         .eq('id', selectedBookingDog.booking_id)
 
@@ -1886,9 +1892,9 @@ export default function StaffDashboard() {
                                   <p className="text-sm text-gray-600">{dog.breed}</p>
                                   <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
                                   <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
-                                  {dog.check_in_time && (
+                                  {dog.checked_in_at && (
                                     <p className="text-xs text-green-700 font-semibold">
-                                      In: {new Date(dog.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                      In: {new Date(dog.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                   )}
                                 </div>
@@ -1945,9 +1951,9 @@ export default function StaffDashboard() {
                                 <p className="text-sm text-gray-600">{dog.breed}</p>
                                 <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
                                 <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
-                                {dog.check_out_time && (
+                                {dog.checked_out_at && (
                                   <p className="text-xs text-gray-700 font-semibold">
-                                    Out: {new Date(dog.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    Out: {new Date(dog.checked_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                   </p>
                                 )}
                               </div>

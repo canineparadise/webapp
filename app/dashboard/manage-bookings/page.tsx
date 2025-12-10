@@ -32,8 +32,8 @@ interface Booking {
   refund_status?: string
   amount?: number
   payment_method?: string
-  check_in_time?: string
-  check_out_time?: string
+  checked_in_at?: string
+  checked_out_at?: string
   dogs?: {
     id: string
     name: string
