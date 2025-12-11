@@ -58,14 +58,14 @@ export default function Dashboard() {
       }
       setUser(user)
 
+      // Optimized: Fetch bookings once instead of twice (removed duplicate upcoming queries)
+      const today = new Date().toISOString().split('T')[0]
       const [
         profileRes,
         legalRes,
         dogsRes,
         subscriptionRes,
-        bookingsRes,
         allBookingsRes,
-        individualDayBookingsRes,
         allIndividualDayBookingsRes,
         assessmentBookingsRes
       ] = await Promise.all([
@@ -73,9 +73,7 @@ export default function Dashboard() {
         supabase.from('legal_agreements').select('*').eq('user_id', user.id).maybeSingle(),
         supabase.from('dogs').select('*').eq('owner_id', user.id).order('created_at', { ascending: true }),
         supabase.from('subscriptions').select('*, subscription_tiers:tier_id(name), dogs(name)').eq('user_id', user.id).eq('is_active', true),
-        supabase.from('bookings').select('*').eq('user_id', user.id).gte('booking_date', new Date().toISOString().split('T')[0]).order('booking_date', { ascending: true }).limit(3),
         supabase.from('bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }).limit(100),
-        supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).gte('booking_date', new Date().toISOString().split('T')[0]).order('booking_date', { ascending: true }).limit(3),
         supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }).limit(100),
         supabase.from('assessment_bookings').select(`
           *,
@@ -91,6 +89,16 @@ export default function Dashboard() {
           )
         `).eq('user_id', user.id).in('booking_status', ['confirmed', 'pending']).order('booked_at', { ascending: false })
       ])
+
+      // Filter upcoming bookings from the full list (saves 2 database queries)
+      const upcomingSubscriptionBookings = (allBookingsRes.data || [])
+        .filter(b => b.booking_date >= today)
+        .sort((a, b) => new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime())
+        .slice(0, 3)
+      const upcomingIndividualBookings = (allIndividualDayBookingsRes.data || [])
+        .filter(b => b.booking_date >= today)
+        .sort((a, b) => new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime())
+        .slice(0, 3)
 
       setProfile(profileRes.data)
       setLegalAgreements(legalRes.data)
@@ -120,8 +128,8 @@ export default function Dashboard() {
 
       // Merge subscription bookings and individual day bookings
       const upcomingBookingsCombined = [
-        ...(bookingsRes.data || []),
-        ...(individualDayBookingsRes.data || [])
+        ...upcomingSubscriptionBookings,
+        ...upcomingIndividualBookings
       ].sort((a, b) => new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime()).slice(0, 3)
 
       const allBookingsCombined = [
@@ -133,8 +141,8 @@ export default function Dashboard() {
       setAllBookings(allBookingsCombined)
 
       const booked = [
-        ...(bookingsRes.data?.map(b => b.booking_date) || []),
-        ...(individualDayBookingsRes.data?.map(b => b.booking_date) || [])
+        ...upcomingSubscriptionBookings.map(b => b.booking_date),
+        ...upcomingIndividualBookings.map(b => b.booking_date)
       ]
       setBookedDates(booked)
 

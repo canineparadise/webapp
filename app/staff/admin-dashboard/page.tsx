@@ -1481,24 +1481,32 @@ export default function AdminDashboard() {
         .eq('booking_date', date)
         .eq('status', 'confirmed')
 
-      // Process subscription bookings
-      const subscriptionBookingsWithDogs = await Promise.all(
-        (bookingsData || []).map(async (booking) => {
-          const { data: dogsData } = await supabase
-            .from('dogs')
-            .select(`
-              *,
-              owner:profiles!dogs_owner_id_fkey (first_name, last_name, email, phone, address)
-            `)
-            .in('id', booking.dog_ids)
+      // Process subscription bookings - batch fetch all dogs in ONE query instead of N+1
+      const allDogIds = (bookingsData || []).flatMap(b => b.dog_ids || []).filter(Boolean)
+      const uniqueDogIds = Array.from(new Set(allDogIds))
 
-          return {
-            ...booking,
-            dogs: dogsData || [],
-            booking_type: 'subscription'
-          }
-        })
-      )
+      let dogsMap: Record<string, any> = {}
+      if (uniqueDogIds.length > 0) {
+        const { data: allDogsData } = await supabase
+          .from('dogs')
+          .select(`
+            id, name, breed, size, photo_url, owner_id,
+            owner:profiles!dogs_owner_id_fkey (first_name, last_name, email, phone, address)
+          `)
+          .in('id', uniqueDogIds)
+
+        // Create lookup map
+        dogsMap = (allDogsData || []).reduce((acc, dog) => {
+          acc[dog.id] = dog
+          return acc
+        }, {} as Record<string, any>)
+      }
+
+      const subscriptionBookingsWithDogs = (bookingsData || []).map(booking => ({
+        ...booking,
+        dogs: (booking.dog_ids || []).map((id: string) => dogsMap[id]).filter(Boolean),
+        booking_type: 'subscription'
+      }))
 
       // Transform individual bookings to match format
       const individualBookingsWithDogs = (individualBookingsData || []).map((booking: any) => ({
@@ -1554,26 +1562,45 @@ export default function AdminDashboard() {
         `)
         .eq('booking_status', 'confirmed')
 
-      // Fetch related data for each booking
-      const enrichedData = await Promise.all(
-        (bookingsData || []).map(async (booking) => {
-          const [slotRes, dogRes] = await Promise.all([
-            supabase.from('assessment_slots').select('*').eq('id', booking.slot_id).single(),
-            supabase.from('dogs').select(`
-              *,
-              owner:profiles!dogs_owner_id_fkey (first_name, last_name, email, phone)
-            `).eq('id', booking.dog_id).single()
-          ])
+      // Batch fetch all slots and dogs in TWO queries instead of N+1
+      const slotIds = Array.from(new Set((bookingsData || []).map(b => b.slot_id).filter(Boolean)))
+      const dogIds = Array.from(new Set((bookingsData || []).map(b => b.dog_id).filter(Boolean)))
 
-          return {
-            ...dogRes.data,
-            assessment_date: slotRes.data?.assessment_date,
-            assessment_time: slotRes.data?.start_time,
-            assessment_end_time: slotRes.data?.end_time,
-            booking_id: booking.id
-          }
-        })
-      )
+      const [slotsRes, dogsRes] = await Promise.all([
+        slotIds.length > 0
+          ? supabase.from('assessment_slots').select('*').in('id', slotIds)
+          : Promise.resolve({ data: [] }),
+        dogIds.length > 0
+          ? supabase.from('dogs').select(`
+              id, name, breed, photo_url, owner_id,
+              owner:profiles!dogs_owner_id_fkey (first_name, last_name, email, phone)
+            `).in('id', dogIds)
+          : Promise.resolve({ data: [] })
+      ])
+
+      // Create lookup maps
+      const slotsMap = (slotsRes.data || []).reduce((acc, slot) => {
+        acc[slot.id] = slot
+        return acc
+      }, {} as Record<string, any>)
+
+      const dogsMap = (dogsRes.data || []).reduce((acc, dog) => {
+        acc[dog.id] = dog
+        return acc
+      }, {} as Record<string, any>)
+
+      // Enrich bookings using maps
+      const enrichedData = (bookingsData || []).map(booking => {
+        const slot = slotsMap[booking.slot_id]
+        const dog = dogsMap[booking.dog_id]
+        return {
+          ...dog,
+          assessment_date: slot?.assessment_date,
+          assessment_time: slot?.start_time,
+          assessment_end_time: slot?.end_time,
+          booking_id: booking.id
+        }
+      }).filter(d => d.id)
 
       // Filter for the selected month
       const dogsInMonth = enrichedData.filter(dog =>
