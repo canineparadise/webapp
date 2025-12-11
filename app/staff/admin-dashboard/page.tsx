@@ -546,27 +546,46 @@ export default function AdminDashboard() {
   const [taskFilterPriority, setTaskFilterPriority] = useState<string>('all')
   const [taskFilterStatus, setTaskFilterStatus] = useState<string>('all')
 
+  // OPTIMIZED: Only load essential data on initial load
+  // Other data is lazy-loaded when tabs are accessed
   useEffect(() => {
     fetchAdminProfile()
     fetchDashboardData()
-    fetchPlayGroups()
-    fetchSubscriptionTiers()
-    fetchCancelledSubscriptions()
     fetchSettings()
-    fetchRecurringSlots()
-    fetchSections()
-    fetchClosedDays()
-    fetchLegalAgreements()
-    fetchDogMedications()
-    fetchIncidents()
-    fetchFinancialTransactions()
-    fetchAllBookings()
-    fetchStaffActivityLog()
-    fetchDiscountUsages()
-    fetchRefundRequests()
-    fetchStaffAssignments()
-    fetchStaffTasks()
   }, [])
+
+  // Lazy load data when specific tabs are accessed
+  useEffect(() => {
+    if (activeTab === 'all_bookings') {
+      fetchAllBookings()
+    } else if (activeTab === 'playgroups') {
+      fetchPlayGroups()
+      fetchSections()
+    } else if (activeTab === 'subscriptions' || activeTab === 'cancellations') {
+      fetchSubscriptionTiers()
+      fetchCancelledSubscriptions()
+    } else if (activeTab === 'legal') {
+      fetchLegalAgreements()
+    } else if (activeTab === 'medications') {
+      fetchDogMedications()
+    } else if (activeTab === 'incidents') {
+      fetchIncidents()
+    } else if (activeTab === 'transactions' || activeTab === 'monthly_revenue') {
+      fetchFinancialTransactions()
+    } else if (activeTab === 'staff_activity') {
+      fetchStaffActivityLog()
+    } else if (activeTab === 'discounts') {
+      fetchDiscountUsages()
+    } else if (activeTab === 'refund_requests') {
+      fetchRefundRequests()
+    } else if (activeTab === 'staff_schedule') {
+      fetchStaffAssignments()
+      fetchStaffTasks()
+    } else if (activeTab === 'assessments') {
+      fetchRecurringSlots()
+      fetchClosedDays()
+    }
+  }, [activeTab])
 
   useEffect(() => {
     fetchScheduleForDate(selectedDate)
@@ -819,41 +838,48 @@ export default function AdminDashboard() {
         })
       }
 
-      // Calculate weekly stats (next 7 days) - include both booking types
-      const weeklyData = []
+      // Calculate weekly stats (next 7 days) - OPTIMIZED: 2 queries instead of 14
+      const weekDates: string[] = []
       for (let i = 0; i < 7; i++) {
         const date = new Date()
         date.setDate(date.getDate() + i)
-        const dateStr = date.toISOString().split('T')[0]
+        weekDates.push(date.toISOString().split('T')[0])
+      }
+
+      // Batch fetch all bookings for the week in 2 queries
+      const [{ data: weekSubBookings }, { data: weekIndBookings }] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select('booking_date, session_type')
+          .in('booking_date', weekDates)
+          .in('status', ['confirmed', 'checked_in', 'completed']),
+        supabase
+          .from('individual_day_bookings')
+          .select('booking_date')
+          .in('booking_date', weekDates)
+          .in('status', ['confirmed', 'checked_in', 'completed'])
+      ])
+
+      // Process data by day
+      const weeklyData = weekDates.map(dateStr => {
+        const date = new Date(dateStr)
         const dayName = date.toLocaleDateString('en-GB', { weekday: 'short' })
 
-        // Get subscription bookings (OLD SCHEMA: dog_id not dog_ids)
-        // Include confirmed, checked_in, and completed statuses
-        const { data: daySubscriptionBookings } = await supabase
-          .from('bookings')
-          .select('session_type, dog_id')
-          .eq('booking_date', dateStr)
-          .in('status', ['confirmed', 'checked_in', 'completed'])
+        const daySubBookings = (weekSubBookings || []).filter(b => b.booking_date === dateStr)
+        const dayIndBookings = (weekIndBookings || []).filter(b => b.booking_date === dateStr)
 
-        // Get individual bookings
-        const { data: dayIndividualBookings } = await supabase
-          .from('individual_day_bookings')
-          .select('id')
-          .eq('booking_date', dateStr)
-          .in('status', ['confirmed', 'checked_in', 'completed'])
+        const subFullDay = daySubBookings.filter(b => b.session_type === 'full_day').length
+        const subHalfDay = daySubBookings.filter(b => b.session_type === 'half_day').length
+        const indFullDay = dayIndBookings.length
 
-        const subFullDay = daySubscriptionBookings?.filter(b => b.session_type === 'full_day').length || 0
-        const subHalfDay = daySubscriptionBookings?.filter(b => b.session_type === 'half_day').length || 0
-        const indFullDay = dayIndividualBookings?.length || 0 // Each individual booking is 1 dog
-
-        weeklyData.push({
+        return {
           day: dayName,
           date: dateStr,
           fullDay: subFullDay + indFullDay,
           halfDay: subHalfDay,
           total: subFullDay + indFullDay + subHalfDay
-        })
-      }
+        }
+      })
       setWeeklyStats(weeklyData)
 
       // Monthly revenue - Calculate from subscriptions, individual days, and assessments
