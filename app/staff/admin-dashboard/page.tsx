@@ -1019,12 +1019,11 @@ export default function AdminDashboard() {
             .gt('price', 0)
             .gte('booking_date', firstDayOfMonth)
             .lte('booking_date', lastDayOfMonth),
-          // Assessment bookings with slot_id
+          // Assessment bookings with slot_id (confirmed = paid)
           supabase
             .from('assessment_bookings')
             .select('id, slot_id, booked_at')
-            .eq('booking_status', 'confirmed')
-            .eq('payment_status', 'paid'),
+            .eq('booking_status', 'confirmed'),
           // Assessment slots to get dates
           supabase
             .from('assessment_slots')
