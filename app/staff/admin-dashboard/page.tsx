@@ -771,6 +771,8 @@ export default function AdminDashboard() {
       const today = new Date().toISOString().split('T')[0]
       const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
       const lastDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+      // For datetime comparisons, use end of day for last day of month
+      const lastDayOfMonthEndOfDay = lastDayOfMonth + 'T23:59:59.999Z'
 
       // Total dogs in system - ALL DOGS (approved and pending)
       const { count: dogsCount } = await supabase
@@ -913,11 +915,12 @@ export default function AdminDashboard() {
       // Monthly revenue - Calculate from subscriptions, individual days, and assessments
       try {
         // Get subscription signups this month (actual payments received)
+        // Use proper datetime range: from start of first day to end of last day
         const { data: subscriptionRevenueData } = await supabase
           .from('subscriptions')
           .select('monthly_price, created_at')
-          .gte('created_at', firstDayOfMonth)
-          .lte('created_at', lastDayOfMonth)
+          .gte('created_at', firstDayOfMonth + 'T00:00:00.000Z')
+          .lte('created_at', lastDayOfMonthEndOfDay)
           .eq('payment_status', 'paid')
 
         // Get individual day bookings revenue - only count non-free bookings
@@ -929,13 +932,13 @@ export default function AdminDashboard() {
           .eq('payment_status', 'paid')
           .gt('price', 0) // Exclude 100% discount (free) bookings
 
-        // Get assessment bookings with discount info
+        // Get assessment bookings with discount info (payments received this month)
         const { data: assessmentRevenueData } = await supabase
           .from('assessment_bookings')
           .select('id, slot_id, booked_at, user_id')
           .eq('booking_status', 'confirmed')
-          .gte('booked_at', firstDayOfMonth)
-          .lte('booked_at', lastDayOfMonth)
+          .gte('booked_at', firstDayOfMonth + 'T00:00:00.000Z')
+          .lte('booked_at', lastDayOfMonthEndOfDay)
 
         // Get discount usage for all bookings this month (only if table exists)
         const discountUsageResult = await supabase
@@ -949,9 +952,11 @@ export default function AdminDashboard() {
 
         // Calculate subscription revenue (payments received this month)
         const subscriptionRev = subscriptionRevenueData?.reduce((sum, s) => sum + Number(s.monthly_price || 0), 0) || 0
+        console.log('📊 Subscriptions this month:', subscriptionRevenueData?.length || 0, 'total:', subscriptionRev)
 
         // Individual day revenue from paid bookings (already excludes free ones with price > 0 filter)
         const individualRev = individualRevenueData?.reduce((sum, b) => sum + (b.price || 0), 0) || 0
+        console.log('📊 Individual days this month:', individualRevenueData?.length || 0, 'total:', individualRev)
 
         const bookingsRev = subscriptionRev + individualRev
 
