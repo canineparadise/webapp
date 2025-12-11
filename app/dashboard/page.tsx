@@ -74,9 +74,9 @@ export default function Dashboard() {
         supabase.from('dogs').select('*').eq('owner_id', user.id).order('created_at', { ascending: true }),
         supabase.from('subscriptions').select('*, subscription_tiers:tier_id(name), dogs(name)').eq('user_id', user.id).eq('is_active', true),
         supabase.from('bookings').select('*').eq('user_id', user.id).gte('booking_date', new Date().toISOString().split('T')[0]).order('booking_date', { ascending: true }).limit(3),
-        supabase.from('bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }),
+        supabase.from('bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }).limit(100),
         supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).gte('booking_date', new Date().toISOString().split('T')[0]).order('booking_date', { ascending: true }).limit(3),
-        supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }),
+        supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }).limit(100),
         supabase.from('assessment_bookings').select(`
           *,
           assessment_slots (

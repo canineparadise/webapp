@@ -739,12 +739,8 @@ export default function SubscribeDogsPage() {
                       {tiers
                         .filter(tier => {
                           const sessionType = dogSelections[dog.id]?.sessionType || 'full_day'
-                          // Filter tiers based on session type
-                          if (sessionType === 'full_day') {
-                            return !tier.name.toLowerCase().includes('half')
-                          } else {
-                            return tier.name.toLowerCase().includes('half')
-                          }
+                          // Filter tiers based on session type - use the tier's session_type column
+                          return tier.session_type === sessionType
                         })
                         .map((tier, tierIndex) => {
                         const isSelected = dogSelections[dog.id]?.tierId === tier.id

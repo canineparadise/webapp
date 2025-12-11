@@ -25,6 +25,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import GoldenPawBadge from '@/components/GoldenPawBadge'
 
 type TabType = 'today' | 'rollcall' | 'schedule' | 'assessments' | 'feeding' | 'medications' | 'incidents' | 'playgroups'
 type AssessmentView = 'calendar' | 'approvals'
@@ -65,6 +66,9 @@ interface DogWithBooking extends Dog {
   checked_in_at?: string
   checked_out_at?: string
   checkout_password?: string
+  booking_type?: 'subscription' | 'individual'
+  session_type?: 'full_day' | 'half_day'
+  is_vip_member?: boolean
 }
 
 interface PlayGroup {
@@ -384,25 +388,25 @@ export default function StaffDashboard() {
         return
       }
 
-      // Get all dogs attending today with full details
+      // Get all dogs attending today with full details including owner VIP status
       const { data: dogsData } = await supabase
         .from('dogs')
         .select(`
           *,
-          owner:profiles!dogs_owner_id_fkey (first_name, last_name, phone, email)
+          owner:profiles!dogs_owner_id_fkey (first_name, last_name, phone, email, is_vip_member, vip_badge_type)
         `)
         .in('id', todayDogIds)
 
-      // Get bookings with check-in/out times from both tables
+      // Get bookings with check-in/out times and session_type from both tables
       const [{ data: bookingsWithTimes }, { data: individualBookingsWithTimes }] = await Promise.all([
         supabase
           .from('bookings')
-          .select('*')
+          .select('*, subscriptions:subscription_id(session_type, subscription_tiers:tier_id(name))')
           .eq('booking_date', currentDate)
           .in('status', ['confirmed', 'checked_in', 'completed']),
         supabase
           .from('individual_day_bookings')
-          .select('*')
+          .select('*, session_type')
           .eq('booking_date', currentDate)
           .in('status', ['confirmed', 'checked_in', 'completed'])
       ])
@@ -416,12 +420,16 @@ export default function StaffDashboard() {
       bookingsWithTimes?.forEach(booking => {
         const dog = dogsData?.find(d => d.id === booking.dog_id)
         if (dog) {
+          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
           const dogWithBooking: DogWithBooking = {
             ...dog,
             booking_id: booking.id,
             checked_in_at: booking.checked_in_at,
             checked_out_at: booking.checked_out_at,
-            special_instructions: booking.special_instructions
+            special_instructions: booking.special_instructions,
+            booking_type: 'subscription',
+            session_type: booking.subscriptions?.session_type || 'full_day',
+            is_vip_member: owner?.is_vip_member || false
           }
 
           if (booking.checked_out_at) {
@@ -438,12 +446,16 @@ export default function StaffDashboard() {
       individualBookingsWithTimes?.forEach(booking => {
         const dog = dogsData?.find(d => d.id === booking.dog_id)
         if (dog) {
+          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
           const dogWithBooking: DogWithBooking = {
             ...dog,
             booking_id: booking.id,
             checked_in_at: booking.checked_in_at,
             checked_out_at: booking.checked_out_at,
-            special_instructions: booking.special_instructions || booking.notes
+            special_instructions: booking.special_instructions || booking.notes,
+            booking_type: 'individual',
+            session_type: booking.session_type || 'full_day',
+            is_vip_member: owner?.is_vip_member || false
           }
 
           if (booking.checked_out_at) {
@@ -1853,9 +1865,28 @@ export default function StaffDashboard() {
                                   )}
                                 </div>
                                 <div className="flex-1">
-                                  <h4 className="font-bold text-canine-navy">{dog.name}</h4>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="font-bold text-canine-navy">{dog.name}</h4>
+                                    {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
+                                  </div>
                                   <p className="text-sm text-gray-600">{dog.breed}</p>
-                                  <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                                      dog.booking_type === 'subscription'
+                                        ? 'bg-purple-100 text-purple-700'
+                                        : 'bg-blue-100 text-blue-700'
+                                    }`}>
+                                      {dog.booking_type === 'subscription' ? 'Sub' : 'Individual'}
+                                    </span>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                                      dog.session_type === 'half_day'
+                                        ? 'bg-orange-100 text-orange-700'
+                                        : 'bg-green-100 text-green-700'
+                                    }`}>
+                                      {dog.session_type === 'half_day' ? 'Half Day' : 'Full Day'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">{owner?.first_name} {owner?.last_name}</p>
                                   <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
                                 </div>
                               </div>
@@ -1907,9 +1938,28 @@ export default function StaffDashboard() {
                                   )}
                                 </div>
                                 <div className="flex-1">
-                                  <h4 className="font-bold text-canine-navy">{dog.name}</h4>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h4 className="font-bold text-canine-navy">{dog.name}</h4>
+                                    {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
+                                  </div>
                                   <p className="text-sm text-gray-600">{dog.breed}</p>
-                                  <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                                      dog.booking_type === 'subscription'
+                                        ? 'bg-purple-100 text-purple-700'
+                                        : 'bg-blue-100 text-blue-700'
+                                    }`}>
+                                      {dog.booking_type === 'subscription' ? 'Sub' : 'Individual'}
+                                    </span>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                                      dog.session_type === 'half_day'
+                                        ? 'bg-orange-100 text-orange-700'
+                                        : 'bg-green-100 text-green-700'
+                                    }`}>
+                                      {dog.session_type === 'half_day' ? 'Half Day' : 'Full Day'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">{owner?.first_name} {owner?.last_name}</p>
                                   <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
                                   {dog.checked_in_at && (
                                     <p className="text-xs text-green-700 font-semibold">
@@ -1966,9 +2016,28 @@ export default function StaffDashboard() {
                                 )}
                               </div>
                               <div className="flex-1">
-                                <h4 className="font-bold text-canine-navy">{dog.name}</h4>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-bold text-canine-navy">{dog.name}</h4>
+                                  {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
+                                </div>
                                 <p className="text-sm text-gray-600">{dog.breed}</p>
-                                <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                <div className="flex items-center gap-2 flex-wrap mt-1">
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                                    dog.booking_type === 'subscription'
+                                      ? 'bg-purple-100 text-purple-700'
+                                      : 'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {dog.booking_type === 'subscription' ? 'Sub' : 'Individual'}
+                                  </span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                                    dog.session_type === 'half_day'
+                                      ? 'bg-orange-100 text-orange-700'
+                                      : 'bg-green-100 text-green-700'
+                                  }`}>
+                                    {dog.session_type === 'half_day' ? 'Half Day' : 'Full Day'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">{owner?.first_name} {owner?.last_name}</p>
                                 <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
                                 {dog.checked_out_at && (
                                   <p className="text-xs text-gray-700 font-semibold">

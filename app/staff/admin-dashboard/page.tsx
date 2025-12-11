@@ -288,11 +288,14 @@ interface Booking {
   total_amount?: number
   payment_status?: string
   status: string
+  booking_type?: 'subscription' | 'individual'
   profiles?: {
     first_name: string
     last_name: string
     phone: string
     email: string
+    is_vip_member?: boolean
+    vip_badge_type?: string
   }
   dogs?: Dog[]
 }
@@ -740,7 +743,8 @@ export default function AdminDashboard() {
         .from('bookings')
         .select(`
           *,
-          profiles:user_id (first_name, last_name, phone)
+          profiles:user_id (first_name, last_name, phone, is_vip_member, vip_badge_type),
+          subscriptions:subscription_id (session_type)
         `)
         .eq('booking_date', today)
         .in('status', ['confirmed', 'checked_in', 'completed'])
@@ -749,8 +753,8 @@ export default function AdminDashboard() {
         .from('individual_day_bookings')
         .select(`
           *,
-          profiles:user_id (first_name, last_name, phone),
-          dogs:dog_id (id, name, breed, photo_url, owner_id, profiles:owner_id (first_name, last_name, email, phone))
+          profiles:user_id (first_name, last_name, phone, is_vip_member, vip_badge_type),
+          dogs:dog_id (id, name, breed, photo_url, owner_id, profiles:owner_id (first_name, last_name, email, phone, is_vip_member, vip_badge_type))
         `)
         .eq('booking_date', today)
         .in('status', ['confirmed', 'checked_in', 'completed'])
@@ -762,11 +766,16 @@ export default function AdminDashboard() {
             .from('dogs')
             .select(`
               id, name, breed, photo_url, owner_id,
-              profiles:owner_id (first_name, last_name, email, phone)
+              profiles:owner_id (first_name, last_name, email, phone, is_vip_member, vip_badge_type)
             `)
             .eq('id', booking.dog_id)
 
-          return { ...booking, dogs: dogsData || [], booking_type: 'subscription' }
+          return {
+            ...booking,
+            dogs: dogsData || [],
+            booking_type: 'subscription',
+            session_type: booking.subscriptions?.session_type || booking.session_type || 'full_day'
+          }
         })
       )
 
@@ -1282,7 +1291,7 @@ export default function AdminDashboard() {
           profiles:user_id (first_name, last_name, phone, email)
         `)
         .order('booking_date', { ascending: false })
-        .limit(500)
+        .limit(200)
 
       if (subError) throw subError
 
@@ -1295,26 +1304,36 @@ export default function AdminDashboard() {
           dogs!individual_day_bookings_dog_id_fkey (id, name, breed, photo_url)
         `)
         .order('booking_date', { ascending: false })
-        .limit(500)
+        .limit(200)
 
       if (indError) throw indError
 
-      // Fetch dogs for subscription bookings
-      const subscriptionWithDogs = await Promise.all(
-        (subscriptionBookings || []).map(async (booking) => {
-          const { data: dogsData } = await supabase
+      // Fetch dogs for subscription bookings in a single batch to avoid N+1 queries
+      const allDogIds = (subscriptionBookings || [])
+        .flatMap((booking) => booking.dog_ids || [])
+        .filter(Boolean)
+
+      const { data: allDogs } = allDogIds.length
+        ? await supabase
             .from('dogs')
             .select('id, name, breed, photo_url')
-            .in('id', booking.dog_ids || [])
+            .in('id', allDogIds)
+        : { data: [] }
 
-          return {
-            ...booking,
-            dogs: dogsData || [],
-            booking_type: 'subscription',
-            dog_count: dogsData?.length || 0
-          }
-        })
-      )
+      const dogsMap = new Map((allDogs || []).map((dog) => [dog.id, dog]))
+
+      const subscriptionWithDogs = (subscriptionBookings || []).map((booking) => {
+        const dogs = (booking.dog_ids || [])
+          .map((id: string) => dogsMap.get(id))
+          .filter(Boolean)
+
+        return {
+          ...booking,
+          dogs,
+          booking_type: 'subscription',
+          dog_count: dogs.length
+        }
+      })
 
       // Transform individual bookings to match subscription format
       const individualWithDogs = (individualBookings || []).map((booking: any) => ({
@@ -3180,8 +3199,12 @@ export default function AdminDashboard() {
                           )}
                           {/* Booking Type Badge */}
                           <div className="absolute top-2 right-2">
-                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-canine-gold text-white">
-                              Booking
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              booking.booking_type === 'subscription'
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-blue-500 text-white'
+                            }`}>
+                              {booking.booking_type === 'subscription' ? 'Sub' : 'Individual'}
                             </span>
                           </div>
                           {/* Session Type Badge */}
@@ -3189,14 +3212,23 @@ export default function AdminDashboard() {
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                               booking.session_type === 'full_day'
                                 ? 'bg-green-500 text-white'
-                                : 'bg-blue-500 text-white'
+                                : 'bg-orange-500 text-white'
                             }`}>
                               {booking.session_type === 'full_day' ? 'Full Day' : 'Half Day'}
                             </span>
                           </div>
+                          {/* VIP Badge */}
+                          {booking.profiles?.is_vip_member && (
+                            <div className="absolute bottom-2 right-2">
+                              <GoldenPawBadge size="small" showText={false} />
+                            </div>
+                          )}
                         </div>
                         <div className="p-4">
-                          <h3 className="font-bold text-lg text-canine-navy mb-1">{dog.name}</h3>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-lg text-canine-navy">{dog.name}</h3>
+                            {booking.profiles?.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
+                          </div>
                           <p className="text-sm text-gray-600 mb-2">{dog.breed}</p>
                           <p className="text-xs text-gray-500">
                             Owner: {dog.owner?.first_name} {dog.owner?.last_name}
@@ -3272,9 +3304,28 @@ export default function AdminDashboard() {
                                   <div className="flex items-center justify-center h-full text-sm">🐕</div>
                                 )}
                               </div>
-                              <div>
-                                <p className="font-bold text-canine-navy text-sm">{dog.name}</p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1">
+                                  <p className="font-bold text-canine-navy text-sm truncate">{dog.name}</p>
+                                  {booking.profiles?.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
+                                </div>
                                 <p className="text-xs text-gray-600">{dog.breed}</p>
+                                <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                                    booking.booking_type === 'subscription'
+                                      ? 'bg-purple-100 text-purple-700'
+                                      : 'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {booking.booking_type === 'subscription' ? 'Sub' : 'Individual'}
+                                  </span>
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
+                                    booking.session_type === 'half_day'
+                                      ? 'bg-orange-100 text-orange-700'
+                                      : 'bg-green-100 text-green-700'
+                                  }`}>
+                                    {booking.session_type === 'half_day' ? 'Half' : 'Full'}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           )) : (
