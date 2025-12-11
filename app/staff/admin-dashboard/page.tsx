@@ -368,6 +368,13 @@ export default function AdminDashboard() {
   const [recurringRevenue, setRecurringRevenue] = useState(0)
   const [pendingAssessments, setPendingAssessments] = useState(0)
   const [activeSubscriptions, setActiveSubscriptions] = useState(0)
+  // Payments received this month (actual cash collected Dec 1 - Dec 31)
+  const [paymentsReceived, setPaymentsReceived] = useState({
+    subscriptions: 0,
+    individualDays: 0,
+    assessments: 0,
+    total: 0
+  })
   // Comprehensive revenue breakdown (daily/weekly/monthly)
   const [revenueBreakdown, setRevenueBreakdown] = useState({
     daily: {
@@ -987,7 +994,16 @@ export default function AdminDashboard() {
         setMonthlyRevenue(totalRevenue)
         setBookingRevenue(bookingsRev)
         setAssessmentRevenue(assessmentsRev)
-        console.log('📊 Revenue breakdown:', { subscriptionRev, individualRev, bookingRevenue: bookingsRev, assessmentRevenue: assessmentsRev, totalRevenue })
+
+        // Set payments received this month (actual cash collected)
+        setPaymentsReceived({
+          subscriptions: subscriptionRev,
+          individualDays: individualRev,
+          assessments: assessmentsRev,
+          total: subscriptionRev + individualRev + assessmentsRev
+        })
+
+        console.log('📊 Payments received this month:', { subscriptions: subscriptionRev, individualDays: individualRev, assessments: assessmentsRev, total: subscriptionRev + individualRev + assessmentsRev })
       } catch (e) {
         console.log('Revenue calculation failed:', e)
         setMonthlyRevenue(0)
@@ -3205,35 +3221,33 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Revenue Breakdown */}
+              {/* Payments Received This Month */}
               <div className="bg-gradient-to-r from-canine-navy to-[#2a5a7a] rounded-2xl p-6 shadow-xl text-white">
-                <h3 className="text-xl font-display font-bold mb-6">Revenue Breakdown This Month</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <h3 className="text-xl font-display font-bold mb-6">Payments Received This Month (Dec 1 - Dec 31)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div>
-                    <p className="text-sm opacity-75 mb-2">Assessment Revenue</p>
-                    <p className="text-4xl font-bold">£{assessmentRevenue.toFixed(0)}</p>
-                    <div className="mt-2 bg-white/20 rounded-full h-2">
-                      <div
-                        className="bg-green-400 h-2 rounded-full"
-                        style={{ width: `${monthlyRevenue > 0 ? (assessmentRevenue / monthlyRevenue * 100) : 0}%` }}
-                      />
-                    </div>
+                    <p className="text-sm opacity-75 mb-2">New Subscriptions</p>
+                    <p className="text-4xl font-bold">£{paymentsReceived.subscriptions.toFixed(0)}</p>
+                    <p className="text-xs opacity-75 mt-1">Subscription signups</p>
                   </div>
                   <div>
-                    <p className="text-sm opacity-75 mb-2">Booking Revenue</p>
-                    <p className="text-4xl font-bold">£{bookingRevenue.toFixed(0)}</p>
-                    <div className="mt-2 bg-white/20 rounded-full h-2">
-                      <div
-                        className="bg-blue-400 h-2 rounded-full"
-                        style={{ width: `${monthlyRevenue > 0 ? (bookingRevenue / monthlyRevenue * 100) : 0}%` }}
-                      />
-                    </div>
+                    <p className="text-sm opacity-75 mb-2">Individual Days</p>
+                    <p className="text-4xl font-bold">£{paymentsReceived.individualDays.toFixed(0)}</p>
+                    <p className="text-xs opacity-75 mt-1">One-off bookings</p>
                   </div>
                   <div>
-                    <p className="text-sm opacity-75 mb-2">Monthly Recurring Revenue</p>
-                    <p className="text-4xl font-bold">£{recurringRevenue.toFixed(0)}</p>
-                    <p className="text-xs opacity-75 mt-1">{activeSubscriptions} active subscriptions</p>
+                    <p className="text-sm opacity-75 mb-2">Assessments</p>
+                    <p className="text-4xl font-bold">£{paymentsReceived.assessments.toFixed(0)}</p>
+                    <p className="text-xs opacity-75 mt-1">Assessment fees</p>
                   </div>
+                  <div className="bg-white/10 rounded-xl p-3">
+                    <p className="text-sm opacity-75 mb-2">TOTAL RECEIVED</p>
+                    <p className="text-4xl font-bold text-green-300">£{paymentsReceived.total.toFixed(0)}</p>
+                    <p className="text-xs opacity-75 mt-1">Resets Jan 1st</p>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-white/20">
+                  <p className="text-sm opacity-75">Monthly Recurring Revenue (MRR): <span className="font-bold text-lg">£{recurringRevenue.toFixed(0)}</span> <span className="text-xs">({activeSubscriptions} active subscriptions)</span></p>
                 </div>
               </div>
 
