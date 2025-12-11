@@ -368,6 +368,34 @@ export default function AdminDashboard() {
   const [recurringRevenue, setRecurringRevenue] = useState(0)
   const [pendingAssessments, setPendingAssessments] = useState(0)
   const [activeSubscriptions, setActiveSubscriptions] = useState(0)
+  // Comprehensive revenue breakdown (daily/weekly/monthly)
+  const [revenueBreakdown, setRevenueBreakdown] = useState({
+    daily: {
+      subscriptionFullDay: 0,
+      subscriptionHalfDay: 0,
+      individualDay: 0,
+      assessments: 0,
+      total: 0
+    },
+    weekly: {
+      subscriptionFullDay: 0,
+      subscriptionHalfDay: 0,
+      individualDay: 0,
+      assessments: 0,
+      total: 0
+    },
+    monthly: {
+      subscriptionFullDay: 0,
+      subscriptionHalfDay: 0,
+      individualDay: 0,
+      assessments: 0,
+      total: 0
+    }
+  })
+  // Legacy state for backward compatibility
+  const [dailySubscriptionRevenue, setDailySubscriptionRevenue] = useState(0)
+  const [weeklySubscriptionRevenue, setWeeklySubscriptionRevenue] = useState(0)
+  const [monthlySubscriptionRevenue, setMonthlySubscriptionRevenue] = useState(0)
   const [weeklyStats, setWeeklyStats] = useState<{
     day: string
     date: string
@@ -958,6 +986,119 @@ export default function AdminDashboard() {
       } catch (e) {
         console.log('Revenue calculation failed:', e)
         setMonthlyRevenue(0)
+      }
+
+      // Calculate comprehensive revenue breakdown (daily/weekly/monthly) for ALL booking types
+      try {
+        // Get week boundaries (Monday to Sunday)
+        const currentDate = new Date()
+        const dayOfWeek = currentDate.getDay()
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+        const monday = new Date(currentDate)
+        monday.setDate(currentDate.getDate() + mondayOffset)
+        const mondayStr = monday.toISOString().split('T')[0]
+        const sunday = new Date(monday)
+        sunday.setDate(monday.getDate() + 6)
+        const sundayStr = sunday.toISOString().split('T')[0]
+
+        // Fetch all data needed in parallel
+        const [subBookingsRes, indBookingsRes, assessBookingsRes, slotsRes] = await Promise.all([
+          // Subscription bookings with session_type and price_per_day
+          supabase
+            .from('bookings')
+            .select('booking_date, session_type, subscriptions:subscription_id(price_per_day, session_type)')
+            .in('status', ['confirmed', 'checked_in', 'completed'])
+            .gte('booking_date', firstDayOfMonth)
+            .lte('booking_date', lastDayOfMonth),
+          // Individual day bookings with price
+          supabase
+            .from('individual_day_bookings')
+            .select('booking_date, price')
+            .in('status', ['confirmed', 'checked_in', 'completed'])
+            .eq('payment_status', 'paid')
+            .gt('price', 0)
+            .gte('booking_date', firstDayOfMonth)
+            .lte('booking_date', lastDayOfMonth),
+          // Assessment bookings with slot_id
+          supabase
+            .from('assessment_bookings')
+            .select('id, slot_id, booked_at')
+            .eq('booking_status', 'confirmed')
+            .eq('payment_status', 'paid'),
+          // Assessment slots to get dates
+          supabase
+            .from('assessment_slots')
+            .select('id, assessment_date')
+        ])
+
+        const subBookings = subBookingsRes.data || []
+        const indBookings = indBookingsRes.data || []
+        const assessBookings = assessBookingsRes.data || []
+        const slots = slotsRes.data || []
+
+        // Create slot id to date map
+        const slotDateMap = new Map(slots.map(s => [s.id, s.assessment_date]))
+
+        // Helper to calculate revenue for a date range
+        const calculateRevenue = (startDate: string, endDate: string) => {
+          // Subscription revenue (full day vs half day)
+          let subFullDay = 0
+          let subHalfDay = 0
+          subBookings
+            .filter(b => b.booking_date >= startDate && b.booking_date <= endDate)
+            .forEach(b => {
+              const pricePerDay = (b.subscriptions as any)?.price_per_day || 0
+              const sessionType = (b.subscriptions as any)?.session_type || b.session_type || 'full_day'
+              if (sessionType === 'half_day') {
+                subHalfDay += Number(pricePerDay)
+              } else {
+                subFullDay += Number(pricePerDay)
+              }
+            })
+
+          // Individual day revenue
+          const indRev = indBookings
+            .filter(b => b.booking_date >= startDate && b.booking_date <= endDate)
+            .reduce((sum, b) => sum + (b.price || 0), 0)
+
+          // Assessment revenue (based on assessment slot date, not booked_at)
+          const assessmentFee = settings.assessment_fee || 40
+          const assessRev = assessBookings
+            .filter(a => {
+              const assessDate = slotDateMap.get(a.slot_id)
+              return assessDate && assessDate >= startDate && assessDate <= endDate
+            })
+            .length * assessmentFee
+
+          return {
+            subscriptionFullDay: subFullDay,
+            subscriptionHalfDay: subHalfDay,
+            individualDay: indRev,
+            assessments: assessRev,
+            total: subFullDay + subHalfDay + indRev + assessRev
+          }
+        }
+
+        // Calculate for each period
+        const dailyRev = calculateRevenue(today, today)
+        const weeklyRev = calculateRevenue(mondayStr, sundayStr)
+        const monthlyRev = calculateRevenue(firstDayOfMonth, lastDayOfMonth)
+
+        // Update state
+        setRevenueBreakdown({
+          daily: dailyRev,
+          weekly: weeklyRev,
+          monthly: monthlyRev
+        })
+
+        // Legacy state for backward compatibility
+        setDailySubscriptionRevenue(dailyRev.subscriptionFullDay + dailyRev.subscriptionHalfDay)
+        setWeeklySubscriptionRevenue(weeklyRev.subscriptionFullDay + weeklyRev.subscriptionHalfDay)
+        setMonthlySubscriptionRevenue(monthlyRev.subscriptionFullDay + monthlyRev.subscriptionHalfDay)
+
+        console.log('📊 Comprehensive Revenue Breakdown:', { daily: dailyRev, weekly: weeklyRev, monthly: monthlyRev })
+      } catch (e) {
+        console.log('Revenue breakdown calculation failed:', e)
       }
 
       // Pending approvals - Users who have booked assessments and are awaiting approval
@@ -3089,6 +3230,108 @@ export default function AdminDashboard() {
                     <p className="text-4xl font-bold">£{recurringRevenue.toFixed(0)}</p>
                     <p className="text-xs opacity-75 mt-1">{activeSubscriptions} active subscriptions</p>
                   </div>
+                </div>
+              </div>
+
+              {/* Comprehensive Revenue Breakdown - Daily/Weekly/Monthly */}
+              <div className="bg-white rounded-2xl p-6 shadow-xl border-2 border-canine-gold/20">
+                <h3 className="text-xl font-display font-bold text-canine-navy mb-6 flex items-center gap-2">
+                  <BanknotesIcon className="h-6 w-6 text-canine-gold" />
+                  Revenue Breakdown (All Booking Types)
+                </h3>
+
+                {/* Daily / Weekly / Monthly Summary Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                    <p className="text-sm text-green-700 font-medium mb-1">Today's Total</p>
+                    <p className="text-3xl font-bold text-green-800">£{revenueBreakdown.daily.total.toFixed(2)}</p>
+                    <p className="text-xs text-green-600 mt-1">{dogsToday} dogs booked</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                    <p className="text-sm text-blue-700 font-medium mb-1">This Week's Total</p>
+                    <p className="text-3xl font-bold text-blue-800">£{revenueBreakdown.weekly.total.toFixed(2)}</p>
+                    <p className="text-xs text-blue-600 mt-1">Mon - Sun</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+                    <p className="text-sm text-purple-700 font-medium mb-1">This Month's Total</p>
+                    <p className="text-3xl font-bold text-purple-800">£{revenueBreakdown.monthly.total.toFixed(2)}</p>
+                    <p className="text-xs text-purple-600 mt-1">All revenue sources</p>
+                  </div>
+                </div>
+
+                {/* Detailed Breakdown Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b-2 border-gray-200">
+                        <th className="text-left py-3 px-2 font-semibold text-gray-700">Revenue Source</th>
+                        <th className="text-right py-3 px-2 font-semibold text-green-700">Today</th>
+                        <th className="text-right py-3 px-2 font-semibold text-blue-700">This Week</th>
+                        <th className="text-right py-3 px-2 font-semibold text-purple-700">This Month</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-2 px-2">
+                          <span className="inline-flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                            Full Day Subscriptions
+                          </span>
+                        </td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.daily.subscriptionFullDay.toFixed(2)}</td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.weekly.subscriptionFullDay.toFixed(2)}</td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.monthly.subscriptionFullDay.toFixed(2)}</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-2 px-2">
+                          <span className="inline-flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-sky-400"></span>
+                            Half Day Subscriptions
+                          </span>
+                        </td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.daily.subscriptionHalfDay.toFixed(2)}</td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.weekly.subscriptionHalfDay.toFixed(2)}</td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.monthly.subscriptionHalfDay.toFixed(2)}</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-2 px-2">
+                          <span className="inline-flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                            Individual Day Bookings
+                          </span>
+                        </td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.daily.individualDay.toFixed(2)}</td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.weekly.individualDay.toFixed(2)}</td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.monthly.individualDay.toFixed(2)}</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-2 px-2">
+                          <span className="inline-flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            Assessments
+                          </span>
+                        </td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.daily.assessments.toFixed(2)}</td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.weekly.assessments.toFixed(2)}</td>
+                        <td className="text-right py-2 px-2 font-medium">£{revenueBreakdown.monthly.assessments.toFixed(2)}</td>
+                      </tr>
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-50 font-bold">
+                        <td className="py-3 px-2">TOTAL</td>
+                        <td className="text-right py-3 px-2 text-green-700">£{revenueBreakdown.daily.total.toFixed(2)}</td>
+                        <td className="text-right py-3 px-2 text-blue-700">£{revenueBreakdown.weekly.total.toFixed(2)}</td>
+                        <td className="text-right py-3 px-2 text-purple-700">£{revenueBreakdown.monthly.total.toFixed(2)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-600">
+                    <strong>Note:</strong> Revenue is calculated based on actual bookings used. Subscription revenue = price per day x bookings.
+                    Individual day revenue = booking prices paid. Assessment revenue = £{settings.assessment_fee || 40} per paid assessment.
+                  </p>
                 </div>
               </div>
 
