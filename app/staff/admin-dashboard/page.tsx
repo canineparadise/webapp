@@ -828,18 +828,19 @@ export default function AdminDashboard() {
         const dayName = date.toLocaleDateString('en-GB', { weekday: 'short' })
 
         // Get subscription bookings (OLD SCHEMA: dog_id not dog_ids)
+        // Include confirmed, checked_in, and completed statuses
         const { data: daySubscriptionBookings } = await supabase
           .from('bookings')
           .select('session_type, dog_id')
           .eq('booking_date', dateStr)
-          .eq('status', 'confirmed')
+          .in('status', ['confirmed', 'checked_in', 'completed'])
 
         // Get individual bookings
         const { data: dayIndividualBookings } = await supabase
           .from('individual_day_bookings')
           .select('id')
           .eq('booking_date', dateStr)
-          .eq('status', 'confirmed')
+          .in('status', ['confirmed', 'checked_in', 'completed'])
 
         const subFullDay = daySubscriptionBookings?.filter(b => b.session_type === 'full_day').length || 0
         const subHalfDay = daySubscriptionBookings?.filter(b => b.session_type === 'half_day').length || 0
