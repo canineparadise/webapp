@@ -1060,12 +1060,12 @@ export default function AdminDashboard() {
             .filter(b => b.booking_date >= startDate && b.booking_date <= endDate)
             .reduce((sum, b) => sum + (b.price || 0), 0)
 
-          // Assessment revenue (based on assessment slot date, not booked_at)
+          // Assessment revenue (based on booked_at date - when payment was received)
           const assessmentFee = settings.assessment_fee || 40
           const assessRev = assessBookings
             .filter(a => {
-              const assessDate = slotDateMap.get(a.slot_id)
-              return assessDate && assessDate >= startDate && assessDate <= endDate
+              const bookedDate = a.booked_at ? a.booked_at.split('T')[0] : null
+              return bookedDate && bookedDate >= startDate && bookedDate <= endDate
             })
             .length * assessmentFee
 
