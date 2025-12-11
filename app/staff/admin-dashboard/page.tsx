@@ -3039,7 +3039,7 @@ export default function AdminDashboard() {
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3">
               <CurrencyPoundIcon className="h-4 w-4 sm:h-5 sm:w-5 text-canine-gold mb-1" />
-              <p className="text-xl sm:text-2xl font-bold">£{monthlyRevenue.toFixed(0)}</p>
+              <p className="text-xl sm:text-2xl font-bold">£{paymentsReceived.total.toFixed(0)}</p>
               <p className="text-xs text-canine-sky">Revenue</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 sm:p-3">
@@ -5730,14 +5730,19 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-canine-gold/20">
-                  <h3 className="text-sm font-semibold text-gray-600 mb-2">This Month</h3>
-                  <p className="text-3xl font-bold text-canine-navy">£{monthlyRevenue.toFixed(2)}</p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-green-200">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Received This Month</h3>
+                  <p className="text-3xl font-bold text-green-600">£{paymentsReceived.total.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 mt-1">Resets Jan 1st</p>
                 </div>
                 <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-canine-gold/20">
                   <h3 className="text-sm font-semibold text-gray-600 mb-2">Active Subscriptions</h3>
                   <p className="text-3xl font-bold text-canine-gold">{activeSubscriptions}</p>
+                </div>
+                <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-canine-gold/20">
+                  <h3 className="text-sm font-semibold text-gray-600 mb-2">MRR</h3>
+                  <p className="text-3xl font-bold text-canine-navy">£{recurringRevenue.toFixed(0)}</p>
                 </div>
                 <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-canine-gold/20">
                   <h3 className="text-sm font-semibold text-gray-600 mb-2">Total Clients</h3>
@@ -5746,21 +5751,35 @@ export default function AdminDashboard() {
               </div>
 
               <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-display font-bold text-canine-navy mb-4">Revenue by Source</h3>
+                <h3 className="text-xl font-display font-bold text-canine-navy mb-4">Payments Received This Month (Dec 1 - Dec 31)</h3>
                 <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-canine-cream rounded-lg">
+                    <div>
+                      <p className="font-semibold text-canine-navy">New Subscriptions</p>
+                      <p className="text-sm text-gray-600">Subscription signups this month</p>
+                    </div>
+                    <p className="text-2xl font-bold text-canine-navy">£{paymentsReceived.subscriptions.toFixed(2)}</p>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-canine-cream rounded-lg">
+                    <div>
+                      <p className="font-semibold text-canine-navy">Individual Day Bookings</p>
+                      <p className="text-sm text-gray-600">One-off daycare bookings</p>
+                    </div>
+                    <p className="text-2xl font-bold text-canine-navy">£{paymentsReceived.individualDays.toFixed(2)}</p>
+                  </div>
                   <div className="flex items-center justify-between p-4 bg-canine-cream rounded-lg">
                     <div>
                       <p className="font-semibold text-canine-navy">Assessment Bookings</p>
                       <p className="text-sm text-gray-600">Initial assessment fees</p>
                     </div>
-                    <p className="text-2xl font-bold text-canine-gold">£{assessmentRevenue.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-canine-gold">£{paymentsReceived.assessments.toFixed(2)}</p>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-canine-cream rounded-lg">
+                  <div className="flex items-center justify-between p-4 bg-green-100 rounded-lg border-2 border-green-300">
                     <div>
-                      <p className="font-semibold text-canine-navy">Daycare Bookings</p>
-                      <p className="text-sm text-gray-600">Daily bookings revenue</p>
+                      <p className="font-bold text-green-800">TOTAL RECEIVED</p>
+                      <p className="text-sm text-green-600">All payments this month</p>
                     </div>
-                    <p className="text-2xl font-bold text-canine-navy">£{bookingRevenue.toFixed(2)}</p>
+                    <p className="text-3xl font-bold text-green-700">£{paymentsReceived.total.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
