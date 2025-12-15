@@ -182,10 +182,11 @@ interface LegalAgreement {
   user_id: string
   terms_accepted: boolean
   injury_waiver_agreed: boolean
-  photo_permission_agreed: boolean
-  recurring_billing_agreed: boolean
+  photo_permission_granted: boolean  // Correct column name from DB
+  recurring_billing_accepted: boolean  // Correct column name from DB
   password_policy_agreed: boolean
   signed_at: string
+  digital_signature?: string
   profiles?: {
     first_name: string
     last_name: string
@@ -600,7 +601,7 @@ export default function AdminDashboard() {
     } else if (activeTab === 'subscriptions' || activeTab === 'cancellations') {
       fetchSubscriptionTiers()
       fetchCancelledSubscriptions()
-    } else if (activeTab === 'legal') {
+    } else if (activeTab === 'legal' || activeTab === 'documents') {
       fetchLegalAgreements()
     } else if (activeTab === 'medications') {
       fetchDogMedications()
@@ -5316,14 +5317,14 @@ export default function AdminDashboard() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {agreement.photo_permission_agreed ? (
+                          {agreement.photo_permission_granted ? (
                             <CheckIcon className="h-5 w-5 text-green-600 mx-auto" />
                           ) : (
                             <XCircleIcon className="h-5 w-5 text-red-600 mx-auto" />
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {agreement.recurring_billing_agreed ? (
+                          {agreement.recurring_billing_accepted ? (
                             <CheckIcon className="h-5 w-5 text-green-600 mx-auto" />
                           ) : (
                             <XCircleIcon className="h-5 w-5 text-red-600 mx-auto" />
@@ -7874,7 +7875,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex items-center justify-between py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-600">Photo Permission</span>
-                        {clientLegalAgreement.photo_permission_agreed ? (
+                        {clientLegalAgreement.photo_permission_granted ? (
                           <CheckCircleIcon className="h-5 w-5 text-green-600" />
                         ) : (
                           <XCircleIcon className="h-5 w-5 text-red-600" />
@@ -7882,7 +7883,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex items-center justify-between py-2 border-b border-gray-100">
                         <span className="text-sm text-gray-600">Recurring Billing</span>
-                        {clientLegalAgreement.recurring_billing_agreed ? (
+                        {clientLegalAgreement.recurring_billing_accepted ? (
                           <CheckCircleIcon className="h-5 w-5 text-green-600" />
                         ) : (
                           <XCircleIcon className="h-5 w-5 text-red-600" />
