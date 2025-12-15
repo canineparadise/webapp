@@ -48,6 +48,7 @@ import {
   ArrowTrendingDownIcon,
   TicketIcon,
   ReceiptRefundIcon,
+  EyeIcon,
 } from '@heroicons/react/24/outline'
 import { ChatBubbleLeftIcon as QuoteIcon } from '@heroicons/react/24/solid'
 import { supabase } from '@/lib/supabase'
@@ -5287,8 +5288,10 @@ export default function AdminDashboard() {
                       <th className="px-6 py-4 text-left">Email</th>
                       <th className="px-6 py-4 text-center">Terms</th>
                       <th className="px-6 py-4 text-center">Waiver</th>
-                      <th className="px-6 py-4 text-center">Password</th>
+                      <th className="px-6 py-4 text-center">Photo</th>
+                      <th className="px-6 py-4 text-center">Billing</th>
                       <th className="px-6 py-4 text-left">Signed Date</th>
+                      <th className="px-6 py-4 text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -5313,7 +5316,14 @@ export default function AdminDashboard() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {agreement.password_policy_agreed ? (
+                          {agreement.photo_permission_agreed ? (
+                            <CheckIcon className="h-5 w-5 text-green-600 mx-auto" />
+                          ) : (
+                            <XCircleIcon className="h-5 w-5 text-red-600 mx-auto" />
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {agreement.recurring_billing_agreed ? (
                             <CheckIcon className="h-5 w-5 text-green-600 mx-auto" />
                           ) : (
                             <XCircleIcon className="h-5 w-5 text-red-600 mx-auto" />
@@ -5321,6 +5331,27 @@ export default function AdminDashboard() {
                         </td>
                         <td className="px-6 py-4 text-sm">
                           {new Date(agreement.signed_at).toLocaleDateString('en-GB')}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <button
+                            onClick={() => {
+                              setSelectedClientForDocs({
+                                id: agreement.user_id,
+                                first_name: agreement.profiles?.first_name || '',
+                                last_name: agreement.profiles?.last_name || '',
+                                email: agreement.profiles?.email || '',
+                                phone: agreement.profiles?.phone || '',
+                                role: 'user',
+                                created_at: ''
+                              })
+                              setClientLegalAgreement(agreement)
+                              setShowClientDocsModal(true)
+                            }}
+                            className="px-3 py-1.5 bg-canine-navy text-white rounded-lg hover:bg-canine-gold transition-colors text-sm flex items-center gap-1 mx-auto"
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                            View
+                          </button>
                         </td>
                       </tr>
                     ))}
