@@ -201,12 +201,20 @@ export async function POST(req: NextRequest) {
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const { metadata, client_reference_id, subscription } = session
 
-  if (!metadata || !client_reference_id) {
-    console.error('Missing metadata or client_reference_id')
+  // Allow processing if we have metadata with userId OR client_reference_id
+  if (!metadata) {
+    console.error('[Stripe Webhook] Missing metadata')
     return
   }
 
   const userId = metadata.userId || client_reference_id
+
+  if (!userId) {
+    console.error('[Stripe Webhook] Missing userId - no metadata.userId or client_reference_id')
+    return
+  }
+
+  console.log('[Stripe Webhook] Processing checkout for userId:', userId, 'type:', metadata.type)
 
   // Processing checkout session
 

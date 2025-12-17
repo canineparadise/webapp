@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/individual-days?payment_method=stripe&session_id={CHECKOUT_SESSION_ID}&success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/dashboard/individual-days`,
       customer_email: profile.email,
+      client_reference_id: userId,  // Required for webhook to identify user
       metadata: {
         userId,
         dogId,
