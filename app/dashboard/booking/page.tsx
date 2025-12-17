@@ -340,6 +340,7 @@ export default function BookingPage() {
           bookings.push({
             user_id: user.id,
             dog_id: dogId,
+            dog_ids: [dogId],  // Also set dog_ids array for staff dashboard
             booking_date: date,
             subscription_id: dogSub?.id || subscription.id,
             status: 'confirmed',
