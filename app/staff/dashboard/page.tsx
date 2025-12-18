@@ -361,7 +361,7 @@ export default function StaffDashboard() {
     setLoading(true)
     try {
       // Get today's bookings from both tables (OLD SCHEMA: bookings has dog_id singular, not dog_ids array)
-      const [{ data: bookingsData }, { data: individualDayBookingsData }] = await Promise.all([
+      const [{ data: bookingsData, error: bookingsError }, { data: individualDayBookingsData, error: individualError }] = await Promise.all([
         supabase
           .from('bookings')
           .select('dog_id')
@@ -373,6 +373,12 @@ export default function StaffDashboard() {
           .eq('booking_date', currentDate)
           .in('status', ['confirmed', 'checked_in', 'completed'])
       ])
+
+      // Debug logging for individual day bookings
+      if (individualError) {
+        console.error('[Staff Dashboard] Error fetching individual_day_bookings:', individualError)
+      }
+      console.log('[Staff Dashboard] Individual day bookings for', currentDate, ':', individualDayBookingsData)
 
       const subscriptionDogIds = bookingsData?.map(b => b.dog_id) || []
       const individualDayDogIds = individualDayBookingsData?.map(b => b.dog_id) || []
