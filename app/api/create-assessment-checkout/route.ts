@@ -90,21 +90,82 @@ export async function POST(request: NextRequest) {
     let slotDetails = null
 
     if (slotId) {
-      const { data: slot } = await supabase
-        .from('assessment_slots')
-        .select('*')
-        .eq('id', slotId)
-        .maybeSingle()
+      // First, try to reserve the slot to prevent double bookings
+      // This uses an atomic database operation to ensure only one user can reserve a slot
+      const { data: reserveResult, error: reserveError } = await supabase
+        .rpc('reserve_assessment_slot', {
+          p_slot_id: slotId,
+          p_user_id: userId,
+          p_reservation_minutes: 30  // 30 minute reservation window for payment
+        })
 
-      if (slot) {
+      // If reservation function doesn't exist yet, fall back to direct check
+      if (reserveError && reserveError.message.includes('does not exist')) {
+        console.log('[Assessment Checkout] Reservation function not found, using direct check')
+        // Check if slot is available
+        const { data: slot } = await supabase
+          .from('assessment_slots')
+          .select('*')
+          .eq('id', slotId)
+          .maybeSingle()
+
+        if (!slot || !slot.is_available) {
+          return NextResponse.json(
+            { error: 'This slot is no longer available. Please select another time.' },
+            { status: 409 }
+          )
+        }
+
+        // Try to reserve with direct update (less safe but works without the function)
+        const { error: updateError } = await supabase
+          .from('assessment_slots')
+          .update({
+            is_available: false,
+            booked_by_user_id: userId,
+          })
+          .eq('id', slotId)
+          .eq('is_available', true)  // Only update if still available (optimistic lock)
+
+        if (updateError) {
+          console.error('[Assessment Checkout] Failed to reserve slot:', updateError)
+          return NextResponse.json(
+            { error: 'Failed to reserve slot. Please try again.' },
+            { status: 500 }
+          )
+        }
+
         slotDetails = slot
-        dateDisplay = new Date(slot.assessment_date).toLocaleDateString('en-GB', {
+      } else if (reserveError) {
+        console.error('[Assessment Checkout] Reserve error:', reserveError)
+        return NextResponse.json(
+          { error: 'Failed to reserve slot. Please try again.' },
+          { status: 500 }
+        )
+      } else if (reserveResult === false) {
+        // Slot was already reserved by someone else
+        return NextResponse.json(
+          { error: 'This slot is no longer available. Please select another time.' },
+          { status: 409 }
+        )
+      } else {
+        // Reservation successful, get slot details
+        const { data: slot } = await supabase
+          .from('assessment_slots')
+          .select('*')
+          .eq('id', slotId)
+          .maybeSingle()
+
+        slotDetails = slot
+      }
+
+      if (slotDetails) {
+        dateDisplay = new Date(slotDetails.assessment_date).toLocaleDateString('en-GB', {
           weekday: 'long',
           day: 'numeric',
           month: 'long',
           year: 'numeric'
         })
-        dateDisplay += ` at ${slot.start_time.slice(0, 5)}-${slot.end_time.slice(0, 5)}`
+        dateDisplay += ` at ${slotDetails.start_time.slice(0, 5)}-${slotDetails.end_time.slice(0, 5)}`
       }
     } else if (requestedDate) {
       // Old format compatibility

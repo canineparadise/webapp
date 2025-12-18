@@ -306,21 +306,16 @@ export default function BookAssessmentSlot() {
     setBooking(true)
 
     try {
-      // Verify slot is still available
-      const { data: slotData } = await supabase
-        .from('assessment_slots')
-        .select('*')
-        .eq('id', selectedSlot)
-        .single()
-
-      if (!slotData || !slotData.is_available || slotData.booked_count >= slotData.max_dogs) {
-        toast.error('Sorry, this slot is no longer available')
-        await fetchAvailableSlots()
-        setBooking(false)
+      // Get current auth session for the API call
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        toast.error('Please log in again')
+        router.push('/login')
         return
       }
 
       // Create Stripe checkout session for assessment payment
+      // The API will verify slot availability and reserve it atomically
       const totalAmount = assessmentFee * selectedDogs.length
       const finalAmount = calculateTotalPrice()
 
@@ -328,6 +323,7 @@ export default function BookAssessmentSlot() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           userId: user.id,
@@ -341,20 +337,29 @@ export default function BookAssessmentSlot() {
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error('Failed to create checkout session')
+        // Handle specific error for slot no longer available
+        if (response.status === 409) {
+          toast.error(data.error || 'This slot is no longer available. Please select another time.')
+          setSelectedSlot('')
+          await fetchAvailableSlots()
+        } else {
+          throw new Error(data.error || 'Failed to create checkout session')
+        }
+        setBooking(false)
+        return
       }
 
-      const { url } = await response.json()
-
-      if (url) {
-        window.location.href = url
+      if (data.url) {
+        window.location.href = data.url
       } else {
         throw new Error('No checkout URL returned')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Booking error:', error)
-      toast.error('Failed to book assessment. Please try again.')
+      toast.error(error.message || 'Failed to book assessment. Please try again.')
       setBooking(false)
     }
   }
