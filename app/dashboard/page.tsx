@@ -355,18 +355,18 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky">
-      {/* Friendly Header with Gradient */}
+      {/* Friendly Header with Gradient - Compact on mobile */}
       <header className="bg-gradient-to-r from-canine-navy to-blue-900 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 py-2 sm:py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-1 min-w-0">
-              {/* Friendly Avatar with Border */}
-              <div className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 rounded-full bg-gradient-to-br from-canine-gold to-canine-light-gold flex items-center justify-center text-white font-bold text-lg sm:text-xl md:text-2xl shadow-lg border-2 sm:border-4 border-white/20 flex-shrink-0">
+              {/* Friendly Avatar with Border - Smaller on mobile */}
+              <div className="h-9 w-9 sm:h-14 sm:w-14 md:h-16 md:w-16 rounded-full bg-gradient-to-br from-canine-gold to-canine-light-gold flex items-center justify-center text-white font-bold text-sm sm:text-xl md:text-2xl shadow-lg border-2 sm:border-4 border-white/20 flex-shrink-0">
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-lg sm:text-2xl md:text-3xl font-display font-bold">
-                  Welcome back, {firstName}! 👋
+                <h1 className="text-sm sm:text-2xl md:text-3xl font-display font-bold truncate">
+                  Hi, {firstName}! 👋
                 </h1>
                 <p className="text-blue-100 mt-0.5 sm:mt-1 text-xs sm:text-sm hidden sm:block">
                   {profile?.is_vip_member ? "Thank you for being a VIP Founder! 🌟" : "We're happy to see you and your pups!"}
@@ -375,10 +375,10 @@ export default function Dashboard() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
-              {/* Logout Button */}
+              {/* Logout Button - Compact on mobile */}
               <button
                 onClick={handleSignOut}
-                className="text-white/90 hover:text-white text-xs sm:text-sm px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg border border-white/30 hover:border-white/60 hover:bg-white/10 transition-all whitespace-nowrap"
+                className="text-white/90 hover:text-white text-[10px] sm:text-sm px-1.5 sm:px-3 md:px-4 py-1 sm:py-2 rounded-lg border border-white/30 hover:border-white/60 hover:bg-white/10 transition-all whitespace-nowrap"
               >
                 Logout
               </button>

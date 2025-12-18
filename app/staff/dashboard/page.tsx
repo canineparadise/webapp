@@ -1655,24 +1655,25 @@ export default function StaffDashboard() {
         animate={{ y: 0 }}
         className="bg-gradient-to-r from-canine-navy via-canine-navy to-[#2a5a7a] text-white shadow-xl sticky top-0 z-40"
       >
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          {/* Title and Logout */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-display font-bold mb-1">Staff Dashboard</h1>
-              <p className="text-canine-sky">Welcome, {staffName}</p>
+        {/* Mobile: Compact header | Desktop: Original spacing */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2 sm:py-6">
+          {/* Title and Logout - compact on mobile */}
+          <div className="flex items-center justify-between mb-2 sm:mb-6">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg sm:text-3xl font-display font-bold truncate">Staff Dashboard</h1>
+              <p className="text-canine-sky text-xs sm:text-base hidden sm:block">Welcome, {staffName}</p>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-6 py-3 rounded-xl transition-all"
+              className="flex items-center space-x-1 sm:space-x-2 bg-white/10 hover:bg-white/20 px-2 sm:px-6 py-1.5 sm:py-3 rounded-lg sm:rounded-xl transition-all ml-2"
             >
-              <ArrowRightOnRectangleIcon className="h-5 w-5" />
-              <span className="font-semibold">Logout</span>
+              <ArrowRightOnRectangleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="font-semibold text-xs sm:text-base">Logout</span>
             </button>
           </div>
 
-          {/* Stats Grid - 4 Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Stats Grid - Hidden on mobile, shown on sm+ */}
+          <div className="hidden sm:grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Date Picker Card */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border-2 border-white/20">
               <label className="block text-sm text-canine-sky mb-2 font-medium">Date</label>
@@ -1714,20 +1715,39 @@ export default function StaffDashboard() {
             </div>
           </div>
 
-          {/* Tab Navigation Bar */}
-          <div className="border-b-2 border-white/20">
-            <div className="flex items-end space-x-1">
+          {/* Mobile-only: Compact date picker and quick stats row */}
+          <div className="sm:hidden flex items-center gap-2 mb-2">
+            <input
+              type="date"
+              value={currentDate}
+              onChange={(e) => setCurrentDate(e.target.value)}
+              className="flex-1 px-2 py-1 text-xs rounded-lg border border-white/20 bg-white/10 text-white font-semibold outline-none"
+            />
+            <div className="flex items-center gap-1 bg-white/10 px-2 py-1 rounded-lg">
+              <Squares2X2Icon className="h-3 w-3 text-canine-gold" />
+              <span className="text-xs font-bold">{totalDogsToday}</span>
+            </div>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg ${medicationsToday.length > 0 ? 'bg-red-500/30' : 'bg-white/10'}`}>
+              <BeakerIcon className={`h-3 w-3 ${medicationsToday.length > 0 ? 'text-red-300' : 'text-canine-gold'}`} />
+              <span className="text-xs font-bold">{medicationsToday.length}</span>
+            </div>
+          </div>
+
+          {/* Tab Navigation Bar - Horizontally scrollable on mobile */}
+          <div className="border-b-2 border-white/20 -mx-3 sm:mx-0 px-3 sm:px-0">
+            <div className="flex items-end space-x-0.5 sm:space-x-1 overflow-x-auto scrollbar-hide pb-0.5"
+                 style={{ WebkitOverflowScrolling: 'touch' }}>
               {/* Today */}
               <button
                 onClick={() => setActiveTab('today')}
-                className={`flex items-center space-x-2 px-4 py-3 font-semibold transition-all relative ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 font-semibold transition-all relative whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'today'
                     ? 'text-white'
                     : 'text-white/60 hover:text-white/90'
                 }`}
               >
-                <Squares2X2Icon className="h-5 w-5" />
-                <span>Today</span>
+                <Squares2X2Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">Today</span>
                 {activeTab === 'today' && (
                   <motion.div
                     layoutId="activeTab"
@@ -1740,14 +1760,14 @@ export default function StaffDashboard() {
               {/* Roll Call */}
               <button
                 onClick={() => setActiveTab('rollcall')}
-                className={`flex items-center space-x-2 px-4 py-3 font-semibold transition-all relative ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 font-semibold transition-all relative whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'rollcall'
                     ? 'text-white'
                     : 'text-white/60 hover:text-white/90'
                 }`}
               >
-                <ClipboardDocumentCheckIcon className="h-5 w-5" />
-                <span>Roll Call</span>
+                <ClipboardDocumentCheckIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">Roll Call</span>
                 {(() => {
                   const morningStatus = getRollCallStatus('11am')
                   const eveningStatus = getRollCallStatus('5pm')
@@ -1788,14 +1808,14 @@ export default function StaffDashboard() {
               {/* Schedule */}
               <button
                 onClick={() => setActiveTab('schedule')}
-                className={`flex items-center space-x-2 px-4 py-3 font-semibold transition-all relative ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 font-semibold transition-all relative whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'schedule'
                     ? 'text-white'
                     : 'text-white/60 hover:text-white/90'
                 }`}
               >
-                <CalendarDaysIcon className="h-5 w-5" />
-                <span>Schedule</span>
+                <CalendarDaysIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">Schedule</span>
                 {activeTab === 'schedule' && (
                   <motion.div
                     layoutId="activeTab"
@@ -1806,18 +1826,18 @@ export default function StaffDashboard() {
               </button>
 
               {/* Assessments with Dropdown */}
-              <div className="relative" ref={assessmentDropdownRef}>
+              <div className="relative flex-shrink-0" ref={assessmentDropdownRef}>
                 <button
                   onClick={handleAssessmentTabClick}
-                  className={`flex items-center space-x-2 px-4 py-3 font-semibold transition-all relative ${
+                  className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 font-semibold transition-all relative whitespace-nowrap ${
                     activeTab === 'assessments'
                       ? 'text-white'
                       : 'text-white/60 hover:text-white/90'
                   }`}
                 >
-                  <ClipboardDocumentCheckIcon className="h-5 w-5" />
-                  <span>Assessments</span>
-                  <ChevronDownIcon className={`h-4 w-4 transition-transform ${showAssessmentDropdown ? 'rotate-180' : ''}`} />
+                  <ClipboardDocumentCheckIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span className="text-xs sm:text-sm">Assess</span>
+                  <ChevronDownIcon className={`h-3 w-3 sm:h-4 sm:w-4 transition-transform ${showAssessmentDropdown ? 'rotate-180' : ''}`} />
                   {activeTab === 'assessments' && (
                     <motion.div
                       layoutId="activeTab"
@@ -1872,14 +1892,14 @@ export default function StaffDashboard() {
               {/* Feeding */}
               <button
                 onClick={() => setActiveTab('feeding')}
-                className={`flex items-center space-x-2 px-4 py-3 font-semibold transition-all relative ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 font-semibold transition-all relative whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'feeding'
                     ? 'text-white'
                     : 'text-white/60 hover:text-white/90'
                 }`}
               >
-                <CakeIcon className="h-5 w-5" />
-                <span>Feeding</span>
+                <CakeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">Feeding</span>
                 {activeTab === 'feeding' && (
                   <motion.div
                     layoutId="activeTab"
@@ -1892,16 +1912,16 @@ export default function StaffDashboard() {
               {/* Medications */}
               <button
                 onClick={() => setActiveTab('medications')}
-                className={`flex items-center space-x-2 px-4 py-3 font-semibold transition-all relative ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 font-semibold transition-all relative whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'medications'
                     ? 'text-white'
                     : 'text-white/60 hover:text-white/90'
                 }`}
               >
-                <BeakerIcon className="h-5 w-5" />
-                <span>Medications</span>
+                <BeakerIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">Meds</span>
                 {medicationsToday.length > 0 && (
-                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full ml-1">
+                  <span className="bg-red-500 text-white text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full ml-0.5 sm:ml-1">
                     {medicationsToday.length}
                   </span>
                 )}
@@ -1917,16 +1937,16 @@ export default function StaffDashboard() {
               {/* Incidents */}
               <button
                 onClick={() => setActiveTab('incidents')}
-                className={`flex items-center space-x-2 px-4 py-3 font-semibold transition-all relative ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 font-semibold transition-all relative whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'incidents'
                     ? 'text-white'
                     : 'text-white/60 hover:text-white/90'
                 }`}
               >
-                <ExclamationTriangleIcon className="h-5 w-5" />
-                <span>Incidents</span>
+                <ExclamationTriangleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">Incidents</span>
                 {incidents.filter(i => !i.resolved).length > 0 && (
-                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full ml-1 animate-pulse">
+                  <span className="bg-red-500 text-white text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full ml-0.5 sm:ml-1 animate-pulse">
                     {incidents.filter(i => !i.resolved).length}
                   </span>
                 )}
@@ -1942,14 +1962,14 @@ export default function StaffDashboard() {
               {/* Play Groups */}
               <button
                 onClick={() => setActiveTab('playgroups')}
-                className={`flex items-center space-x-2 px-4 py-3 font-semibold transition-all relative ${
+                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 font-semibold transition-all relative whitespace-nowrap flex-shrink-0 ${
                   activeTab === 'playgroups'
                     ? 'text-white'
                     : 'text-white/60 hover:text-white/90'
                 }`}
               >
-                <UserGroupIcon className="h-5 w-5" />
-                <span>Play Groups</span>
+                <UserGroupIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-xs sm:text-sm">Groups</span>
                 {activeTab === 'playgroups' && (
                   <motion.div
                     layoutId="activeTab"
@@ -1964,7 +1984,7 @@ export default function StaffDashboard() {
       </motion.header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
         <AnimatePresence mode="wait">
           {/* Today's Overview Tab */}
           {activeTab === 'today' && (
