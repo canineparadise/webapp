@@ -972,6 +972,129 @@ export async function sendPasswordResetEmail({
   })
 }
 
+// Assessment reschedule notification email
+export async function sendAssessmentRescheduleEmail({
+  userEmail,
+  userName,
+  dogNames,
+  oldDate,
+  oldStartTime,
+  oldEndTime,
+  newDate,
+  newStartTime,
+  newEndTime,
+  rescheduledBy,
+}: {
+  userEmail: string
+  userName: string
+  dogNames: string[]
+  oldDate: string
+  oldStartTime: string
+  oldEndTime: string
+  newDate: string
+  newStartTime: string
+  newEndTime: string
+  rescheduledBy: string
+}) {
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+
+  const dogsText = dogNames.length === 1
+    ? dogNames[0]
+    : dogNames.length === 2
+    ? `${dogNames[0]} and ${dogNames[1]}`
+    : `${dogNames.slice(0, -1).join(', ')}, and ${dogNames[dogNames.length - 1]}`
+
+  const subject = `Assessment Rescheduled - New Date: ${formatDate(newDate)}`
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #1a3a52 0%, #2d5a7b 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; }
+          .details-box { background: #f5f2e8; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #a68756; }
+          .old-details { background: #f8d7da; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #dc3545; text-decoration: line-through; opacity: 0.7; }
+          .new-details { background: #d4edda; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #28a745; }
+          .footer { background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 10px 10px; }
+          h1 { margin: 0; font-size: 28px; }
+          h2 { color: #1a3a52; margin-top: 0; }
+          .highlight { color: #a68756; font-weight: bold; }
+          ul { padding-left: 20px; }
+          li { margin: 10px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📅 Assessment Rescheduled</h1>
+          </div>
+
+          <div class="content">
+            <p>Dear ${userName},</p>
+
+            <p>Your assessment for <strong>${dogsText}</strong> has been rescheduled by ${rescheduledBy}.</p>
+
+            <div class="old-details">
+              <h3 style="margin-top: 0; color: #721c24;">Previous Date (Cancelled)</h3>
+              <p><strong>Date:</strong> ${formatDate(oldDate)}</p>
+              <p><strong>Time:</strong> ${oldStartTime.slice(0, 5)} - ${oldEndTime.slice(0, 5)}</p>
+            </div>
+
+            <div class="new-details">
+              <h3 style="margin-top: 0; color: #155724;">New Date</h3>
+              <p><strong>Date:</strong> ${formatDate(newDate)}</p>
+              <p><strong>Time:</strong> ${newStartTime.slice(0, 5)} - ${newEndTime.slice(0, 5)}</p>
+              <p><strong>Dog${dogNames.length > 1 ? 's' : ''}:</strong> ${dogsText}</p>
+            </div>
+
+            <div class="details-box">
+              <h2>What to Bring</h2>
+              <ul>
+                <li>Your dog's vaccination records (if not already provided)</li>
+                <li>Any medication your dog requires</li>
+                <li>Your dog's favourite treats (optional)</li>
+                <li>A positive attitude! 🐕</li>
+              </ul>
+            </div>
+
+            <p><strong>Our Address:</strong><br>
+            Aldenham Doggy Day Care<br>
+            [Your Full Address Here]</p>
+
+            <p>If you have any questions about this change or need to request a different date, please contact us at admin@aldenhamdoggydaycare.com or call [Your Phone Number].</p>
+
+            <p>We look forward to meeting ${dogsText}! 🐾</p>
+
+            <p>Best regards,<br>
+            <strong>The Aldenham Doggy Day Care Team</strong></p>
+          </div>
+
+          <div class="footer">
+            <p>This is an automated notification from Aldenham Doggy Day Care.</p>
+            <p>&copy; ${new Date().getFullYear()} Aldenham Doggy Day Care. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+
+  return sendEmail({
+    to: userEmail,
+    subject,
+    html,
+  })
+}
+
 // Dog approval notification email
 export async function sendDogApprovalEmail({
   userEmail,

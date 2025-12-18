@@ -433,7 +433,7 @@ export default function AdminDashboard() {
 
   // Assessment calendar state
   const [assessmentCalendarMonth, setAssessmentCalendarMonth] = useState(new Date())
-  const [scheduledAssessments, setScheduledAssessments] = useState<{date: string, start_time?: string, end_time?: string, dogs: (Dog & {assessment_time?: string})[]}[]>([])
+  const [scheduledAssessments, setScheduledAssessments] = useState<{date: string, start_time?: string, end_time?: string, slot_id?: string, dogs: (Dog & {assessment_time?: string, slot_id?: string, booking_user_id?: string})[]}[]>([])
   const [allDogs, setAllDogs] = useState<Dog[]>([])
   const [filteredDogs, setFilteredDogs] = useState<Dog[]>([])
   const [dogSearchQuery, setDogSearchQuery] = useState('')
@@ -526,6 +526,26 @@ export default function AdminDashboard() {
   }[]>([])
   const [clientDogs, setClientDogs] = useState<Dog[]>([])
   const [clientLegalAgreement, setClientLegalAgreement] = useState<LegalAgreement | null>(null)
+
+  // Reschedule assessment state
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false)
+  const [rescheduleTarget, setRescheduleTarget] = useState<{
+    dogId: string
+    dogName: string
+    userId: string
+    ownerName: string
+    currentSlotId: string
+    currentDate: string
+    currentTime: string
+  } | null>(null)
+  const [availableSlots, setAvailableSlots] = useState<{
+    id: string
+    assessment_date: string
+    start_time: string
+    end_time: string
+  }[]>([])
+  const [selectedNewSlot, setSelectedNewSlot] = useState<string>('')
+  const [rescheduling, setRescheduling] = useState(false)
 
   // Newsletter state
   const [newsletterSubject, setNewsletterSubject] = useState('')
@@ -1788,7 +1808,9 @@ export default function AdminDashboard() {
           assessment_date: slot?.assessment_date,
           assessment_time: slot?.start_time,
           assessment_end_time: slot?.end_time,
-          booking_id: booking.id
+          booking_id: booking.id,
+          slot_id: booking.slot_id,
+          booking_user_id: booking.user_id,
         }
       }).filter(d => d.id)
 
@@ -1800,7 +1822,7 @@ export default function AdminDashboard() {
       )
 
       // Group dogs by assessment date and time
-      const grouped: { [key: string]: { date: string, start_time?: string, end_time?: string, dogs: any[] } } = {}
+      const grouped: { [key: string]: { date: string, start_time?: string, end_time?: string, slot_id?: string, dogs: any[] } } = {}
       dogsInMonth.forEach((dog: any) => {
         if (dog.assessment_date) {
           const key = `${dog.assessment_date}_${dog.assessment_time || ''}`
@@ -1809,6 +1831,7 @@ export default function AdminDashboard() {
               date: dog.assessment_date,
               start_time: dog.assessment_time,
               end_time: dog.assessment_end_time,
+              slot_id: dog.slot_id,
               dogs: []
             }
           }
@@ -2608,6 +2631,89 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error sending newsletter:', error)
       toast.error('Failed to send newsletter')
+    }
+  }
+
+  // Reschedule Assessment Functions
+  const openRescheduleModal = async (dog: any, slotId: string, slotDate: string, slotTime: string) => {
+    setRescheduleTarget({
+      dogId: dog.id,
+      dogName: dog.name,
+      userId: dog.owner?.id || dog.owner_id,
+      ownerName: `${dog.owner?.first_name || ''} ${dog.owner?.last_name || ''}`.trim(),
+      currentSlotId: slotId,
+      currentDate: slotDate,
+      currentTime: slotTime,
+    })
+    setSelectedNewSlot('')
+
+    // Fetch available slots (excluding current slot)
+    try {
+      const { data: slots, error } = await supabase
+        .from('assessment_slots')
+        .select('id, assessment_date, start_time, end_time')
+        .eq('is_available', true)
+        .neq('id', slotId)
+        .order('assessment_date', { ascending: true })
+        .order('start_time', { ascending: true })
+
+      if (error) throw error
+      setAvailableSlots(slots || [])
+    } catch (error) {
+      console.error('Error fetching available slots:', error)
+      toast.error('Failed to load available slots')
+      setAvailableSlots([])
+    }
+
+    setShowRescheduleModal(true)
+  }
+
+  const handleRescheduleAssessment = async () => {
+    if (!rescheduleTarget || !selectedNewSlot) {
+      toast.error('Please select a new slot')
+      return
+    }
+
+    setRescheduling(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        toast.error('Session expired. Please log in again.')
+        return
+      }
+
+      const response = await fetch('/api/reschedule-assessment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          dogId: rescheduleTarget.dogId,
+          oldSlotId: rescheduleTarget.currentSlotId,
+          newSlotId: selectedNewSlot,
+          userId: rescheduleTarget.userId,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to reschedule assessment')
+      }
+
+      toast.success(`Assessment rescheduled to ${data.newDate} ${data.newTime}`)
+      setShowRescheduleModal(false)
+      setRescheduleTarget(null)
+      setSelectedNewSlot('')
+
+      // Refresh the assessment calendar
+      fetchAssessmentCalendar(assessmentCalendarMonth)
+    } catch (error: any) {
+      console.error('Error rescheduling assessment:', error)
+      toast.error(error.message || 'Failed to reschedule assessment')
+    } finally {
+      setRescheduling(false)
     }
   }
 
@@ -3823,11 +3929,24 @@ export default function AdminDashboard() {
                             {assessment.dogs.length} dog{assessment.dogs.length !== 1 ? 's' : ''}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {assessment.dogs.map((dog) => (
-                            <div key={dog.id} className="bg-white rounded-lg p-2 text-sm">
-                              <p className="font-semibold text-canine-navy">{dog.name}</p>
-                              <p className="text-xs text-gray-600">{dog.owner?.first_name} {dog.owner?.last_name}</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {assessment.dogs.map((dog: any) => (
+                            <div key={dog.id} className="bg-white rounded-lg p-3 text-sm flex items-center justify-between">
+                              <div>
+                                <p className="font-semibold text-canine-navy">{dog.name}</p>
+                                <p className="text-xs text-gray-600">{dog.owner?.first_name} {dog.owner?.last_name}</p>
+                              </div>
+                              <button
+                                onClick={() => openRescheduleModal(
+                                  dog,
+                                  dog.slot_id || assessment.slot_id || '',
+                                  assessment.date,
+                                  `${assessment.start_time?.slice(0, 5) || ''} - ${assessment.end_time?.slice(0, 5) || ''}`
+                                )}
+                                className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-medium"
+                              >
+                                Reschedule
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -8266,6 +8385,132 @@ export default function AdminDashboard() {
                 >
                   {editingTask ? 'Update Task' : 'Create Task'}
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Reschedule Assessment Modal */}
+      <AnimatePresence>
+        {showRescheduleModal && rescheduleTarget && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setShowRescheduleModal(false)
+              setRescheduleTarget(null)
+              setSelectedNewSlot('')
+            }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden"
+            >
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-3xl">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-display font-bold">Reschedule Assessment</h2>
+                  <button
+                    onClick={() => {
+                      setShowRescheduleModal(false)
+                      setRescheduleTarget(null)
+                      setSelectedNewSlot('')
+                    }}
+                    className="bg-white/20 hover:bg-white/30 rounded-full p-2 transition-all"
+                  >
+                    <XCircleIcon className="h-6 w-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {/* Current booking info */}
+                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                  <h3 className="font-bold text-red-800 mb-2">Current Booking (to be changed)</h3>
+                  <div className="space-y-1 text-sm">
+                    <p><span className="font-semibold">Dog:</span> {rescheduleTarget.dogName}</p>
+                    <p><span className="font-semibold">Owner:</span> {rescheduleTarget.ownerName}</p>
+                    <p><span className="font-semibold">Date:</span> {new Date(rescheduleTarget.currentDate).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                    <p><span className="font-semibold">Time:</span> {rescheduleTarget.currentTime}</p>
+                  </div>
+                </div>
+
+                {/* Select new slot */}
+                <div>
+                  <label className="block text-sm font-bold text-canine-navy mb-3">Select New Date & Time</label>
+                  {availableSlots.length === 0 ? (
+                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 text-center">
+                      <ExclamationTriangleIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
+                      <p className="text-yellow-800 font-semibold">No available slots</p>
+                      <p className="text-sm text-yellow-700 mt-1">Please create assessment slots in Business Settings first.</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto space-y-2 border-2 border-gray-200 rounded-xl p-3">
+                      {availableSlots.map((slot) => (
+                        <label
+                          key={slot.id}
+                          className={`flex items-center p-3 rounded-lg cursor-pointer transition-all ${
+                            selectedNewSlot === slot.id
+                              ? 'bg-green-100 border-2 border-green-500'
+                              : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="newSlot"
+                            value={slot.id}
+                            checked={selectedNewSlot === slot.id}
+                            onChange={(e) => setSelectedNewSlot(e.target.value)}
+                            className="h-5 w-5 text-green-600 focus:ring-green-500"
+                          />
+                          <div className="ml-3">
+                            <p className="font-semibold text-canine-navy">
+                              {new Date(slot.assessment_date).toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {slot.start_time.slice(0, 5)} - {slot.end_time.slice(0, 5)}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowRescheduleModal(false)
+                      setRescheduleTarget(null)
+                      setSelectedNewSlot('')
+                    }}
+                    className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300 transition-all"
+                    disabled={rescheduling}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleRescheduleAssessment}
+                    disabled={!selectedNewSlot || rescheduling}
+                    className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+                      !selectedNewSlot || rescheduling
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    {rescheduling ? 'Rescheduling...' : 'Confirm Reschedule'}
+                  </button>
+                </div>
+
+                <p className="text-xs text-gray-500 text-center">
+                  The client will receive an email notification about this change.
+                </p>
               </div>
             </motion.div>
           </motion.div>
