@@ -227,6 +227,7 @@ export default function StaffDashboard() {
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklyBooking[]>([])
   const [scheduledAssessments, setScheduledAssessments] = useState<Dog[]>([])
   const [pendingApprovals, setPendingApprovals] = useState<Dog[]>([])
+  const [todayAssessments, setTodayAssessments] = useState<Dog[]>([])
   const [feedingSchedule, setFeedingSchedule] = useState<{
     breakfast: FeedingDog[]
     lunch: FeedingDog[]
@@ -384,6 +385,52 @@ export default function StaffDashboard() {
         setUnassignedDogs([])
         setMedicationsToday([])
         setTodayDogs({ notCheckedIn: [], checkedIn: [], checkedOut: [] })
+        setFeedingSchedule({ breakfast: [], lunch: [], dinner: [] })
+        // Still need to check for today's assessments even if no regular dogs
+        const { data: todayAssessmentBookings } = await supabase
+          .from('assessment_bookings')
+          .select('slot_id, dog_id')
+          .eq('booking_status', 'confirmed')
+
+        if (todayAssessmentBookings && todayAssessmentBookings.length > 0) {
+          const slotIds = todayAssessmentBookings.map(b => b.slot_id)
+          const { data: todaySlots } = await supabase
+            .from('assessment_slots')
+            .select('*')
+            .in('id', slotIds)
+            .eq('assessment_date', currentDate)
+
+          if (todaySlots && todaySlots.length > 0) {
+            const todaySlotIds = todaySlots.map(s => s.id)
+            const todayAssessmentBookingsFiltered = todayAssessmentBookings.filter(b => todaySlotIds.includes(b.slot_id))
+            const todayDogIdsForAssessments = todayAssessmentBookingsFiltered.map(b => b.dog_id)
+
+            const { data: assessmentDogs } = await supabase
+              .from('dogs')
+              .select(`
+                *,
+                owner:profiles!dogs_owner_id_fkey (first_name, last_name, phone, email)
+              `)
+              .in('id', todayDogIdsForAssessments)
+
+            const enrichedAssessments = (assessmentDogs || []).map(dog => {
+              const booking = todayAssessmentBookingsFiltered.find(b => b.dog_id === dog.id)
+              const slot = todaySlots.find(s => s.id === booking?.slot_id)
+              return {
+                ...dog,
+                assessment_date: slot?.assessment_date,
+                assessment_time: slot?.start_time,
+                assessment_end_time: slot?.end_time
+              }
+            }).sort((a, b) => (a.assessment_time || '').localeCompare(b.assessment_time || ''))
+
+            setTodayAssessments(enrichedAssessments)
+          } else {
+            setTodayAssessments([])
+          }
+        } else {
+          setTodayAssessments([])
+        }
         setLoading(false)
         return
       }
@@ -518,6 +565,112 @@ export default function StaffDashboard() {
         .order('created_at', { ascending: true })
 
       setMedicationsToday(medsData || [])
+
+      // Fetch today's assessments for the overview
+      const { data: todayAssessmentBookings } = await supabase
+        .from('assessment_bookings')
+        .select('slot_id, dog_id')
+        .eq('booking_status', 'confirmed')
+
+      if (todayAssessmentBookings && todayAssessmentBookings.length > 0) {
+        // Get slot IDs and filter for today
+        const slotIds = todayAssessmentBookings.map(b => b.slot_id)
+        const { data: todaySlots } = await supabase
+          .from('assessment_slots')
+          .select('*')
+          .in('id', slotIds)
+          .eq('assessment_date', currentDate)
+
+        if (todaySlots && todaySlots.length > 0) {
+          const todaySlotIds = todaySlots.map(s => s.id)
+          const todayAssessmentBookingsFiltered = todayAssessmentBookings.filter(b => todaySlotIds.includes(b.slot_id))
+          const todayDogIdsForAssessments = todayAssessmentBookingsFiltered.map(b => b.dog_id)
+
+          const { data: assessmentDogs } = await supabase
+            .from('dogs')
+            .select(`
+              *,
+              owner:profiles!dogs_owner_id_fkey (first_name, last_name, phone, email)
+            `)
+            .in('id', todayDogIdsForAssessments)
+
+          // Enrich with slot times
+          const enrichedAssessments = (assessmentDogs || []).map(dog => {
+            const booking = todayAssessmentBookingsFiltered.find(b => b.dog_id === dog.id)
+            const slot = todaySlots.find(s => s.id === booking?.slot_id)
+            return {
+              ...dog,
+              assessment_date: slot?.assessment_date,
+              assessment_time: slot?.start_time,
+              assessment_end_time: slot?.end_time
+            }
+          }).sort((a, b) => (a.assessment_time || '').localeCompare(b.assessment_time || ''))
+
+          setTodayAssessments(enrichedAssessments)
+        } else {
+          setTodayAssessments([])
+        }
+      } else {
+        setTodayAssessments([])
+      }
+
+      // Helper function to parse meal requirements from special_instructions text
+      const parseMealsFromInstructions = (instructions: string | null): { breakfast: boolean, lunch: boolean, dinner: boolean } => {
+        if (!instructions) return { breakfast: false, lunch: false, dinner: false }
+        const upperInstructions = instructions.toUpperCase()
+        return {
+          breakfast: upperInstructions.includes('BREAKFAST'),
+          lunch: upperInstructions.includes('LUNCH'),
+          dinner: upperInstructions.includes('DINNER')
+        }
+      }
+
+      // Fetch feeding schedule for overview (combine subscription and individual bookings)
+      const allBookingsForFeeding = [
+        ...(bookingsWithTimes || []).map(b => ({ ...b, booking_type: 'subscription' })),
+        ...(individualBookingsWithTimes || []).map(b => ({ ...b, booking_type: 'individual' }))
+      ]
+
+      const breakfast: FeedingDog[] = []
+      const lunch: FeedingDog[] = []
+      const dinner: FeedingDog[] = []
+
+      allBookingsForFeeding.forEach(booking => {
+        const dog = dogsData?.find(d => d.id === booking.dog_id)
+        if (!dog) return
+
+        const parsedMeals = parseMealsFromInstructions(booking.special_instructions)
+        const needsBreakfast = booking.needs_breakfast || parsedMeals.breakfast
+        const needsLunch = booking.needs_lunch || parsedMeals.lunch
+        const needsDinner = booking.needs_dinner || parsedMeals.dinner
+
+        if (!needsBreakfast && !needsLunch && !needsDinner) return
+
+        const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+        const feedingDog: FeedingDog = {
+          dog_id: dog.id,
+          dog_name: dog.name,
+          dog_photo_url: dog.photo_url,
+          owner_name: `${owner?.first_name} ${owner?.last_name}`,
+          booking_id: booking.id,
+          booking_type: booking.booking_type as 'subscription' | 'individual',
+          feeding_schedule: dog.feeding_schedule,
+          dietary_requirements: dog.special_dietary_requirements,
+          special_instructions: booking.special_instructions,
+          breakfast_completed: booking.breakfast_completed,
+          breakfast_completed_at: booking.breakfast_completed_at,
+          lunch_completed: booking.lunch_completed,
+          lunch_completed_at: booking.lunch_completed_at,
+          dinner_completed: booking.dinner_completed,
+          dinner_completed_at: booking.dinner_completed_at
+        }
+
+        if (needsBreakfast) breakfast.push(feedingDog)
+        if (needsLunch) lunch.push(feedingDog)
+        if (needsDinner) dinner.push(feedingDog)
+      })
+
+      setFeedingSchedule({ breakfast, lunch, dinner })
 
     } catch (error) {
       console.error('Error fetching today data:', error)
@@ -1813,7 +1966,7 @@ export default function StaffDashboard() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         <AnimatePresence mode="wait">
-          {/* Today's Dogs Tab */}
+          {/* Today's Overview Tab */}
           {activeTab === 'today' && (
             <motion.div
               key="today"
@@ -1822,244 +1975,518 @@ export default function StaffDashboard() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {totalDogsToday === 0 ? (
-                <div className="bg-white rounded-2xl p-12 shadow-lg text-center border-2 border-canine-gold/20">
-                  <CalendarIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <h2 className="text-2xl font-bold text-canine-navy mb-2">No Dogs Scheduled</h2>
-                  <p className="text-gray-600">No dogs are booked for {new Date(currentDate).toLocaleDateString()}</p>
+              <div className="space-y-6">
+                {/* Header with Date */}
+                <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-canine-gold/20">
+                  <h2 className="text-2xl font-display font-bold text-canine-navy flex items-center">
+                    <CalendarIcon className="h-8 w-8 mr-3 text-canine-gold" />
+                    Daily Overview - {new Date(currentDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </h2>
                 </div>
-              ) : (
-                <div>
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-display font-bold text-canine-navy mb-2">
-                      Today's Dogs - {new Date(currentDate).toLocaleDateString()}
-                    </h2>
-                    <p className="text-gray-600">
-                      Total: {totalDogsToday} | Not Checked In: {todayDogs.notCheckedIn.length} | Checked In: {todayDogs.checkedIn.length} | Checked Out: {todayDogs.checkedOut.length}
-                    </p>
+
+                {/* Quick Stats Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Dogs Today */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 text-white shadow-lg"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-blue-100 text-sm font-medium">Dogs Today</p>
+                        <p className="text-4xl font-bold">{totalDogsToday}</p>
+                        <p className="text-blue-200 text-xs mt-1">
+                          {todayDogs.checkedIn.length} in | {todayDogs.notCheckedIn.length} pending
+                        </p>
+                      </div>
+                      <div className="bg-white/20 rounded-full p-3">
+                        <Squares2X2Icon className="h-8 w-8" />
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Assessments Today */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-purple-100 text-sm font-medium">Assessments</p>
+                        <p className="text-4xl font-bold">{todayAssessments.length}</p>
+                        <p className="text-purple-200 text-xs mt-1">
+                          {todayAssessments.length > 0 ? 'Scheduled today' : 'None scheduled'}
+                        </p>
+                      </div>
+                      <div className="bg-white/20 rounded-full p-3">
+                        <ClipboardDocumentCheckIcon className="h-8 w-8" />
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Meals Needed */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-5 text-white shadow-lg"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-orange-100 text-sm font-medium">Meals Needed</p>
+                        <p className="text-4xl font-bold">
+                          {feedingSchedule.breakfast.filter(d => !d.breakfast_completed).length +
+                           feedingSchedule.lunch.filter(d => !d.lunch_completed).length +
+                           feedingSchedule.dinner.filter(d => !d.dinner_completed).length}
+                        </p>
+                        <p className="text-orange-200 text-xs mt-1">
+                          B:{feedingSchedule.breakfast.length} L:{feedingSchedule.lunch.length} D:{feedingSchedule.dinner.length}
+                        </p>
+                      </div>
+                      <div className="bg-white/20 rounded-full p-3">
+                        <CakeIcon className="h-8 w-8" />
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Medications */}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-5 text-white shadow-lg"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-red-100 text-sm font-medium">Medications</p>
+                        <p className="text-4xl font-bold">{medicationsToday.length}</p>
+                        <p className="text-red-200 text-xs mt-1">
+                          {medicationsToday.length > 0 ? 'Dogs need meds' : 'No meds required'}
+                        </p>
+                      </div>
+                      <div className="bg-white/20 rounded-full p-3">
+                        <BeakerIcon className="h-8 w-8" />
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Check In / Check Out Section */}
+                <div className="bg-white rounded-2xl shadow-lg border-2 border-canine-gold/20 overflow-hidden">
+                  <div className="bg-canine-navy p-4">
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <ArrowRightOnRectangleIcon className="h-6 w-6 mr-2" />
+                      Check In / Check Out
+                    </h3>
                   </div>
+                  <div className="p-6">
+                    {totalDogsToday === 0 ? (
+                      <div className="text-center py-8">
+                        <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No dogs scheduled for today</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Not Checked In */}
+                        <div className="bg-yellow-50 rounded-xl p-4 border-2 border-yellow-300">
+                          <h4 className="text-lg font-bold text-yellow-800 mb-3 flex items-center">
+                            <ClockIcon className="h-5 w-5 mr-2" />
+                            Awaiting ({todayDogs.notCheckedIn.length})
+                          </h4>
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {todayDogs.notCheckedIn.length === 0 ? (
+                              <p className="text-sm text-yellow-600 text-center py-4">All dogs checked in!</p>
+                            ) : (
+                              todayDogs.notCheckedIn.map(dog => {
+                                const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+                                return (
+                                  <div key={dog.id} className="bg-white rounded-lg p-3 border border-yellow-200 flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="w-10 h-10 rounded-full bg-yellow-200 overflow-hidden flex-shrink-0">
+                                        {dog.photo_url ? (
+                                          <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <div className="flex items-center justify-center h-full text-lg">🐕</div>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1">
+                                          <p className="font-semibold text-canine-navy text-sm">{dog.name}</p>
+                                          {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
+                                        </div>
+                                        <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedBookingDog(dog)
+                                        setShowCheckInModal(true)
+                                      }}
+                                      className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-all"
+                                    >
+                                      Check In
+                                    </button>
+                                  </div>
+                                )
+                              })
+                            )}
+                          </div>
+                        </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Not Checked In */}
-                    <div className="bg-yellow-50 rounded-2xl p-6 border-4 border-yellow-400">
-                      <h3 className="text-xl font-bold text-yellow-900 mb-4 flex items-center">
-                        <ClockIcon className="h-6 w-6 mr-2" />
-                        Not Checked In ({todayDogs.notCheckedIn.length})
-                      </h3>
-                      <div className="space-y-3">
-                        {todayDogs.notCheckedIn.map(dog => {
+                        {/* Checked In */}
+                        <div className="bg-green-50 rounded-xl p-4 border-2 border-green-300">
+                          <h4 className="text-lg font-bold text-green-800 mb-3 flex items-center">
+                            <CheckCircleIcon className="h-5 w-5 mr-2" />
+                            Here ({todayDogs.checkedIn.length})
+                          </h4>
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {todayDogs.checkedIn.length === 0 ? (
+                              <p className="text-sm text-green-600 text-center py-4">No dogs checked in yet</p>
+                            ) : (
+                              todayDogs.checkedIn.map(dog => {
+                                const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
+                                return (
+                                  <div key={dog.id} className="bg-white rounded-lg p-3 border border-green-200 flex items-center justify-between">
+                                    <div className="flex items-center space-x-3">
+                                      <div className="w-10 h-10 rounded-full bg-green-200 overflow-hidden flex-shrink-0">
+                                        {dog.photo_url ? (
+                                          <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <div className="flex items-center justify-center h-full text-lg">🐕</div>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-1">
+                                          <p className="font-semibold text-canine-navy text-sm">{dog.name}</p>
+                                          {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
+                                        </div>
+                                        <p className="text-xs text-green-600">
+                                          In: {dog.checked_in_at ? new Date(dog.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        setSelectedBookingDog(dog)
+                                        setShowCheckOutModal(true)
+                                      }}
+                                      className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-all"
+                                    >
+                                      Check Out
+                                    </button>
+                                  </div>
+                                )
+                              })
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Checked Out */}
+                        <div className="bg-gray-50 rounded-xl p-4 border-2 border-gray-300">
+                          <h4 className="text-lg font-bold text-gray-700 mb-3 flex items-center">
+                            <XCircleIcon className="h-5 w-5 mr-2" />
+                            Gone Home ({todayDogs.checkedOut.length})
+                          </h4>
+                          <div className="space-y-2 max-h-64 overflow-y-auto">
+                            {todayDogs.checkedOut.length === 0 ? (
+                              <p className="text-sm text-gray-500 text-center py-4">No dogs checked out yet</p>
+                            ) : (
+                              todayDogs.checkedOut.map(dog => (
+                                <div key={dog.id} className="bg-white rounded-lg p-3 border border-gray-200">
+                                  <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden flex-shrink-0">
+                                      {dog.photo_url ? (
+                                        <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="flex items-center justify-center h-full text-lg">🐕</div>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-1">
+                                        <p className="font-semibold text-canine-navy text-sm">{dog.name}</p>
+                                        {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
+                                      </div>
+                                      <p className="text-xs text-gray-500">
+                                        Out: {dog.checked_out_at ? new Date(dog.checked_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Today's Assessments Section */}
+                <div className="bg-white rounded-2xl shadow-lg border-2 border-canine-gold/20 overflow-hidden">
+                  <div className="bg-purple-600 p-4">
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <ClipboardDocumentCheckIcon className="h-6 w-6 mr-2" />
+                      Today's Assessments ({todayAssessments.length})
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    {todayAssessments.length === 0 ? (
+                      <div className="text-center py-8">
+                        <ClipboardDocumentCheckIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No assessments scheduled for today</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {todayAssessments.map(dog => {
                           const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
                           return (
-                          <motion.div
-                            key={dog.id}
-                            whileHover={{ scale: 1.02 }}
-                            className="bg-white rounded-xl p-4 shadow-sm border-2 border-yellow-200 cursor-pointer"
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-3" onClick={() => handleDogClick(dog)}>
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-400 overflow-hidden flex-shrink-0">
+                            <motion.div
+                              key={dog.id}
+                              whileHover={{ scale: 1.02 }}
+                              className="bg-purple-50 rounded-xl p-4 border-2 border-purple-200"
+                            >
+                              <div className="flex items-center space-x-3 mb-3">
+                                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-300 to-purple-500 overflow-hidden flex-shrink-0">
                                   {dog.photo_url ? (
                                     <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
                                   ) : (
-                                    <div className="flex items-center justify-center h-full text-xl">🐕</div>
+                                    <div className="flex items-center justify-center h-full text-2xl">🐕</div>
                                   )}
                                 </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <h4 className="font-bold text-canine-navy">{dog.name}</h4>
-                                    {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
-                                  </div>
+                                <div>
+                                  <h4 className="font-bold text-canine-navy text-lg">{dog.name}</h4>
                                   <p className="text-sm text-gray-600">{dog.breed}</p>
-                                  <div className="flex items-center gap-2 flex-wrap mt-1">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                      dog.booking_type === 'subscription'
-                                        ? 'bg-purple-100 text-purple-700'
-                                        : 'bg-blue-100 text-blue-700'
-                                    }`}>
-                                      {dog.booking_type === 'subscription' ? 'Sub' : 'Individual'}
-                                    </span>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                      dog.session_type === 'half_day'
-                                        ? 'bg-orange-100 text-orange-700'
-                                        : 'bg-green-100 text-green-700'
-                                    }`}>
-                                      {dog.session_type === 'half_day' ? 'Half Day' : 'Full Day'}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-1">{owner?.first_name} {owner?.last_name}</p>
-                                  <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
+                                  <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
                                 </div>
                               </div>
-                            </div>
-                            {dog.special_instructions && (
-                              <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <p className="text-xs font-semibold text-blue-900 mb-1">Special Instructions:</p>
-                                <p className="text-sm text-blue-800 whitespace-pre-wrap">{dog.special_instructions}</p>
+                              <div className="bg-white rounded-lg p-3 border border-purple-200">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">Time:</span>
+                                  <span className="font-bold text-purple-700">
+                                    {dog.assessment_time?.slice(0, 5)} - {dog.assessment_end_time?.slice(0, 5)}
+                                  </span>
+                                </div>
+                                {owner?.phone && (
+                                  <div className="flex items-center justify-between mt-2">
+                                    <span className="text-sm text-gray-600">Phone:</span>
+                                    <span className="text-sm text-canine-navy">{owner.phone}</span>
+                                  </div>
+                                )}
                               </div>
-                            )}
-                            <button
-                              onClick={() => {
-                                setSelectedBookingDog(dog)
-                                setShowCheckInModal(true)
-                              }}
-                              className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg transition-all flex items-center justify-center space-x-2"
-                            >
-                              <ArrowRightIcon className="h-4 w-4" />
-                              <span>Check In</span>
-                            </button>
-                          </motion.div>
+                            </motion.div>
                           )
                         })}
                       </div>
-                    </div>
+                    )}
+                  </div>
+                </div>
 
-                    {/* Checked In */}
-                    <div className="bg-green-50 rounded-2xl p-6 border-4 border-green-400">
-                      <h3 className="text-xl font-bold text-green-900 mb-4 flex items-center">
-                        <CheckCircleIcon className="h-6 w-6 mr-2" />
-                        Checked In ({todayDogs.checkedIn.length})
-                      </h3>
-                      <div className="space-y-3">
-                        {todayDogs.checkedIn.map(dog => {
-                          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
-                          return (
-                          <motion.div
-                            key={dog.id}
-                            whileHover={{ scale: 1.02 }}
-                            className="bg-white rounded-xl p-4 shadow-sm border-2 border-green-200 cursor-pointer"
-                          >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-3" onClick={() => handleDogClick(dog)}>
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-200 to-green-400 overflow-hidden flex-shrink-0">
-                                  {dog.photo_url ? (
-                                    <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
-                                  ) : (
-                                    <div className="flex items-center justify-center h-full text-xl">🐕</div>
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <h4 className="font-bold text-canine-navy">{dog.name}</h4>
-                                    {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
-                                  </div>
-                                  <p className="text-sm text-gray-600">{dog.breed}</p>
-                                  <div className="flex items-center gap-2 flex-wrap mt-1">
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                      dog.booking_type === 'subscription'
-                                        ? 'bg-purple-100 text-purple-700'
-                                        : 'bg-blue-100 text-blue-700'
-                                    }`}>
-                                      {dog.booking_type === 'subscription' ? 'Sub' : 'Individual'}
-                                    </span>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                      dog.session_type === 'half_day'
-                                        ? 'bg-orange-100 text-orange-700'
-                                        : 'bg-green-100 text-green-700'
-                                    }`}>
-                                      {dog.session_type === 'half_day' ? 'Half Day' : 'Full Day'}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-1">{owner?.first_name} {owner?.last_name}</p>
-                                  <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
-                                  {dog.checked_in_at && (
-                                    <p className="text-xs text-green-700 font-semibold">
-                                      In: {new Date(dog.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            {dog.special_instructions && (
-                              <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <p className="text-xs font-semibold text-blue-900 mb-1">Special Instructions:</p>
-                                <p className="text-sm text-blue-800 whitespace-pre-wrap">{dog.special_instructions}</p>
-                              </div>
-                            )}
-                            <button
-                              onClick={() => {
-                                setSelectedBookingDog(dog)
-                                setShowCheckOutModal(true)
-                              }}
-                              className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-all flex items-center justify-center space-x-2"
-                            >
-                              <ArrowRightIcon className="h-4 w-4" />
-                              <span>Check Out</span>
-                            </button>
-                          </motion.div>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Checked Out */}
-                    <div className="bg-gray-50 rounded-2xl p-6 border-4 border-gray-300">
-                      <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-                        <CheckCircleIcon className="h-6 w-6 mr-2" />
-                        Checked Out ({todayDogs.checkedOut.length})
-                      </h3>
-                      <div className="space-y-3">
-                        {todayDogs.checkedOut.map(dog => {
-                          const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
-                          return (
-                          <motion.div
-                            key={dog.id}
-                            whileHover={{ scale: 1.02 }}
-                            onClick={() => handleDogClick(dog)}
-                            className="bg-white rounded-xl p-4 shadow-sm border-2 border-gray-200 cursor-pointer"
-                          >
-                            <div className="flex items-center space-x-3 mb-3">
-                              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gray-200 to-gray-400 overflow-hidden flex-shrink-0">
-                                {dog.photo_url ? (
-                                  <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
+                {/* Meals Overview Section */}
+                <div className="bg-white rounded-2xl shadow-lg border-2 border-canine-gold/20 overflow-hidden">
+                  <div className="bg-orange-500 p-4">
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <CakeIcon className="h-6 w-6 mr-2" />
+                      Meals Overview
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Breakfast */}
+                      <div className="bg-yellow-50 rounded-xl p-4 border-2 border-yellow-300">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-lg font-bold text-yellow-800 flex items-center">
+                            <span className="text-2xl mr-2">🌅</span>
+                            Breakfast
+                          </h4>
+                          <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                            feedingSchedule.breakfast.filter(d => !d.breakfast_completed).length === 0
+                              ? 'bg-green-200 text-green-800'
+                              : 'bg-yellow-200 text-yellow-800'
+                          }`}>
+                            {feedingSchedule.breakfast.filter(d => d.breakfast_completed).length}/{feedingSchedule.breakfast.length}
+                          </span>
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {feedingSchedule.breakfast.length === 0 ? (
+                            <p className="text-sm text-yellow-600 text-center py-4">No breakfast needed</p>
+                          ) : (
+                            feedingSchedule.breakfast.map(dog => (
+                              <div key={`breakfast-${dog.booking_id}`} className={`rounded-lg p-2 flex items-center justify-between ${
+                                dog.breakfast_completed ? 'bg-green-100 border border-green-200' : 'bg-white border border-yellow-200'
+                              }`}>
+                                <span className="font-medium text-sm">{dog.dog_name}</span>
+                                {dog.breakfast_completed ? (
+                                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
                                 ) : (
-                                  <div className="flex items-center justify-center h-full text-xl">🐕</div>
+                                  <ClockIcon className="h-5 w-5 text-yellow-500" />
                                 )}
                               </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="font-bold text-canine-navy">{dog.name}</h4>
-                                  {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
-                                </div>
-                                <p className="text-sm text-gray-600">{dog.breed}</p>
-                                <div className="flex items-center gap-2 flex-wrap mt-1">
-                                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                    dog.booking_type === 'subscription'
-                                      ? 'bg-purple-100 text-purple-700'
-                                      : 'bg-blue-100 text-blue-700'
-                                  }`}>
-                                    {dog.booking_type === 'subscription' ? 'Sub' : 'Individual'}
-                                  </span>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                                    dog.session_type === 'half_day'
-                                      ? 'bg-orange-100 text-orange-700'
-                                      : 'bg-green-100 text-green-700'
-                                  }`}>
-                                    {dog.session_type === 'half_day' ? 'Half Day' : 'Full Day'}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">{owner?.first_name} {owner?.last_name}</p>
-                                <p className="text-xs text-gray-500">📞 {owner?.phone}</p>
-                                {dog.checked_out_at && (
-                                  <p className="text-xs text-gray-700 font-semibold">
-                                    Out: {new Date(dog.checked_out_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  </p>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Lunch */}
+                      <div className="bg-orange-50 rounded-xl p-4 border-2 border-orange-300">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-lg font-bold text-orange-800 flex items-center">
+                            <span className="text-2xl mr-2">☀️</span>
+                            Lunch
+                          </h4>
+                          <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                            feedingSchedule.lunch.filter(d => !d.lunch_completed).length === 0
+                              ? 'bg-green-200 text-green-800'
+                              : 'bg-orange-200 text-orange-800'
+                          }`}>
+                            {feedingSchedule.lunch.filter(d => d.lunch_completed).length}/{feedingSchedule.lunch.length}
+                          </span>
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {feedingSchedule.lunch.length === 0 ? (
+                            <p className="text-sm text-orange-600 text-center py-4">No lunch needed</p>
+                          ) : (
+                            feedingSchedule.lunch.map(dog => (
+                              <div key={`lunch-${dog.booking_id}`} className={`rounded-lg p-2 flex items-center justify-between ${
+                                dog.lunch_completed ? 'bg-green-100 border border-green-200' : 'bg-white border border-orange-200'
+                              }`}>
+                                <span className="font-medium text-sm">{dog.dog_name}</span>
+                                {dog.lunch_completed ? (
+                                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                                ) : (
+                                  <ClockIcon className="h-5 w-5 text-orange-500" />
                                 )}
                               </div>
-                            </div>
-                            {dog.special_instructions && (
-                              <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <p className="text-xs font-semibold text-blue-900 mb-1">Special Instructions:</p>
-                                <p className="text-sm text-blue-800 whitespace-pre-wrap">{dog.special_instructions}</p>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Dinner */}
+                      <div className="bg-purple-50 rounded-xl p-4 border-2 border-purple-300">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="text-lg font-bold text-purple-800 flex items-center">
+                            <span className="text-2xl mr-2">🌙</span>
+                            Dinner
+                          </h4>
+                          <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                            feedingSchedule.dinner.filter(d => !d.dinner_completed).length === 0
+                              ? 'bg-green-200 text-green-800'
+                              : 'bg-purple-200 text-purple-800'
+                          }`}>
+                            {feedingSchedule.dinner.filter(d => d.dinner_completed).length}/{feedingSchedule.dinner.length}
+                          </span>
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {feedingSchedule.dinner.length === 0 ? (
+                            <p className="text-sm text-purple-600 text-center py-4">No dinner needed</p>
+                          ) : (
+                            feedingSchedule.dinner.map(dog => (
+                              <div key={`dinner-${dog.booking_id}`} className={`rounded-lg p-2 flex items-center justify-between ${
+                                dog.dinner_completed ? 'bg-green-100 border border-green-200' : 'bg-white border border-purple-200'
+                              }`}>
+                                <span className="font-medium text-sm">{dog.dog_name}</span>
+                                {dog.dinner_completed ? (
+                                  <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                                ) : (
+                                  <ClockIcon className="h-5 w-5 text-purple-500" />
+                                )}
                               </div>
-                            )}
-                          </motion.div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {(feedingSchedule.breakfast.length > 0 || feedingSchedule.lunch.length > 0 || feedingSchedule.dinner.length > 0) && (
+                      <div className="mt-4 text-center">
+                        <button
+                          onClick={() => setActiveTab('feeding')}
+                          className="text-orange-600 hover:text-orange-700 font-semibold text-sm"
+                        >
+                          Go to Feeding Tab for Full Details →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Medications Overview Section */}
+                <div className="bg-white rounded-2xl shadow-lg border-2 border-canine-gold/20 overflow-hidden">
+                  <div className="bg-red-500 p-4">
+                    <h3 className="text-xl font-bold text-white flex items-center">
+                      <BeakerIcon className="h-6 w-6 mr-2" />
+                      Medications Required ({medicationsToday.length})
+                    </h3>
+                  </div>
+                  <div className="p-6">
+                    {medicationsToday.length === 0 ? (
+                      <div className="text-center py-8">
+                        <BeakerIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No medications required for today's dogs</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {medicationsToday.map(med => {
+                          const dog = med.dogs as any
+                          const owner = dog?.profiles
+                          return (
+                            <motion.div
+                              key={med.id}
+                              whileHover={{ scale: 1.02 }}
+                              className="bg-red-50 rounded-xl p-4 border-2 border-red-200"
+                            >
+                              <div className="flex items-center space-x-3 mb-3">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-300 to-red-500 overflow-hidden flex-shrink-0">
+                                  {dog?.photo_url ? (
+                                    <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="flex items-center justify-center h-full text-xl">🐕</div>
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-canine-navy">{dog?.name}</h4>
+                                  <p className="text-xs text-gray-500">{owner?.first_name} {owner?.last_name}</p>
+                                </div>
+                              </div>
+                              <div className="bg-white rounded-lg p-3 border border-red-200 space-y-2">
+                                <div className="flex items-start justify-between">
+                                  <span className="text-xs text-gray-600">Medication:</span>
+                                  <span className="font-semibold text-red-700 text-sm text-right">{med.medication_name}</span>
+                                </div>
+                                <div className="flex items-start justify-between">
+                                  <span className="text-xs text-gray-600">Dosage:</span>
+                                  <span className="text-sm text-canine-navy text-right">{med.dosage}</span>
+                                </div>
+                                <div className="flex items-start justify-between">
+                                  <span className="text-xs text-gray-600">Frequency:</span>
+                                  <span className="text-sm text-canine-navy text-right">{med.frequency}</span>
+                                </div>
+                                {med.time_of_day && (
+                                  <div className="flex items-start justify-between">
+                                    <span className="text-xs text-gray-600">Time:</span>
+                                    <span className="text-sm text-canine-navy text-right">{med.time_of_day}</span>
+                                  </div>
+                                )}
+                                {med.notes && (
+                                  <div className="pt-2 border-t border-red-100">
+                                    <p className="text-xs text-gray-600 mb-1">Notes:</p>
+                                    <p className="text-xs text-red-700">{med.notes}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
                           )
                         })}
                       </div>
-                    </div>
+                    )}
+                    {medicationsToday.length > 0 && (
+                      <div className="mt-4 text-center">
+                        <button
+                          onClick={() => setActiveTab('medications')}
+                          className="text-red-600 hover:text-red-700 font-semibold text-sm"
+                        >
+                          Go to Medications Tab for Full Details →
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
             </motion.div>
           )}
 
