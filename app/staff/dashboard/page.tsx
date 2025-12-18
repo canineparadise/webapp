@@ -459,7 +459,7 @@ export default function StaffDashboard() {
           .in('status', ['confirmed', 'checked_in', 'completed']),
         supabase
           .from('individual_day_bookings')
-          .select('*, session_type')
+          .select('*')
           .eq('booking_date', currentDate)
           .in('status', ['confirmed', 'checked_in', 'completed'])
       ])
