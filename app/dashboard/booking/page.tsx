@@ -34,6 +34,7 @@ export default function BookingPage() {
   const [mealAgreementAccepted, setMealAgreementAccepted] = useState(false)
   const [maxDogsPerDay, setMaxDogsPerDay] = useState(20)
   const [dateCapacity, setDateCapacity] = useState<Record<string, number>>({})
+  const [closedDates, setClosedDates] = useState<string[]>([])
 
   useEffect(() => {
     checkAuthAndLoadData()
@@ -122,6 +123,15 @@ export default function BookingPage() {
       })
       setDateCapacity(capacityMap)
 
+      // Fetch closed days (holidays, etc.)
+      const { data: closedDaysData } = await supabase
+        .from('closed_days')
+        .select('closed_date')
+
+      if (closedDaysData) {
+        setClosedDates(closedDaysData.map(d => d.closed_date))
+      }
+
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -151,6 +161,9 @@ export default function BookingPage() {
     // Check if it's a weekend
     const dayOfWeek = date.getDay()
     if (dayOfWeek === 0 || dayOfWeek === 6) return false
+
+    // Check if it's a closed day (holiday, etc.)
+    if (closedDates.includes(dateString)) return false
 
     // Check if already booked
     if (bookedDates.includes(dateString)) return false
