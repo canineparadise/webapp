@@ -279,9 +279,20 @@ export default function BookingPage() {
 
       // Redirect to Stripe checkout for extra days
       try {
+        // Get current auth session for the API call
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          toast.error('Please log in again')
+          router.push('/login')
+          return
+        }
+
         const response = await fetch('/api/create-subscription-extra-days-checkout', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({
             userId: user.id,
             subscriptionId: subscription.id,
