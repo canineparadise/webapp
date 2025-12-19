@@ -69,6 +69,12 @@ interface DogWithBooking extends Dog {
   booking_type?: 'subscription' | 'individual'
   session_type?: 'full_day' | 'half_day'
   is_vip_member?: boolean
+  needs_breakfast?: boolean
+  needs_lunch?: boolean
+  needs_dinner?: boolean
+  breakfast_completed?: boolean
+  lunch_completed?: boolean
+  dinner_completed?: boolean
 }
 
 interface PlayGroup {
@@ -482,7 +488,13 @@ export default function StaffDashboard() {
             special_instructions: booking.special_instructions,
             booking_type: 'subscription',
             session_type: booking.subscriptions?.session_type || 'full_day',
-            is_vip_member: owner?.is_vip_member || false
+            is_vip_member: owner?.is_vip_member || false,
+            needs_breakfast: booking.needs_breakfast,
+            needs_lunch: booking.needs_lunch,
+            needs_dinner: booking.needs_dinner,
+            breakfast_completed: booking.breakfast_completed,
+            lunch_completed: booking.lunch_completed,
+            dinner_completed: booking.dinner_completed
           }
 
           if (booking.checked_out_at) {
@@ -508,7 +520,13 @@ export default function StaffDashboard() {
             special_instructions: booking.special_instructions || booking.notes,
             booking_type: 'individual',
             session_type: booking.session_type || 'full_day',
-            is_vip_member: owner?.is_vip_member || false
+            is_vip_member: owner?.is_vip_member || false,
+            needs_breakfast: booking.needs_breakfast,
+            needs_lunch: booking.needs_lunch,
+            needs_dinner: booking.needs_dinner,
+            breakfast_completed: booking.breakfast_completed,
+            lunch_completed: booking.lunch_completed,
+            dinner_completed: booking.dinner_completed
           }
 
           if (booking.checked_out_at) {
@@ -2169,7 +2187,7 @@ export default function StaffDashboard() {
                                 const owner = Array.isArray(dog.owner) ? dog.owner[0] : dog.owner
                                 return (
                                   <div key={dog.id} className="bg-white rounded-lg p-3 border border-green-200 flex items-center justify-between">
-                                    <div className="flex items-center space-x-3">
+                                    <div className="flex items-center space-x-3 flex-1">
                                       <div className="w-10 h-10 rounded-full bg-green-200 overflow-hidden flex-shrink-0">
                                         {dog.photo_url ? (
                                           <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
@@ -2177,7 +2195,7 @@ export default function StaffDashboard() {
                                           <div className="flex items-center justify-center h-full text-lg">🐕</div>
                                         )}
                                       </div>
-                                      <div>
+                                      <div className="flex-1">
                                         <div className="flex items-center gap-1">
                                           <p className="font-semibold text-canine-navy text-sm">{dog.name}</p>
                                           {dog.is_vip_member && <GoldenPawBadge size="small" showText={false} />}
@@ -2185,6 +2203,26 @@ export default function StaffDashboard() {
                                         <p className="text-xs text-green-600">
                                           In: {dog.checked_in_at ? new Date(dog.checked_in_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                         </p>
+                                        {/* Meal indicators */}
+                                        {(dog.needs_breakfast || dog.needs_lunch || dog.needs_dinner) && (
+                                          <div className="flex flex-wrap gap-1 mt-1">
+                                            {dog.needs_breakfast && (
+                                              <span className={`text-xs px-1.5 py-0.5 rounded ${dog.breakfast_completed ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                                🍳{dog.breakfast_completed ? '✓' : ''}
+                                              </span>
+                                            )}
+                                            {dog.needs_lunch && (
+                                              <span className={`text-xs px-1.5 py-0.5 rounded ${dog.lunch_completed ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                🍱{dog.lunch_completed ? '✓' : ''}
+                                              </span>
+                                            )}
+                                            {dog.needs_dinner && (
+                                              <span className={`text-xs px-1.5 py-0.5 rounded ${dog.dinner_completed ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'}`}>
+                                                🍽️{dog.dinner_completed ? '✓' : ''}
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
                                     <button
@@ -2192,7 +2230,7 @@ export default function StaffDashboard() {
                                         setSelectedBookingDog(dog)
                                         setShowCheckOutModal(true)
                                       }}
-                                      className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-all"
+                                      className="bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-1.5 px-3 rounded-lg transition-all flex-shrink-0"
                                     >
                                       Check Out
                                     </button>
