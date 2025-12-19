@@ -470,6 +470,9 @@ export default function StaffDashboard() {
           .in('status', ['confirmed', 'checked_in', 'completed'])
       ])
 
+      console.log('[fetchTodayData] Subscription bookings:', bookingsWithTimes?.map(b => ({ id: b.id, status: b.status, checked_in_at: b.checked_in_at })))
+      console.log('[fetchTodayData] Individual bookings:', individualBookingsWithTimes?.map(b => ({ id: b.id, status: b.status, checked_in_at: b.checked_in_at })))
+
       // Organize dogs by check-in/out status
       const notCheckedIn: DogWithBooking[] = []
       const checkedIn: DogWithBooking[] = []
@@ -539,6 +542,11 @@ export default function StaffDashboard() {
         }
       })
 
+      console.log('[fetchTodayData] Dogs organized:', {
+        notCheckedIn: notCheckedIn.map(d => ({ name: d.name, booking_id: d.booking_id, type: d.booking_type })),
+        checkedIn: checkedIn.map(d => ({ name: d.name, booking_id: d.booking_id, type: d.booking_type })),
+        checkedOut: checkedOut.map(d => ({ name: d.name, booking_id: d.booking_id, type: d.booking_type }))
+      })
       setTodayDogs({ notCheckedIn, checkedIn, checkedOut })
 
       // Get play groups with their assigned dogs
@@ -1179,8 +1187,27 @@ export default function StaffDashboard() {
     if (!selectedBookingDog || !staffId) return
 
     try {
-      const { error } = await supabase
-        .from('bookings')
+      console.log('[Check-in] Starting check-in for:', {
+        dogName: selectedBookingDog.name,
+        bookingId: selectedBookingDog.booking_id,
+        bookingType: selectedBookingDog.booking_type
+      })
+
+      // Get the current session token
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        toast.error('Session expired. Please refresh the page.')
+        return
+      }
+
+      // Determine which table to update based on booking type
+      const tableName = selectedBookingDog.booking_type === 'individual' ? 'individual_day_bookings' : 'bookings'
+
+      // Direct Supabase update (using user's session for RLS)
+      console.log('[Check-in] Updating table:', tableName, 'with booking_id:', selectedBookingDog.booking_id)
+
+      const { data, error } = await supabase
+        .from(tableName)
         .update({
           checked_in: true,
           checked_in_at: new Date().toISOString(),
@@ -1188,16 +1215,34 @@ export default function StaffDashboard() {
           status: 'checked_in'
         })
         .eq('id', selectedBookingDog.booking_id)
+        .select()
 
-      if (error) throw error
+      console.log('[Check-in] Direct update result:', { data, error, rowsUpdated: data?.length || 0 })
+
+      if (error) {
+        console.error('[Check-in] Update error:', error)
+        throw error
+      }
+
+      if (!data || data.length === 0) {
+        console.error('[Check-in] No rows were updated - RLS might be blocking')
+        toast.error('Check-in failed - no rows updated. RLS may be blocking the update.')
+        return
+      }
 
       toast.success(`${selectedBookingDog.name} checked in successfully!`)
       setShowCheckInModal(false)
       setSelectedBookingDog(null)
-      fetchTodayData()
-    } catch (error) {
+
+      // Longer delay to ensure database write is complete
+      console.log('[Check-in] Waiting 1 second before refetching...')
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('[Check-in] Now refetching data...')
+      await fetchTodayData()
+      console.log('[Check-in] Refetch complete')
+    } catch (error: any) {
       console.error('Error checking in:', error)
-      toast.error('Failed to check in')
+      toast.error(error.message || 'Failed to check in')
     }
   }
 
@@ -1217,8 +1262,20 @@ export default function StaffDashboard() {
     }
 
     try {
-      const { error } = await supabase
-        .from('bookings')
+      console.log('[Check-out] Starting check-out for:', {
+        dogName: selectedBookingDog.name,
+        bookingId: selectedBookingDog.booking_id,
+        bookingType: selectedBookingDog.booking_type
+      })
+
+      // Determine which table to update based on booking type
+      const tableName = selectedBookingDog.booking_type === 'individual' ? 'individual_day_bookings' : 'bookings'
+
+      // Direct Supabase update (using user's session for RLS)
+      console.log('[Check-out] Updating table:', tableName, 'with booking_id:', selectedBookingDog.booking_id)
+
+      const { data, error } = await supabase
+        .from(tableName)
         .update({
           checked_out: true,
           checked_out_at: new Date().toISOString(),
@@ -1226,18 +1283,36 @@ export default function StaffDashboard() {
           status: 'completed'
         })
         .eq('id', selectedBookingDog.booking_id)
+        .select()
 
-      if (error) throw error
+      console.log('[Check-out] Direct update result:', { data, error, rowsUpdated: data?.length || 0 })
+
+      if (error) {
+        console.error('[Check-out] Update error:', error)
+        throw error
+      }
+
+      if (!data || data.length === 0) {
+        console.error('[Check-out] No rows were updated - RLS might be blocking')
+        toast.error('Check-out failed - no rows updated. RLS may be blocking the update.')
+        return
+      }
 
       toast.success(`${selectedBookingDog.name} checked out successfully!`)
       setShowCheckOutModal(false)
       setSelectedBookingDog(null)
       setCheckoutPasswordInput('')
       setCheckoutPasswordError('')
-      fetchTodayData()
-    } catch (error) {
+
+      // Longer delay to ensure database write is complete
+      console.log('[Check-out] Waiting 1 second before refetching...')
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      console.log('[Check-out] Now refetching data...')
+      await fetchTodayData()
+      console.log('[Check-out] Refetch complete')
+    } catch (error: any) {
       console.error('Error checking out:', error)
-      toast.error('Failed to check out')
+      toast.error(error.message || 'Failed to check out')
     }
   }
 
