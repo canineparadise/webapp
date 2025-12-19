@@ -36,8 +36,8 @@ interface DogWithSubscription {
     price_per_day: number
     session_type: 'full_day' | 'half_day'
     subscription_tiers: {
-      extra_day_price: number
-      half_day_extra_day_price: number
+      name: string
+      price_per_day: number
     }
   } | null
 }
@@ -122,8 +122,7 @@ export default function BuyExtraDaysPage() {
           session_type,
           subscription_tiers (
             name,
-            extra_day_price,
-            half_day_extra_day_price
+            price_per_day
           )
         `)
         .eq('user_id', user.id)
@@ -236,9 +235,8 @@ export default function BuyExtraDaysPage() {
       const quantity = dogQuantities[dog.id] || 0
       if (quantity === 0 || !dog.subscription) return sum
 
-      const pricePerDay = dog.subscription.session_type === 'full_day'
-        ? dog.subscription.subscription_tiers.extra_day_price
-        : dog.subscription.subscription_tiers.half_day_extra_day_price
+      // Use the subscription's price_per_day for extra days
+      const pricePerDay = dog.subscription.price_per_day
 
       return sum + (pricePerDay * quantity)
     }, 0)
@@ -278,9 +276,8 @@ export default function BuyExtraDaysPage() {
     try {
       const extraDaysPurchases = selectedDogs.map(dog => {
         const quantity = dogQuantities[dog.id]
-        const pricePerDay = dog.subscription!.session_type === 'full_day'
-          ? dog.subscription!.subscription_tiers.extra_day_price
-          : dog.subscription!.subscription_tiers.half_day_extra_day_price
+        // Use the subscription's price_per_day for extra days
+        const pricePerDay = dog.subscription!.price_per_day
 
         return {
           dogId: dog.id,
@@ -379,9 +376,8 @@ export default function BuyExtraDaysPage() {
         <div className="grid gap-6 mb-8">
           {dogs.map((dog, index) => {
             const quantity = dogQuantities[dog.id] || 0
-            const pricePerDay = dog.subscription!.session_type === 'full_day'
-              ? dog.subscription!.subscription_tiers.extra_day_price
-              : dog.subscription!.subscription_tiers.half_day_extra_day_price
+            // Use the subscription's price_per_day for extra days
+            const pricePerDay = dog.subscription!.price_per_day
             const totalPrice = pricePerDay * quantity
 
             return (
@@ -519,9 +515,8 @@ export default function BuyExtraDaysPage() {
               .filter(dog => (dogQuantities[dog.id] || 0) > 0)
               .map(dog => {
                 const quantity = dogQuantities[dog.id]
-                const pricePerDay = dog.subscription!.session_type === 'full_day'
-                  ? dog.subscription!.subscription_tiers.extra_day_price
-                  : dog.subscription!.subscription_tiers.half_day_extra_day_price
+                // Use the subscription's price_per_day for extra days
+                const pricePerDay = dog.subscription!.price_per_day
                 const total = pricePerDay * quantity
 
                 return (
