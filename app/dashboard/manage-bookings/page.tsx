@@ -26,6 +26,7 @@ interface Booking {
   status: string
   dog_id?: string
   user_id: string
+  subscription_id?: string
   created_at: string
   cancelled_at?: string
   cancellation_reason?: string
@@ -198,16 +199,36 @@ export default function ManageBookingsPage() {
       if (updateError) throw updateError
 
       // Handle subscription booking - return day to days_remaining
-      if (selectedBooking.booking_type === 'subscription' && subscription) {
-        const { error: subError } = await supabase
-          .from('subscriptions')
-          .update({
-            days_remaining: subscription.days_remaining + 1,
-            days_used: Math.max(0, subscription.days_used - 1)
-          })
-          .eq('id', subscription.id)
+      // Use the booking's subscription_id, not the user's current subscription
+      if (selectedBooking.booking_type === 'subscription') {
+        // First, get the booking's actual subscription
+        const bookingSubId = selectedBooking.subscription_id
+        if (bookingSubId) {
+          const { data: bookingSub, error: fetchSubError } = await supabase
+            .from('subscriptions')
+            .select('id, days_remaining, days_used, days_included')
+            .eq('id', bookingSubId)
+            .single()
 
-        if (subError) throw subError
+          if (!fetchSubError && bookingSub) {
+            // Only refund if days_used > 0 and don't exceed days_included
+            const newDaysRemaining = Math.min(bookingSub.days_remaining + 1, bookingSub.days_included)
+            const newDaysUsed = Math.max(0, bookingSub.days_used - 1)
+
+            // Only update if we're actually changing something
+            if (newDaysRemaining > bookingSub.days_remaining || newDaysUsed < bookingSub.days_used) {
+              const { error: subError } = await supabase
+                .from('subscriptions')
+                .update({
+                  days_remaining: newDaysRemaining,
+                  days_used: newDaysUsed
+                })
+                .eq('id', bookingSubId)
+
+              if (subError) throw subError
+            }
+          }
+        }
       }
 
       // Handle individual booking cancellation

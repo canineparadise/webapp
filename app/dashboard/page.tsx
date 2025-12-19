@@ -73,8 +73,8 @@ export default function Dashboard() {
         supabase.from('legal_agreements').select('*').eq('user_id', user.id).maybeSingle(),
         supabase.from('dogs').select('*').eq('owner_id', user.id).order('created_at', { ascending: true }),
         supabase.from('subscriptions').select('*, subscription_tiers:tier_id(name), dogs(name)').eq('user_id', user.id).eq('is_active', true),
-        supabase.from('bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }).limit(100),
-        supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).order('booking_date', { ascending: false }).limit(100),
+        supabase.from('bookings').select('*').eq('user_id', user.id).neq('status', 'cancelled').order('booking_date', { ascending: false }).limit(100),
+        supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).neq('status', 'cancelled').order('booking_date', { ascending: false }).limit(100),
         supabase.from('assessment_bookings').select(`
           *,
           assessment_slots (
@@ -1051,3 +1051,4 @@ export default function Dashboard() {
     </div>
   )
 }
+// Cache bust - Dec 19 2025 - Filter cancelled bookings fix
