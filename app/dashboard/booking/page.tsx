@@ -15,7 +15,6 @@ import {
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
 
 export default function BookingPage() {
   const router = useRouter()
@@ -36,7 +35,6 @@ export default function BookingPage() {
   const [maxDogsPerDay, setMaxDogsPerDay] = useState(20)
   const [dateCapacity, setDateCapacity] = useState<Record<string, number>>({})
   const [closedDates, setClosedDates] = useState<string[]>([])
-  const [dogsNeedingReassessment, setDogsNeedingReassessment] = useState<string[]>([])
 
   useEffect(() => {
     checkAuthAndLoadData()
@@ -132,20 +130,6 @@ export default function BookingPage() {
 
       if (closedDaysData) {
         setClosedDates(closedDaysData.map(d => d.closed_date))
-      }
-
-      // Check reassessment status for all dogs
-      try {
-        const reassessmentResponse = await fetch(`/api/check-reassessment-status?userId=${user.id}`)
-        if (reassessmentResponse.ok) {
-          const reassessmentData = await reassessmentResponse.json()
-          const dogsRequiringReassessment = reassessmentData.dogs
-            ?.filter((d: any) => d.requires_reassessment)
-            .map((d: any) => d.id) || []
-          setDogsNeedingReassessment(dogsRequiringReassessment)
-        }
-      } catch (error) {
-        console.error('Error checking reassessment status:', error)
       }
 
     } catch (error) {
@@ -485,28 +469,6 @@ export default function BookingPage() {
           </div>
         </div>
 
-        {/* Reassessment Required Warning */}
-        {dogsNeedingReassessment.length > 0 && (
-          <div className="mb-8 bg-red-50 border-l-4 border-red-500 rounded-lg p-6">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
-              </div>
-              <div className="ml-4 flex-1">
-                <h3 className="text-lg font-bold text-red-900">Reassessment Required</h3>
-                <p className="text-red-700 mt-1">
-                  {dogsNeedingReassessment.length === dogs.filter(d => d.is_approved).length
-                    ? 'All your dogs need a reassessment before you can book daycare days. Dogs that haven\'t visited for 30+ days require a new assessment.'
-                    : 'Some of your dogs need a reassessment before you can book them for daycare. Dogs marked below haven\'t visited for 30+ days and require a new assessment.'}
-                </p>
-                <Link href="/dashboard/assessment/schedule" className="mt-3 inline-block bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors">
-                  Book Reassessment
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Warning Banners */}
         {!canBook && (
           <div className="mb-8 space-y-4">
@@ -723,48 +685,34 @@ export default function BookingPage() {
                 <h3 className="text-xl font-bold text-canine-navy mb-4">Select Dogs</h3>
                 {hasApprovedDogs ? (
                   <div className="space-y-3">
-                    {dogs.filter(dog => dog.is_approved).map(dog => {
-                      const needsReassessment = dogsNeedingReassessment.includes(dog.id)
-                      const canSelectDog = canBook && !needsReassessment
-                      return (
-                        <label
-                          key={dog.id}
-                          className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
-                            needsReassessment
-                              ? 'cursor-not-allowed border-red-300 bg-red-50 opacity-75'
-                              : canBook
-                              ? `cursor-pointer ${selectedDogs.includes(dog.id)
-                                  ? 'border-canine-gold bg-canine-gold/10'
-                                  : 'border-gray-200 hover:border-canine-gold/50'
-                                }`
-                              : 'cursor-not-allowed border-gray-200 opacity-50'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedDogs.includes(dog.id)}
-                            onChange={() => canSelectDog && toggleDog(dog.id)}
-                            disabled={!canSelectDog}
-                            className="w-5 h-5 text-canine-gold focus:ring-canine-gold rounded disabled:opacity-50"
-                          />
-                          <div className="flex-1">
-                            <p className="font-bold text-gray-900">{dog.name}</p>
-                            <p className="text-sm text-gray-600">{dog.breed}</p>
-                            {needsReassessment && (
-                              <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                                <ExclamationTriangleIcon className="h-3 w-3" />
-                                Requires reassessment (30+ days inactive)
-                              </p>
-                            )}
-                          </div>
-                          {needsReassessment ? (
-                            <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
-                          ) : selectedDogs.includes(dog.id) && (
-                            <CheckCircleIcon className="h-6 w-6 text-canine-gold" />
-                          )}
-                        </label>
-                      )
-                    })}
+                    {dogs.filter(dog => dog.is_approved).map(dog => (
+                      <label
+                        key={dog.id}
+                        className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                          canBook
+                            ? `cursor-pointer ${selectedDogs.includes(dog.id)
+                                ? 'border-canine-gold bg-canine-gold/10'
+                                : 'border-gray-200 hover:border-canine-gold/50'
+                              }`
+                            : 'cursor-not-allowed border-gray-200 opacity-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedDogs.includes(dog.id)}
+                          onChange={() => canBook && toggleDog(dog.id)}
+                          disabled={!canBook}
+                          className="w-5 h-5 text-canine-gold focus:ring-canine-gold rounded disabled:opacity-50"
+                        />
+                        <div className="flex-1">
+                          <p className="font-bold text-gray-900">{dog.name}</p>
+                          <p className="text-sm text-gray-600">{dog.breed}</p>
+                        </div>
+                        {selectedDogs.includes(dog.id) && (
+                          <CheckCircleIcon className="h-6 w-6 text-canine-gold" />
+                        )}
+                      </label>
+                    ))}
                   </div>
                 ) : (
                   <div className="bg-blue-50 rounded-xl p-4 text-center">

@@ -23,7 +23,6 @@ import {
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid'
 import GoldenPawBadge from '@/components/GoldenPawBadge'
-import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
 
 export default function Dashboard() {
   const router = useRouter()
@@ -45,7 +44,6 @@ export default function Dashboard() {
   const [allBookings, setAllBookings] = useState<any[]>([])
   const [mealOption, setMealOption] = useState<'provided' | 'own'>('provided')
   const [specialNotes, setSpecialNotes] = useState('')
-  const [dogsNeedingReassessment, setDogsNeedingReassessment] = useState<any[]>([])
 
   useEffect(() => {
     fetchDashboardData()
@@ -105,20 +103,6 @@ export default function Dashboard() {
       setProfile(profileRes.data)
       setLegalAgreements(legalRes.data)
       setDogs(dogsRes.data || [])
-
-      // Check reassessment status for all dogs
-      if (dogsRes.data && dogsRes.data.length > 0) {
-        try {
-          const reassessmentResponse = await fetch(`/api/check-reassessment-status?userId=${user.id}`)
-          if (reassessmentResponse.ok) {
-            const reassessmentData = await reassessmentResponse.json()
-            const dogsRequiringReassessment = reassessmentData.dogs?.filter((d: any) => d.requires_reassessment) || []
-            setDogsNeedingReassessment(dogsRequiringReassessment)
-          }
-        } catch (error) {
-          console.error('Error checking reassessment status:', error)
-        }
-      }
       setAssessmentBookings(assessmentBookingsRes.data || [])
 
       // Handle multiple subscriptions (one per dog)
@@ -409,41 +393,6 @@ export default function Dashboard() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
             <div className="flex items-center justify-center gap-3">
               <GoldenPawBadge size="medium" showText={true} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Reassessment Required Warning Banner */}
-      {dogsNeedingReassessment.length > 0 && (
-        <div className="bg-gradient-to-r from-red-50 via-orange-50 to-red-50 border-b-2 border-red-300 shadow-md">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-100 rounded-full">
-                  <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-red-900">Reassessment Required</h3>
-                  <p className="text-red-700 text-sm">
-                    {dogsNeedingReassessment.length === 1 ? (
-                      <>
-                        <span className="font-semibold">{dogsNeedingReassessment[0].name}</span> hasn't visited daycare in over 30 days and needs a reassessment before booking.
-                      </>
-                    ) : (
-                      <>
-                        {dogsNeedingReassessment.map((d: any) => d.name).join(', ')} haven't visited daycare in over 30 days and need reassessments before booking.
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <Link href="/dashboard/assessment/schedule" className="flex-shrink-0">
-                <button className="bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center gap-2">
-                  <ClockIcon className="h-5 w-5" />
-                  Book Reassessment
-                </button>
-              </Link>
             </div>
           </div>
         </div>

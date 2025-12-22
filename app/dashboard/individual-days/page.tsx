@@ -6,8 +6,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import BackButton from '@/components/BackButton'
-import { CalendarIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon, ArrowLeftIcon, ClockIcon } from '@heroicons/react/24/outline'
-import { ExclamationTriangleIcon } from '@heroicons/react/24/solid'
+import { CalendarIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { loadStripe } from '@stripe/stripe-js'
 import toast from 'react-hot-toast'
 
@@ -66,7 +65,6 @@ function IndividualDaysContent() {
   const [activeSubscription, setActiveSubscription] = useState<any>(null)
   const [session, setSession] = useState<any>(null)
   const [isVipMember, setIsVipMember] = useState(false)
-  const [dogsNeedingReassessment, setDogsNeedingReassessment] = useState<string[]>([])
 
   // Generate next 60 days for calendar grouped by month
   const generateCalendarDates = () => {
@@ -176,22 +174,6 @@ function IndividualDaysContent() {
         if (error) throw error
         setDogs(dogsData || [])
         console.log('Set dogs state to:', dogsData)
-
-        // Check reassessment status for all dogs
-        if (dogsData && dogsData.length > 0) {
-          try {
-            const reassessmentResponse = await fetch(`/api/check-reassessment-status?userId=${user.id}`)
-            if (reassessmentResponse.ok) {
-              const reassessmentData = await reassessmentResponse.json()
-              const dogsRequiringReassessment = reassessmentData.dogs
-                ?.filter((d: any) => d.requires_reassessment)
-                .map((d: any) => d.id) || []
-              setDogsNeedingReassessment(dogsRequiringReassessment)
-            }
-          } catch (err) {
-            console.error('Error checking reassessment status:', err)
-          }
-        }
       } else {
         console.log('NO USER FOUND')
       }
@@ -548,29 +530,6 @@ function IndividualDaysContent() {
             </Link>
           </div>
 
-          {/* Reassessment Required Warning */}
-          {dogsNeedingReassessment.length > 0 && (
-            <div className="mt-4 bg-red-50 border-l-4 border-red-500 rounded-lg p-6">
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="ml-4 flex-1">
-                  <h3 className="text-lg font-bold text-red-900">Reassessment Required</h3>
-                  <p className="text-red-700 mt-1">
-                    {dogsNeedingReassessment.length === dogs.length
-                      ? 'All your dogs need a reassessment before you can book daycare days. Dogs that haven\'t visited for 30+ days require a new assessment.'
-                      : 'Some of your dogs need a reassessment before you can book them for daycare. Dogs marked in the dropdown haven\'t visited for 30+ days and require a new assessment.'}
-                  </p>
-                  <Link href="/dashboard/assessment/schedule" className="mt-3 inline-flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors">
-                    <ClockIcon className="h-5 w-5" />
-                    Book Reassessment
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Subscription Warning */}
           {activeSubscription && activeSubscription.days_remaining > 0 && (
             <div className="mt-4 bg-gradient-to-r from-canine-gold to-amber-400 text-white p-6 rounded-2xl shadow-xl">
@@ -619,47 +578,22 @@ function IndividualDaysContent() {
               <select
                 value={selectedDog}
                 onChange={(e) => {
-                  const dogId = e.target.value
-                  // Prevent selecting a dog that needs reassessment
-                  if (dogId && dogsNeedingReassessment.includes(dogId)) {
-                    toast.error('This dog requires a reassessment before booking')
-                    return
-                  }
-                  setSelectedDog(dogId)
+                  setSelectedDog(e.target.value)
                   setSelectedDates([])
                 }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-canine-gold focus:border-transparent"
               >
                 <option value="">Choose a dog...</option>
-                {dogs.map((dog) => {
-                  const needsReassessment = dogsNeedingReassessment.includes(dog.id)
-                  return (
-                    <option
-                      key={dog.id}
-                      value={dog.id}
-                      disabled={needsReassessment}
-                      className={needsReassessment ? 'text-gray-400' : ''}
-                    >
-                      {dog.name} ({dog.size}){needsReassessment ? ' - ⚠️ Requires Reassessment' : ''}
-                    </option>
-                  )
-                })}
+                {dogs.map((dog) => (
+                  <option key={dog.id} value={dog.id}>
+                    {dog.name} ({dog.size})
+                  </option>
+                ))}
               </select>
               {dogs.length === 0 && (
                 <p className="text-sm text-gray-500 mt-2">
                   Please register a dog first to book individual days
                 </p>
-              )}
-              {selectedDog && dogsNeedingReassessment.includes(selectedDog) && (
-                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-700 flex items-center gap-2">
-                    <ExclamationTriangleIcon className="h-4 w-4" />
-                    This dog requires a reassessment before booking.
-                    <Link href="/dashboard/assessment/schedule" className="font-semibold underline">
-                      Book now
-                    </Link>
-                  </p>
-                </div>
               )}
             </motion.div>
 
