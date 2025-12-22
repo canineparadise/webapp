@@ -112,6 +112,8 @@ export default function CancellationsPage() {
         .or('is_active.eq.false,cancellation_requested.eq.true')
         .order('cancelled_at', { ascending: false, nullsFirst: false })
 
+      console.log('Cancellations query result:', { data, error, count: data?.length })
+
       if (error) throw error
 
       // Map the data to handle Supabase nested arrays
