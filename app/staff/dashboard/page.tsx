@@ -522,7 +522,7 @@ export default function StaffDashboard() {
             checked_out_at: booking.checked_out_at,
             special_instructions: booking.special_instructions || booking.notes,
             booking_type: 'individual',
-            session_type: booking.session_type || 'full_day',
+            session_type: 'full_day', // Individual day bookings are always full day
             is_vip_member: owner?.is_vip_member || false,
             needs_breakfast: booking.needs_breakfast,
             needs_lunch: booking.needs_lunch,
