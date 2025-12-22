@@ -1165,7 +1165,9 @@ export default function AdminDashboard() {
         ? Array.from(new Set(pendingAssessmentUsers.map(b => b.user_id)))
         : []
 
-      // Also get dogs awaiting approval (completed assessment but not approved)
+      // Get dogs awaiting approval - dogs that have had their assessment (date has passed) but not yet approved
+      // This includes dogs where assessment_date <= today AND is_approved = false
+      const today = new Date().toISOString().split('T')[0]
       const { data: pendingApprovalsData } = await supabase
         .from('dogs')
         .select(`
@@ -1173,7 +1175,9 @@ export default function AdminDashboard() {
           owner:profiles!dogs_owner_id_fkey (first_name, last_name, email, phone, address, city, postcode)
         `)
         .eq('is_approved', false)
-        .eq('assessment_completed', true)
+        .eq('is_draft', false)
+        .not('assessment_date', 'is', null)
+        .lte('assessment_date', today)
         .order('assessment_date', { ascending: true })
 
       const totalPendingCount = uniquePendingUsers.length
