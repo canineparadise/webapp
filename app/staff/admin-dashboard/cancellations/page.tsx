@@ -19,12 +19,16 @@ interface Cancellation {
   id: string
   user_id: string
   tier_id: string
-  cancellation_date: string
-  cancellation_effective_date: string
-  cancellation_reason: string
-  cancellation_reason_category: string
-  notice_given_date: string
-  notice_period_days: number
+  dog_id: string | null
+  is_active: boolean
+  cancellation_requested: boolean
+  cancelled_at: string | null
+  cancellation_date: string | null
+  cancellation_effective_date: string | null
+  cancellation_reason: string | null
+  cancellation_reason_category: string | null
+  notice_given_date: string | null
+  notice_period_days: number | null
   monthly_price: number
   user: {
     first_name: string
@@ -35,6 +39,9 @@ interface Cancellation {
   tier: {
     name: string
   }
+  dog: {
+    name: string
+  } | null
 }
 
 export default function CancellationsPage() {
@@ -71,12 +78,17 @@ export default function CancellationsPage() {
   const fetchCancellations = async () => {
     setLoading(true)
     try {
+      // Fetch subscriptions that are either inactive OR have cancellation requested
       const { data, error } = await supabase
         .from('subscriptions')
         .select(`
           id,
           user_id,
           tier_id,
+          dog_id,
+          is_active,
+          cancellation_requested,
+          cancelled_at,
           cancellation_date,
           cancellation_effective_date,
           cancellation_reason,
@@ -92,10 +104,13 @@ export default function CancellationsPage() {
           ),
           tier:subscription_tiers!subscriptions_tier_id_fkey (
             name
+          ),
+          dog:dogs!subscriptions_dog_id_fkey (
+            name
           )
         `)
-        .eq('cancellation_requested', true)
-        .order('cancellation_date', { ascending: false })
+        .or('is_active.eq.false,cancellation_requested.eq.true')
+        .order('cancelled_at', { ascending: false, nullsFirst: false })
 
       if (error) throw error
 
@@ -104,6 +119,7 @@ export default function CancellationsPage() {
         ...item,
         user: Array.isArray(item.user) ? item.user[0] : item.user,
         tier: Array.isArray(item.tier) ? item.tier[0] : item.tier,
+        dog: Array.isArray(item.dog) ? item.dog[0] : item.dog,
       }))
 
       setCancellations(mappedData)
@@ -117,10 +133,11 @@ export default function CancellationsPage() {
 
   const filteredCancellations = cancellations.filter(c => {
     const matchesSearch =
-      c.user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.user.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.cancellation_reason.toLowerCase().includes(searchQuery.toLowerCase())
+      c.user?.first_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.user?.last_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.dog?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.cancellation_reason || '').toLowerCase().includes(searchQuery.toLowerCase())
 
     const matchesCategory =
       filterCategory === 'all' || c.cancellation_reason_category === filterCategory
@@ -206,9 +223,9 @@ export default function CancellationsPage() {
             <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm opacity-90">Active Notices</p>
+                  <p className="text-sm opacity-90">Pending Cancellations</p>
                   <p className="text-3xl font-bold mt-1">
-                    {cancellations.filter(c => new Date(c.cancellation_effective_date) > new Date()).length}
+                    {cancellations.filter(c => c.is_active && c.cancellation_requested).length}
                   </p>
                 </div>
                 <ClockIcon className="h-12 w-12 opacity-50" />
@@ -282,45 +299,64 @@ export default function CancellationsPage() {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <h3 className="text-xl font-bold text-gray-900">
-                        {cancellation.user.first_name} {cancellation.user.last_name}
+                        {cancellation.user?.first_name} {cancellation.user?.last_name}
+                        {cancellation.dog?.name && (
+                          <span className="text-gray-500 font-normal ml-2">({cancellation.dog.name})</span>
+                        )}
                       </h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(cancellation.cancellation_reason_category)}`}>
-                        {getCategoryLabel(cancellation.cancellation_reason_category)}
-                      </span>
+                      {cancellation.cancellation_reason_category ? (
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(cancellation.cancellation_reason_category)}`}>
+                          {getCategoryLabel(cancellation.cancellation_reason_category)}
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">
+                          Cancelled
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                       <span className="flex items-center space-x-1">
                         <UserIcon className="h-4 w-4" />
-                        <span>{cancellation.user.email}</span>
+                        <span>{cancellation.user?.email}</span>
                       </span>
-                      <span>{cancellation.user.phone}</span>
-                      <span className="font-semibold">{cancellation.tier.name}</span>
-                      <span className="text-red-600 font-bold">-£{cancellation.monthly_price.toFixed(2)}/mo</span>
+                      {cancellation.user?.phone && <span>{cancellation.user.phone}</span>}
+                      <span className="font-semibold">{cancellation.tier?.name}</span>
+                      <span className="text-red-600 font-bold">-£{(cancellation.monthly_price || 0).toFixed(2)}/mo</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-4 mb-4">
                   <p className="text-sm font-semibold text-gray-700 mb-2">Cancellation Reason:</p>
-                  <p className="text-gray-900">{cancellation.cancellation_reason}</p>
+                  <p className="text-gray-900">
+                    {cancellation.cancellation_reason || 'No reason provided (cancelled manually)'}
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <p className="text-gray-600">Notice Given</p>
+                    <p className="text-gray-600">Cancelled Date</p>
                     <p className="font-semibold text-gray-900">
-                      {new Date(cancellation.notice_given_date).toLocaleDateString('en-GB')}
+                      {cancellation.cancelled_at
+                        ? new Date(cancellation.cancelled_at).toLocaleDateString('en-GB')
+                        : cancellation.notice_given_date
+                        ? new Date(cancellation.notice_given_date).toLocaleDateString('en-GB')
+                        : 'Unknown'}
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-600">Effective Date</p>
                     <p className="font-semibold text-gray-900">
-                      {new Date(cancellation.cancellation_effective_date).toLocaleDateString('en-GB')}
+                      {cancellation.cancellation_effective_date
+                        ? new Date(cancellation.cancellation_effective_date).toLocaleDateString('en-GB')
+                        : 'Immediate'}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-600">Notice Period</p>
-                    <p className="font-semibold text-gray-900">{cancellation.notice_period_days} days</p>
+                    <p className="text-gray-600">Status</p>
+                    <p className={`font-semibold ${cancellation.is_active ? 'text-orange-600' : 'text-red-600'}`}>
+                      {cancellation.is_active ? 'Pending Cancellation' : 'Cancelled'}
+                    </p>
                   </div>
                 </div>
               </motion.div>
