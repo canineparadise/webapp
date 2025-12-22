@@ -239,6 +239,16 @@ export default function StaffAssessmentsPage() {
         console.error('Failed to update profile approval status:', profileError)
       }
 
+      // Mark the assessment booking as completed
+      const { error: bookingError } = await supabase
+        .from('assessment_bookings')
+        .update({ booking_status: 'completed' })
+        .eq('id', selectedBooking.id)
+
+      if (bookingError) {
+        console.error('Failed to update assessment booking status:', bookingError)
+      }
+
       // Send approval email - DISABLED (using Supabase emails only)
       // try {
       //   await fetch('/api/send-approval-email', {
@@ -302,6 +312,16 @@ export default function StaffAssessmentsPage() {
 
       if (profileError) {
         console.error('Failed to update profile approval status:', profileError)
+      }
+
+      // Mark the assessment booking as completed (even though denied)
+      const { error: bookingError } = await supabase
+        .from('assessment_bookings')
+        .update({ booking_status: 'completed' })
+        .eq('id', selectedBooking.id)
+
+      if (bookingError) {
+        console.error('Failed to update assessment booking status:', bookingError)
       }
 
       // Send decline email - DISABLED (using Supabase emails only)
