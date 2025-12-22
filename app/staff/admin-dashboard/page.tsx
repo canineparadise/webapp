@@ -3959,7 +3959,7 @@ export default function AdminDashboard() {
               {/* Pending Approvals Section */}
               <div>
                 <h3 className="text-xl font-display font-bold text-canine-navy mb-4">
-                  Dogs Awaiting Approval ({pendingAssessments})
+                  Dogs Awaiting Approval ({pendingApprovals.length})
                 </h3>
                 <p className="text-gray-600 mb-4 text-sm">These dogs have completed their assessments and are awaiting your approval to join daycare.</p>
               </div>
@@ -3967,7 +3967,7 @@ export default function AdminDashboard() {
               {pendingApprovals.length === 0 ? (
                 <div className="bg-white rounded-2xl p-12 shadow-lg text-center border-2 border-canine-gold/20">
                   <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                  <p className="text-xl text-gray-600">All assessments have been reviewed!</p>
+                  <p className="text-xl text-gray-600">No dogs awaiting approval. Check the Assessments page for upcoming assessments.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
