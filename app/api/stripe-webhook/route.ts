@@ -188,7 +188,8 @@ export async function POST(req: NextRequest) {
       break
 
     case 'invoice.paid':
-      // Invoice paid successfully - subscription should remain active
+      const paidInvoice = event.data.object as Stripe.Invoice
+      await handleInvoicePaid(paidInvoice)
       break
 
     default:
@@ -743,6 +744,94 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   if (error) {
     console.error('Error updating subscription status:', error.message)
   }
+}
+
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  console.log('[Stripe Webhook] Processing invoice.paid event')
+
+  // Get subscription ID from invoice
+  const invoiceData = invoice as unknown as { subscription?: string | { id: string } | null }
+  const stripeSubscriptionId = typeof invoiceData.subscription === 'string'
+    ? invoiceData.subscription
+    : invoiceData.subscription?.id
+
+  if (!stripeSubscriptionId) {
+    console.log('[Stripe Webhook] No subscription ID in invoice - may be one-time payment')
+    return
+  }
+
+  console.log('[Stripe Webhook] Stripe subscription ID:', stripeSubscriptionId)
+
+  // Only process renewal invoices, not the first invoice (which is handled by checkout.session.completed)
+  // Check if this is a renewal by looking at billing_reason
+  const billingReason = (invoice as any).billing_reason
+  console.log('[Stripe Webhook] Billing reason:', billingReason)
+
+  if (billingReason === 'subscription_create') {
+    console.log('[Stripe Webhook] This is the initial subscription invoice, skipping (handled by checkout)')
+    return
+  }
+
+  // This is a renewal payment - reset days for all subscriptions with this stripe_subscription_id
+  const { data: subscriptions, error: fetchError } = await supabase
+    .from('subscriptions')
+    .select('id, days_included, days_remaining, user_id, dog_id, monthly_price')
+    .eq('stripe_subscription_id', stripeSubscriptionId)
+
+  if (fetchError) {
+    console.error('[Stripe Webhook] Error fetching subscriptions:', fetchError.message)
+    return
+  }
+
+  if (!subscriptions || subscriptions.length === 0) {
+    console.log('[Stripe Webhook] No subscriptions found for stripe_subscription_id:', stripeSubscriptionId)
+    return
+  }
+
+  console.log('[Stripe Webhook] Found', subscriptions.length, 'subscriptions to renew')
+
+  // Calculate new billing dates
+  const today = new Date()
+  const nextBillingDate = new Date(today)
+  nextBillingDate.setDate(nextBillingDate.getDate() + 30)
+
+  for (const sub of subscriptions) {
+    console.log('[Stripe Webhook] Renewing subscription:', sub.id, '- resetting days from', sub.days_remaining, 'to', sub.days_included)
+
+    const { error: updateError } = await supabase
+      .from('subscriptions')
+      .update({
+        days_remaining: sub.days_included,
+        days_used: 0,
+        payment_status: 'paid',
+        next_billing_date: nextBillingDate.toISOString().split('T')[0],
+        current_period_start: today.toISOString(),
+        current_period_end: nextBillingDate.toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', sub.id)
+
+    if (updateError) {
+      console.error('[Stripe Webhook] Error updating subscription:', sub.id, updateError.message)
+    } else {
+      console.log('[Stripe Webhook] Successfully renewed subscription:', sub.id)
+
+      // Record financial transaction for the renewal
+      await recordFinancialTransaction({
+        userId: sub.user_id,
+        transactionType: 'subscription',
+        amount: sub.monthly_price,
+        stripePaymentIntentId: invoice.payment_intent as string,
+        stripeCustomerId: invoice.customer as string,
+        paymentMethod: 'card',
+        subscriptionId: sub.id,
+        status: 'completed',
+        description: `Subscription renewal - ${sub.days_included} days`,
+      })
+    }
+  }
+
+  console.log('[Stripe Webhook] Invoice paid processing complete')
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
