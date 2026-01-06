@@ -86,6 +86,56 @@ export default function SubscribeDogsPage() {
     init()
   }, [])
 
+  // Auto-apply VIP discount when user profile is loaded and they are a VIP member
+  useEffect(() => {
+    const autoApplyVipDiscount = async () => {
+      // Only auto-apply if user is VIP, discount not already applied, and there are dogs to subscribe
+      if (userProfile?.is_vip_member && !appliedDiscount && !loading && user && dogs.length > 0) {
+        // Check if there are dogs without subscriptions (i.e., they need to subscribe)
+        const dogsWithoutSubs = dogs.filter(dog =>
+          !existingSubscriptions.some(sub => sub.dog_id === dog.id)
+        )
+
+        if (dogsWithoutSubs.length > 0) {
+          // Auto-apply FIRST50 discount code for VIP members
+          setDiscountCode('FIRST50')
+          setValidatingCode(true)
+
+          try {
+            // We need to wait for dogSelections to potentially have a total
+            // For now, use a placeholder amount - will be recalculated when selections are made
+            const { data, error } = await supabase
+              .rpc('validate_discount_code', {
+                p_code: 'FIRST50',
+                p_user_id: user.id,
+                p_applies_to: 'subscription',
+                p_amount: 100 // Placeholder - actual discount is percentage based
+              })
+
+            if (!error && data?.[0]?.is_valid) {
+              const result = data[0]
+              // Store the discount info - amount will be calculated dynamically based on selections
+              setAppliedDiscount({
+                code: 'FIRST50',
+                discountCodeId: result.discount_code_id,
+                type: result.discount_type,
+                value: result.discount_value,
+                discountAmount: 0, // Will be calculated when selections are made
+              })
+              toast.success('Golden Paw VIP discount automatically applied! 10% off')
+            }
+          } catch (error) {
+            console.error('Error auto-applying VIP discount:', error)
+          } finally {
+            setValidatingCode(false)
+          }
+        }
+      }
+    }
+
+    autoApplyVipDiscount()
+  }, [userProfile, loading, user, dogs, existingSubscriptions])
+
   const init = async () => {
     try {
       // Check auth
@@ -271,10 +321,19 @@ export default function SubscribeDogsPage() {
     }, 0)
   }
 
+  const calculateDiscountAmount = () => {
+    if (!appliedDiscount) return 0
+    const total = calculateTotal()
+    if (appliedDiscount.type === 'percentage') {
+      return (total * appliedDiscount.value) / 100
+    }
+    return Math.min(appliedDiscount.value, total) // Fixed amount, but not more than total
+  }
+
   const calculateFinalAmount = () => {
     const total = calculateTotal()
     if (appliedDiscount) {
-      return total - appliedDiscount.discountAmount
+      return total - calculateDiscountAmount()
     }
     return total
   }
@@ -311,7 +370,7 @@ export default function SubscribeDogsPage() {
             discountCode: appliedDiscount?.code || null,
             discountCodeId: appliedDiscount?.discountCodeId || null,
             totalAmount: calculateTotal(),
-            discountAmount: appliedDiscount?.discountAmount || 0,
+            discountAmount: calculateDiscountAmount(),
           }),
         })
 
@@ -339,7 +398,7 @@ export default function SubscribeDogsPage() {
           discountCode: appliedDiscount?.code || null,
           discountCodeId: appliedDiscount?.discountCodeId || null,
           totalAmount: calculateTotal(),
-          discountAmount: appliedDiscount?.discountAmount || 0,
+          discountAmount: calculateDiscountAmount(),
           finalAmount: finalAmount,
         }),
       })
@@ -1012,11 +1071,17 @@ export default function SubscribeDogsPage() {
                 <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-sm text-green-800">
                     <CheckCircleIcon className="h-4 w-4 inline mr-1" />
+                    {appliedDiscount.code === 'FIRST50' && (
+                      <img src="/VIP.png" alt="VIP" className="h-5 w-5 inline mr-1" />
+                    )}
                     Code <strong>{appliedDiscount.code}</strong> applied!
                     {appliedDiscount.type === 'percentage'
                       ? ` ${appliedDiscount.value}% off`
                       : ` £${appliedDiscount.value} off`
-                    } = <strong>-£{appliedDiscount.discountAmount.toFixed(2)}</strong>
+                    }
+                    {calculateTotal() > 0 && (
+                      <> = <strong>-£{calculateDiscountAmount().toFixed(2)}</strong></>
+                    )}
                   </p>
                 </div>
               )}
@@ -1057,7 +1122,7 @@ export default function SubscribeDogsPage() {
                         )}
                         <span>Discount ({appliedDiscount.code}):</span>
                       </div>
-                      <span className="font-bold">-£{appliedDiscount.discountAmount.toFixed(2)}</span>
+                      <span className="font-bold">-£{calculateDiscountAmount().toFixed(2)}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center text-2xl mt-2">
