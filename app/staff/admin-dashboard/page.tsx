@@ -1167,7 +1167,6 @@ export default function AdminDashboard() {
 
       // Get dogs awaiting approval - dogs that have had their assessment (date has passed) but not yet approved
       // This includes dogs where assessment_date <= today AND is_approved = false
-      const today = new Date().toISOString().split('T')[0]
       const { data: pendingApprovalsData } = await supabase
         .from('dogs')
         .select(`
@@ -1523,8 +1522,12 @@ export default function AdminDashboard() {
       if (indError) throw indError
 
       // Fetch dogs for subscription bookings in a single batch to avoid N+1 queries
+      // Handle both dog_id (single) and dog_ids (array) fields
       const allDogIds = (subscriptionBookings || [])
-        .flatMap((booking) => booking.dog_ids || [])
+        .flatMap((booking) => {
+          const ids = booking.dog_ids && booking.dog_ids.length > 0 ? booking.dog_ids : (booking.dog_id ? [booking.dog_id] : [])
+          return ids
+        })
         .filter(Boolean)
 
       const { data: allDogs } = allDogIds.length
@@ -1537,7 +1540,9 @@ export default function AdminDashboard() {
       const dogsMap = new Map((allDogs || []).map((dog) => [dog.id, dog]))
 
       const subscriptionWithDogs = (subscriptionBookings || []).map((booking) => {
-        const dogs = (booking.dog_ids || [])
+        // Handle both dog_id (single) and dog_ids (array) fields
+        const dogIdsList = booking.dog_ids && booking.dog_ids.length > 0 ? booking.dog_ids : (booking.dog_id ? [booking.dog_id] : [])
+        const dogs = dogIdsList
           .map((id: string) => dogsMap.get(id))
           .filter(Boolean)
 
@@ -1696,7 +1701,11 @@ export default function AdminDashboard() {
         .eq('status', 'confirmed')
 
       // Process subscription bookings - batch fetch all dogs in ONE query instead of N+1
-      const allDogIds = (bookingsData || []).flatMap(b => b.dog_ids || []).filter(Boolean)
+      // Handle both dog_id (single) and dog_ids (array) fields
+      const allDogIds = (bookingsData || []).flatMap(b => {
+        const ids = b.dog_ids && b.dog_ids.length > 0 ? b.dog_ids : (b.dog_id ? [b.dog_id] : [])
+        return ids
+      }).filter(Boolean)
       const uniqueDogIds = Array.from(new Set(allDogIds))
 
       let dogsMap: Record<string, any> = {}
@@ -1716,11 +1725,15 @@ export default function AdminDashboard() {
         }, {} as Record<string, any>)
       }
 
-      const subscriptionBookingsWithDogs = (bookingsData || []).map(booking => ({
-        ...booking,
-        dogs: (booking.dog_ids || []).map((id: string) => dogsMap[id]).filter(Boolean),
-        booking_type: 'subscription'
-      }))
+      const subscriptionBookingsWithDogs = (bookingsData || []).map(booking => {
+        // Handle both dog_id (single) and dog_ids (array) fields
+        const dogIdsList = booking.dog_ids && booking.dog_ids.length > 0 ? booking.dog_ids : (booking.dog_id ? [booking.dog_id] : [])
+        return {
+          ...booking,
+          dogs: dogIdsList.map((id: string) => dogsMap[id]).filter(Boolean),
+          booking_type: 'subscription'
+        }
+      })
 
       // Transform individual bookings to match format
       const individualBookingsWithDogs = (individualBookingsData || []).map((booking: any) => ({

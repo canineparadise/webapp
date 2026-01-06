@@ -139,13 +139,22 @@ export default function SignUp() {
 
         // Send custom welcome email
         try {
-          await fetch('/api/send-welcome-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: authData.user.id,
-            }),
-          })
+          // Get the session token for authentication
+          const { data: sessionData } = await supabase.auth.getSession()
+          const accessToken = sessionData?.session?.access_token || authData.session?.access_token
+
+          if (accessToken) {
+            await fetch('/api/send-welcome-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                userId: authData.user.id,
+              }),
+            })
+          }
         } catch (emailError) {
           console.error('Failed to send welcome email:', emailError)
           // Don't fail signup if email fails

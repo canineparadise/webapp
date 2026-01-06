@@ -26,7 +26,7 @@ import {
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 
 export default function ViewAgreementsPage() {
   const router = useRouter()
@@ -104,7 +104,10 @@ export default function ViewAgreementsPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50 py-12">
         <div className="max-w-4xl mx-auto px-4">
           <div className="mb-8">
-            <BackButton href="/dashboard" />
+            <DashboardHeader
+              title="No Agreements Signed"
+              subtitle="You haven't signed any legal agreements yet"
+            />
           </div>
 
           <motion.div
@@ -228,7 +231,10 @@ export default function ViewAgreementsPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50 py-12">
       <div className="max-w-5xl mx-auto px-4">
         <div className="mb-8">
-          <BackButton href="/dashboard" />
+          <DashboardHeader
+            title="Your Legal Agreements"
+            subtitle="Review your signed waivers and consents"
+          />
         </div>
 
         {/* Header */}

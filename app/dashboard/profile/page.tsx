@@ -14,7 +14,7 @@ import {
 import toast from 'react-hot-toast'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -185,24 +185,19 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white py-8">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white">
+      {/* Header with dropdown */}
+      <DashboardHeader
+        title="Your Profile"
+        subtitle="Keep your contact information up to date for your dog's safety"
+      />
+
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {/* Header */}
-          <div className="mb-8">
-            <BackButton href="/dashboard" />
-            <h1 className="text-3xl font-display font-bold text-canine-navy mt-4">
-              Your Profile
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Keep your contact information up to date for your dog's safety
-            </p>
-          </div>
-
           {/* Alert if incomplete */}
           {!isProfileComplete && (
             <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">

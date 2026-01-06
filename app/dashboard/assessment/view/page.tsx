@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   ArrowLeftIcon,
   DocumentTextIcon,
@@ -17,6 +17,7 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   CalendarDaysIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline'
 
 interface AssessmentBooking {
@@ -160,12 +161,12 @@ export default function ViewAssessmentPage() {
         >
           {/* Header */}
           <div className="mb-8">
-            <BackButton href="/dashboard" />
+            <DashboardHeader
+              title={assessmentBookings.length > 0 ? 'Your Assessment Booking' : 'Your Assessment Form'}
+              subtitle="View your assessment details"
+            />
             <div className="flex justify-between items-start mt-4">
               <div>
-                <h1 className="text-3xl font-display font-bold text-canine-navy">
-                  {assessmentBookings.length > 0 ? 'Your Assessment Booking' : 'Your Assessment Form'}
-                </h1>
                 {assessmentBookings.length > 0 ? (
                   <p className="text-gray-600 mt-2">
                     Booked on {new Date(assessmentBookings[0].booked_at).toLocaleDateString('en-GB', {
@@ -280,11 +281,43 @@ export default function ViewAssessmentPage() {
                 })
               })()}
 
-              <div className="mt-6 p-4 bg-amber-500/20 rounded-lg border border-amber-500/30">
-                <p className="text-amber-200 text-sm">
-                  <strong>Important:</strong> Please arrive 10 minutes before your scheduled time. If you need to reschedule, contact us at least 24 hours in advance.
-                </p>
-              </div>
+              {/* Reschedule Button */}
+              {assessmentBookings.length > 0 && (() => {
+                const firstBooking = assessmentBookings[0]
+                const slot = firstBooking.assessment_slots
+                if (!slot) return null
+
+                const assessmentDate = new Date(slot.assessment_date)
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+
+                // Only show reschedule for future assessments
+                if (assessmentDate >= today) {
+                  return (
+                    <div className="mt-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                      <div className="p-4 bg-amber-500/20 rounded-lg border border-amber-500/30 flex-1">
+                        <p className="text-amber-200 text-sm">
+                          <strong>Important:</strong> Please arrive 10 minutes before your scheduled time.
+                        </p>
+                      </div>
+                      <Link href={`/dashboard/assessment/reschedule?slotId=${firstBooking.slot_id}`}>
+                        <button className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                          <ArrowPathIcon className="h-5 w-5" />
+                          Reschedule
+                        </button>
+                      </Link>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="mt-6 p-4 bg-amber-500/20 rounded-lg border border-amber-500/30">
+                    <p className="text-amber-200 text-sm">
+                      <strong>Important:</strong> Please arrive 10 minutes before your scheduled time.
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
           )}
 

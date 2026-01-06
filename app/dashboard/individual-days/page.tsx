@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import { CalendarIcon, CheckCircleIcon, XCircleIcon, CreditCardIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { loadStripe } from '@stripe/stripe-js'
 import toast from 'react-hot-toast'
@@ -504,22 +504,21 @@ function IndividualDaysContent() {
   const finalPrice = totalPrice - totalDiscount
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white">
+      {/* Header with dropdown */}
+      <DashboardHeader
+        title="Book Individual Days"
+        subtitle={`Pay-as-you-go daycare at £${pricePerDay} per day - perfect for occasional visits`}
+      />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Info Banner */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-6"
         >
-          <BackButton href="/dashboard" />
-          <h1 className="text-4xl font-display font-bold text-canine-navy mb-2 mt-4">
-            Book Individual Days
-          </h1>
-          <p className="text-gray-600 mb-4">
-            Pay-as-you-go daycare at £{pricePerDay} per day - perfect for occasional visits without a subscription.
-          </p>
-          <div className="flex gap-4 text-sm">
+          <div className="flex flex-wrap gap-4 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
               <span className="text-gray-600">For non-subscription users</span>
@@ -529,39 +528,54 @@ function IndividualDaysContent() {
               <span className="font-medium">Have a subscription? Book here for discounted rates</span>
             </Link>
           </div>
-
-          {/* Subscription Warning */}
-          {activeSubscription && activeSubscription.days_remaining > 0 && (
-            <div className="mt-4 bg-gradient-to-r from-canine-gold to-amber-400 text-white p-6 rounded-2xl shadow-xl">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-                    </svg>
-                    <h3 className="text-xl font-bold">
-                      You Have an Active Subscription!
-                    </h3>
-                  </div>
-                  <p className="text-lg mb-4">
-                    You have <strong className="font-bold text-2xl">{activeSubscription.days_remaining} days remaining</strong> in your {activeSubscription.subscription_tiers?.name} subscription.
-                  </p>
-                  <p className="text-white/90 text-sm mb-4">
-                    This page is for purchasing additional individual days (£{pricePerDay}/day) beyond your subscription. Use your included subscription days first to save money!
-                  </p>
-                  <Link
-                    href="/dashboard/booking"
-                    className="inline-flex items-center gap-2 bg-white text-canine-gold px-6 py-3 rounded-xl font-bold text-lg hover:bg-canine-cream transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    <CalendarIcon className="h-6 w-6" />
-                    Book Using My Subscription Days
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
         </motion.div>
 
+        {/* Block subscription users - they should use Extra Days instead */}
+        {activeSubscription && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-canine-navy to-blue-900 text-white p-8 rounded-2xl shadow-xl mb-8"
+          >
+            <div className="text-center max-w-2xl mx-auto">
+              <div className="flex justify-center mb-4">
+                <div className="bg-canine-gold/20 p-4 rounded-full">
+                  <CreditCardIcon className="h-12 w-12 text-canine-gold" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold mb-3">
+                You Have an Active Subscription!
+              </h2>
+              <p className="text-lg text-blue-100 mb-2">
+                You have <strong className="text-canine-gold text-2xl">{activeSubscription.days_remaining} days remaining</strong> in your {activeSubscription.subscription_tiers?.name} subscription.
+              </p>
+              <p className="text-blue-200 mb-6">
+                As a subscriber, you get discounted rates on extra days. Use the buttons below to book with your subscription days or purchase extra days at your discounted rate.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link
+                  href="/dashboard/booking"
+                  className="inline-flex items-center justify-center gap-2 bg-canine-gold text-white px-6 py-3 rounded-xl font-bold text-lg hover:bg-canine-light-gold transition-all shadow-lg"
+                >
+                  <CalendarIcon className="h-6 w-6" />
+                  Use My Subscription Days
+                </Link>
+                <Link
+                  href="/dashboard/extra-days"
+                  className="inline-flex items-center justify-center gap-2 bg-white text-canine-navy px-6 py-3 rounded-xl font-bold text-lg hover:bg-canine-cream transition-all shadow-lg"
+                >
+                  Purchase Extra Days
+                </Link>
+              </div>
+              <p className="text-sm text-blue-300 mt-4">
+                Individual days at £{pricePerDay}/day are only available for non-subscribers.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Only show booking form for non-subscribers */}
+        {!activeSubscription && (
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Booking Form */}
           <div className="lg:col-span-2">
@@ -827,7 +841,10 @@ function IndividualDaysContent() {
                     )}
                     {isVipMember && vipDiscountAmount > 0 && (
                       <div className="flex justify-between text-sm text-amber-600">
-                        <span>🏆 Golden Paw VIP (10%):</span>
+                        <div className="flex items-center gap-2">
+                          <img src="/VIP.png" alt="VIP" className="h-5 w-5 object-contain" />
+                          <span>Golden Paw VIP (10%):</span>
+                        </div>
                         <span className="font-semibold">-£{vipDiscountAmount.toFixed(2)}</span>
                       </div>
                     )}
@@ -920,6 +937,7 @@ function IndividualDaysContent() {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   )

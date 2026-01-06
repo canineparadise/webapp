@@ -133,22 +133,28 @@ function SuccessContent() {
         setSuccess(true)
         toast.success(`Assessment booked successfully for ${dogs.length} dog(s)!`)
 
-        // Send confirmation email - DISABLED (using Supabase emails only)
-        // try {
-        //   await fetch('/api/send-assessment-confirmation', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify({
-        //       userId: user.id,
-        //       slotId: slotId,
-        //       dogIds: dogs.map(d => d.id),
-        //       amountPaid: 0, // Will be calculated from Stripe metadata if needed
-        //     }),
-        //   })
-        // } catch (emailError) {
-        //   console.error('Failed to send confirmation email:', emailError)
-        //   // Don't fail the booking if email fails
-        // }
+        // Send confirmation email
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session?.access_token) {
+            await fetch('/api/send-assessment-confirmation', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                userId: user.id,
+                slotId: slotId,
+                dogIds: dogs.map(d => d.id),
+                amountPaid: 0, // Will be calculated from Stripe metadata if needed
+              }),
+            })
+          }
+        } catch (emailError) {
+          console.error('Failed to send confirmation email:', emailError)
+          // Don't fail the booking if email fails
+        }
       } else if (date) {
         // Old date-based system (for backward compatibility)
         const { data: existingAssessments } = await supabase
@@ -288,9 +294,9 @@ function SuccessContent() {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-          className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
+          className="w-20 h-20 bg-canine-gold/20 rounded-full flex items-center justify-center mx-auto mb-6"
         >
-          <CheckCircleIcon className="w-12 h-12 text-green-600" />
+          <CheckCircleIcon className="w-12 h-12 text-canine-gold" />
         </motion.div>
 
         {/* Success Message */}

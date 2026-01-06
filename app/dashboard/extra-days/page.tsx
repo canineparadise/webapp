@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   CreditCardIcon,
   CheckCircleIcon,
@@ -347,9 +347,10 @@ export default function BuyExtraDaysPage() {
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-8">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <div className="mb-4">
-            <BackButton href="/dashboard" />
-          </div>
+          <DashboardHeader
+            title="Buy Extra Days"
+            subtitle="Purchase additional daycare days for your dogs"
+          />
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -541,7 +542,10 @@ export default function BuyExtraDaysPage() {
               )}
               {isVipMember && calculateTotal() > 0 && (
                 <div className="flex justify-between items-center text-amber-300">
-                  <span>🏆 Golden Paw VIP (10%):</span>
+                  <div className="flex items-center gap-2">
+                    <img src="/VIP.png" alt="VIP" className="h-6 w-6 object-contain" />
+                    <span>Golden Paw VIP (10%):</span>
+                  </div>
                   <span className="font-bold">-£{(calculateTotal() * 0.10).toFixed(2)}</span>
                 </div>
               )}

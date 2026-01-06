@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   ArrowLeftIcon,
   HeartIcon,
@@ -22,7 +22,10 @@ import {
   FireIcon,
   BoltIcon,
   StarIcon,
-  TrashIcon
+  TrashIcon,
+  ArrowDownTrayIcon,
+  EyeIcon,
+  LockClosedIcon
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid'
 import toast from 'react-hot-toast'
@@ -37,6 +40,7 @@ export default function DogProfilePage() {
   const [owner, setOwner] = useState<any>(null)
   const [documents, setDocuments] = useState<any[]>([])
   const [visits, setVisits] = useState<any[]>([])
+  const [totalVisits, setTotalVisits] = useState(0)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -79,29 +83,61 @@ export default function DogProfilePage() {
 
       setOwner(ownerData)
 
-      // Fetch documents from storage bucket
+      // Fetch documents from documents table
+      const { data: dbDocuments } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('dog_id', params.id)
+        .order('uploaded_at', { ascending: false })
+
+      // Also check storage bucket for legacy documents (dog-vaccinations)
       const { data: storageFiles } = await supabase.storage
         .from('dog-vaccinations')
         .list(`${params.id}`)
 
-      // Get public URLs for the files
-      const docsWithUrls = (storageFiles || []).map(file => ({
+      // Get public URLs for storage files
+      const storageDocsWithUrls = (storageFiles || []).filter(file => file.name !== '.emptyFolderPlaceholder').map(file => ({
         name: file.name,
         url: supabase.storage.from('dog-vaccinations').getPublicUrl(`${params.id}/${file.name}`).data.publicUrl,
-        created_at: file.created_at
+        created_at: file.created_at,
+        type: 'Vaccination Record'
       }))
 
-      setDocuments(docsWithUrls)
+      // Format database documents
+      const dbDocsWithUrls = (dbDocuments || []).map(doc => ({
+        name: doc.file_name,
+        url: doc.file_url,
+        created_at: doc.uploaded_at,
+        type: doc.type === 'vaccination' ? 'Vaccination Record' : doc.type
+      }))
 
-      // Fetch recent visits/bookings
-      const { data: visitsData } = await supabase
+      // Combine both sources
+      setDocuments([...dbDocsWithUrls, ...storageDocsWithUrls])
+
+      // Fetch completed visits/bookings for this specific dog
+      const { data: subscriptionBookings } = await supabase
         .from('bookings')
         .select('*')
-        .contains('dog_ids', [params.id])
+        .eq('dog_id', params.id)
+        .in('status', ['completed', 'checked_in'])
         .order('booking_date', { ascending: false })
-        .limit(5)
 
-      setVisits(visitsData || [])
+      // Also check individual day bookings
+      const { data: individualBookings } = await supabase
+        .from('individual_day_bookings')
+        .select('*')
+        .eq('dog_id', params.id)
+        .in('status', ['completed', 'checked_in', 'confirmed'])
+        .order('booking_date', { ascending: false })
+
+      // Combine and sort all visits
+      const allVisits = [
+        ...(subscriptionBookings || []).map(b => ({ ...b, type: 'subscription' })),
+        ...(individualBookings || []).map(b => ({ ...b, type: 'individual' }))
+      ].sort((a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime())
+
+      setVisits(allVisits.slice(0, 5))
+      setTotalVisits(allVisits.length)
 
     } catch (error) {
       console.error('Error fetching dog profile:', error)
@@ -182,7 +218,7 @@ export default function DogProfilePage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-canine-cream to-white">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-canine-gold border-t-transparent mx-auto"></div>
-          <p className="mt-6 text-gray-600 text-lg">Loading {params.id}...</p>
+          <p className="mt-6 text-gray-600 text-lg">Loading dog profile...</p>
         </div>
       </div>
     )
@@ -208,16 +244,17 @@ export default function DogProfilePage() {
     <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Back Button */}
-        <div className="mb-8">
-          <BackButton href="/dashboard" />
-        </div>
+        {/* Header */}
+        <DashboardHeader
+          title={dog?.name || 'Dog Profile'}
+          subtitle="View your dog's complete profile"
+        />
 
         {/* Hero Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-r from-canine-navy to-blue-900 rounded-3xl shadow-2xl p-8 mb-8 relative overflow-hidden"
+          className="bg-gradient-to-r from-canine-navy to-canine-navy/90 rounded-3xl shadow-2xl p-8 mb-8 relative overflow-hidden"
         >
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-canine-gold opacity-10 rounded-full -mr-32 -mt-32"></div>
@@ -227,7 +264,7 @@ export default function DogProfilePage() {
             {/* Dog Photo */}
             <motion.div
               whileHover={{ scale: 1.05, rotate: 3 }}
-              className="w-40 h-40 rounded-3xl bg-gradient-to-br from-canine-gold to-amber-400 flex items-center justify-center overflow-hidden shadow-2xl ring-4 ring-white/20"
+              className="w-40 h-40 rounded-3xl bg-gradient-to-br from-canine-gold to-canine-light-gold flex items-center justify-center overflow-hidden shadow-2xl ring-4 ring-white/20"
             >
               {dog.photo_url ? (
                 <img src={dog.photo_url} alt={dog.name} className="w-full h-full object-cover" />
@@ -240,12 +277,12 @@ export default function DogProfilePage() {
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-5xl font-display font-bold text-white flex items-center justify-center md:justify-start gap-3 mb-3">
                 {dog.name}
-                <HeartSolid className="h-10 w-10 text-red-400 animate-pulse" />
+                <HeartSolid className="h-10 w-10 text-canine-gold animate-pulse" />
               </h1>
               <p className="text-2xl text-canine-gold font-semibold mb-3">{dog.breed}</p>
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-white/90 text-lg mb-4">
                 <span className="flex items-center gap-2">
-                  <SparklesIcon className="h-5 w-5" />
+                  <SparklesIcon className="h-5 w-5 text-canine-gold" />
                   {calculateAge()} old
                 </span>
                 <span>•</span>
@@ -258,32 +295,38 @@ export default function DogProfilePage() {
                     <span>{dog.weight_kg} kg</span>
                   </>
                 )}
+                {dog.color && (
+                  <>
+                    <span>•</span>
+                    <span>{dog.color}</span>
+                  </>
+                )}
               </div>
 
               {/* Status Badges */}
               <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                 {dog.is_approved ? (
-                  <span className="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2">
+                  <span className="bg-green-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2">
                     <CheckCircleIcon className="h-5 w-5" />
                     Approved for Daycare
                   </span>
                 ) : (
-                  <span className="bg-amber-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg animate-pulse">
+                  <span className="bg-canine-gold text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg animate-pulse">
                     Pending Approval
                   </span>
                 )}
                 {dog.vaccinated && (
-                  <span className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                  <span className="bg-canine-navy/80 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg border border-canine-gold/30">
                     💉 Vaccinated
                   </span>
                 )}
                 {dog.neutered && (
-                  <span className="bg-purple-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                  <span className="bg-canine-navy/80 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg border border-canine-gold/30">
                     ✓ {dog.gender === 'male' ? 'Neutered' : 'Spayed'}
                   </span>
                 )}
                 {dog.microchipped && (
-                  <span className="bg-indigo-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
+                  <span className="bg-canine-navy/80 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg border border-canine-gold/30">
                     🔒 Microchipped
                   </span>
                 )}
@@ -324,29 +367,29 @@ export default function DogProfilePage() {
             <div className="grid md:grid-cols-3 gap-6">
               <motion.div
                 whileHover={{ y: -5 }}
-                className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-xl"
+                className="bg-gradient-to-br from-canine-navy to-canine-navy/80 rounded-2xl p-6 text-white shadow-xl border border-canine-gold/20"
               >
-                <CalendarIcon className="h-10 w-10 mb-3 opacity-80" />
-                <p className="text-3xl font-bold">{visits.length}</p>
-                <p className="text-blue-100">Total Visits</p>
+                <CalendarIcon className="h-10 w-10 mb-3 text-canine-gold" />
+                <p className="text-3xl font-bold">{totalVisits}</p>
+                <p className="text-gray-300">Total Visits</p>
               </motion.div>
 
               <motion.div
                 whileHover={{ y: -5 }}
-                className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-xl"
+                className="bg-gradient-to-br from-canine-gold to-canine-light-gold rounded-2xl p-6 text-white shadow-xl"
               >
-                <BeakerIcon className="h-10 w-10 mb-3 opacity-80" />
+                <BeakerIcon className="h-10 w-10 mb-3 opacity-90" />
                 <p className="text-3xl font-bold">{dog.vaccinated ? '✓' : '✗'}</p>
-                <p className="text-green-100">Vaccinations</p>
+                <p className="text-white/80">Vaccinations</p>
               </motion.div>
 
               <motion.div
                 whileHover={{ y: -5 }}
-                className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl"
+                className="bg-gradient-to-br from-canine-navy to-canine-navy/80 rounded-2xl p-6 text-white shadow-xl border border-canine-gold/20"
               >
-                <DocumentIcon className="h-10 w-10 mb-3 opacity-80" />
+                <DocumentIcon className="h-10 w-10 mb-3 text-canine-gold" />
                 <p className="text-3xl font-bold">{documents.length}</p>
-                <p className="text-purple-100">Documents</p>
+                <p className="text-gray-300">Documents</p>
               </motion.div>
             </div>
 
@@ -355,39 +398,47 @@ export default function DogProfilePage() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-3xl shadow-xl p-8 border-t-4 border-green-500"
+              className="bg-white rounded-3xl shadow-xl p-8 border-t-4 border-canine-gold"
             >
               <h2 className="text-2xl font-display font-bold text-canine-navy mb-6 flex items-center gap-3">
-                <div className="bg-green-100 p-3 rounded-xl">
-                  <BeakerIcon className="h-7 w-7 text-green-600" />
+                <div className="bg-canine-gold/10 p-3 rounded-xl">
+                  <BeakerIcon className="h-7 w-7 text-canine-gold" />
                 </div>
                 Health & Medical Information
               </h2>
 
               <div className="grid md:grid-cols-2 gap-6 mb-6">
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-200">
-                  <p className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-2">
-                    <CheckCircleIcon className="h-4 w-4" />
+                <div className="bg-gradient-to-br from-canine-cream to-canine-sky/30 rounded-xl p-5 border border-canine-gold/20">
+                  <p className="text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
+                    <CheckCircleIcon className="h-4 w-4 text-canine-gold" />
                     Vaccination Status
                   </p>
                   <p className="font-bold text-gray-900 text-lg">
                     {dog.vaccinated ? `Valid until ${new Date(dog.vaccination_expiry).toLocaleDateString()}` : 'Not provided'}
                   </p>
                 </div>
-                <div className="bg-gradient-to-br from-blue-50 to-sky-50 rounded-xl p-5 border border-blue-200">
-                  <p className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
-                    <FireIcon className="h-4 w-4" />
+                <div className="bg-gradient-to-br from-canine-cream to-canine-sky/30 rounded-xl p-5 border border-canine-gold/20">
+                  <p className="text-sm font-semibold text-canine-navy mb-2 flex items-center gap-2">
+                    <FireIcon className="h-4 w-4 text-canine-gold" />
                     Weight
                   </p>
                   <p className="font-bold text-gray-900 text-lg">{dog.weight_kg ? `${dog.weight_kg} kg` : 'Not specified'}</p>
                 </div>
               </div>
 
+              {/* Treats Information */}
+              <div className="bg-canine-cream/50 rounded-xl p-5 mb-6 border border-canine-gold/20">
+                <p className="text-sm font-semibold text-canine-navy mb-2">Treats</p>
+                <p className={`font-bold ${dog.can_be_given_treats ? 'text-green-600' : 'text-red-600'}`}>
+                  {dog.can_be_given_treats ? '✓ Can be given treats' : '✗ Cannot be given treats'}
+                </p>
+              </div>
+
               {/* Treatment Status */}
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-5 mb-6 border border-purple-200">
-                <p className="text-sm font-semibold text-purple-800 mb-4">Prevention & Treatment</p>
+              <div className="bg-gradient-to-r from-canine-cream to-canine-sky/30 rounded-xl p-5 mb-6 border border-canine-gold/20">
+                <p className="text-sm font-semibold text-canine-navy mb-4">Prevention & Treatment</p>
                 <div className="grid md:grid-cols-3 gap-4">
-                  <div className={`flex items-center gap-3 p-3 rounded-lg ${dog.flea_treatment ? 'bg-green-100 border-2 border-green-300' : 'bg-gray-100'}`}>
+                  <div className={`flex items-center gap-3 p-3 rounded-lg ${dog.flea_treatment ? 'bg-green-50 border-2 border-green-300' : 'bg-gray-100'}`}>
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center ${dog.flea_treatment ? 'bg-green-500' : 'bg-gray-300'}`}>
                       {dog.flea_treatment && <CheckCircleIcon className="h-4 w-4 text-white" />}
                     </div>
@@ -395,7 +446,7 @@ export default function DogProfilePage() {
                       Flea Treatment
                     </span>
                   </div>
-                  <div className={`flex items-center gap-3 p-3 rounded-lg ${dog.worming_treatment ? 'bg-green-100 border-2 border-green-300' : 'bg-gray-100'}`}>
+                  <div className={`flex items-center gap-3 p-3 rounded-lg ${dog.worming_treatment ? 'bg-green-50 border-2 border-green-300' : 'bg-gray-100'}`}>
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center ${dog.worming_treatment ? 'bg-green-500' : 'bg-gray-300'}`}>
                       {dog.worming_treatment && <CheckCircleIcon className="h-4 w-4 text-white" />}
                     </div>
@@ -403,7 +454,7 @@ export default function DogProfilePage() {
                       Worming
                     </span>
                   </div>
-                  <div className={`flex items-center gap-3 p-3 rounded-lg ${dog.heartworm_prevention ? 'bg-green-100 border-2 border-green-300' : 'bg-gray-100'}`}>
+                  <div className={`flex items-center gap-3 p-3 rounded-lg ${dog.heartworm_prevention ? 'bg-green-50 border-2 border-green-300' : 'bg-gray-100'}`}>
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center ${dog.heartworm_prevention ? 'bg-green-500' : 'bg-gray-300'}`}>
                       {dog.heartworm_prevention && <CheckCircleIcon className="h-4 w-4 text-white" />}
                     </div>
@@ -426,18 +477,28 @@ export default function DogProfilePage() {
 
               {dog.current_medications && dog.current_medications.length > 0 && (
                 <div className="border-t-2 border-gray-100 pt-6">
-                  <p className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <BeakerIcon className="h-5 w-5 text-blue-600" />
+                  <p className="text-sm font-bold text-canine-navy mb-4 flex items-center gap-2">
+                    <BeakerIcon className="h-5 w-5 text-canine-gold" />
                     Current Medications
                   </p>
                   <div className="grid gap-3">
                     {dog.current_medications.map((med: any, index: number) => (
-                      <div key={index} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                      <div key={index} className="bg-gradient-to-r from-canine-cream to-canine-sky/30 rounded-xl p-4 border border-canine-gold/20">
                         <p className="font-bold text-gray-900 mb-1">{med.name}</p>
                         <p className="text-sm text-gray-700">{med.dosage} • {med.frequency}</p>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {dog.medication_requirements && (
+                <div className="border-t-2 border-gray-100 pt-6 mt-6">
+                  <p className="text-sm font-bold text-canine-navy mb-2 flex items-center gap-2">
+                    <BeakerIcon className="h-5 w-5 text-canine-gold" />
+                    Medication Requirements
+                  </p>
+                  <p className="text-gray-800 bg-canine-cream/50 rounded-lg p-4 border border-canine-gold/20">{dog.medication_requirements}</p>
                 </div>
               )}
 
@@ -457,19 +518,19 @@ export default function DogProfilePage() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-3xl shadow-xl p-8 border-t-4 border-purple-500"
+              className="bg-white rounded-3xl shadow-xl p-8 border-t-4 border-canine-navy"
             >
               <h2 className="text-2xl font-display font-bold text-canine-navy mb-6 flex items-center gap-3">
-                <div className="bg-purple-100 p-3 rounded-xl">
-                  <UserGroupIcon className="h-7 w-7 text-purple-600" />
+                <div className="bg-canine-navy/10 p-3 rounded-xl">
+                  <UserGroupIcon className="h-7 w-7 text-canine-navy" />
                 </div>
                 Behavioral Profile & Socialization
               </h2>
 
               <div className="grid md:grid-cols-2 gap-8 mb-6">
                 <div>
-                  <p className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                    <StarIcon className="h-5 w-5 text-yellow-500" />
+                  <p className="text-sm font-bold text-canine-navy mb-4 flex items-center gap-2">
+                    <StarIcon className="h-5 w-5 text-canine-gold" />
                     Social Behavior
                   </p>
                   <div className="space-y-3">
@@ -509,8 +570,8 @@ export default function DogProfilePage() {
                 </div>
 
                 <div>
-                  <p className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                    <BoltIcon className="h-5 w-5 text-blue-500" />
+                  <p className="text-sm font-bold text-canine-navy mb-4 flex items-center gap-2">
+                    <BoltIcon className="h-5 w-5 text-canine-gold" />
                     Training Status
                   </p>
                   <div className="space-y-3">
@@ -530,16 +591,38 @@ export default function DogProfilePage() {
                         Crate trained
                       </span>
                     </div>
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
-                      <p className="text-xs text-indigo-700 font-semibold mb-1">Recall Reliability</p>
-                      <p className="text-lg font-bold text-indigo-900 capitalize">{dog.recall_reliability || 'Not specified'}</p>
+                    <div className="bg-gradient-to-r from-canine-cream to-canine-sky/30 rounded-lg p-4 border border-canine-gold/20">
+                      <p className="text-xs text-canine-navy font-semibold mb-1">Recall Reliability</p>
+                      <p className="text-lg font-bold text-canine-navy capitalize">{dog.recall_reliability || 'Not specified'}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Safety Concerns - Escape & Fence */}
+              {(dog.escape_artist || dog.fence_jumper) && (
+                <div className="bg-amber-50 rounded-xl p-5 mb-6 border border-amber-200">
+                  <p className="text-sm font-bold text-amber-900 mb-3 flex items-center gap-2">
+                    <ShieldCheckIcon className="h-5 w-5" />
+                    Safety Concerns
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    {dog.escape_artist && (
+                      <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
+                        Escape Artist
+                      </span>
+                    )}
+                    {dog.fence_jumper && (
+                      <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
+                        Fence Jumper
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {(dog.resource_guarding || dog.separation_anxiety || dog.excessive_barking || dog.leash_pulling) && (
-                <div className="bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl p-6 border-l-4 border-amber-500">
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border-l-4 border-amber-500">
                   <p className="text-sm font-bold text-amber-900 mb-4 flex items-center gap-2">
                     <ExclamationTriangleIcon className="h-6 w-6" />
                     Behavioral Notes
@@ -573,6 +656,26 @@ export default function DogProfilePage() {
                 </div>
               )}
 
+              {dog.behavioral_challenges && (
+                <div className="border-t-2 border-gray-100 pt-6 mt-6">
+                  <p className="text-sm font-bold text-canine-navy mb-3 flex items-center gap-2">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-amber-600" />
+                    Behavioral Challenges
+                  </p>
+                  <p className="text-gray-800 bg-amber-50 rounded-lg p-4 border border-amber-200">{dog.behavioral_challenges}</p>
+                </div>
+              )}
+
+              {dog.training_needs && (
+                <div className="border-t-2 border-gray-100 pt-6 mt-6">
+                  <p className="text-sm font-bold text-canine-navy mb-3 flex items-center gap-2">
+                    <BoltIcon className="h-5 w-5 text-canine-gold" />
+                    Training Needs
+                  </p>
+                  <p className="text-gray-800 bg-canine-cream/50 rounded-lg p-4 border border-canine-gold/20">{dog.training_needs}</p>
+                </div>
+              )}
+
               {dog.aggression_triggers && (
                 <div className="border-t-2 border-gray-100 pt-6 mt-6">
                   <p className="text-sm font-bold text-red-900 mb-3 flex items-center gap-2">
@@ -585,11 +688,11 @@ export default function DogProfilePage() {
 
               {dog.play_style && (
                 <div className="border-t-2 border-gray-100 pt-6 mt-6">
-                  <p className="text-sm font-bold text-purple-900 mb-3 flex items-center gap-2">
-                    <HeartIcon className="h-5 w-5 text-purple-600" />
+                  <p className="text-sm font-bold text-canine-navy mb-3 flex items-center gap-2">
+                    <HeartIcon className="h-5 w-5 text-canine-gold" />
                     Play Style
                   </p>
-                  <p className="text-gray-800 bg-purple-50 rounded-lg p-4 border border-purple-200">{dog.play_style}</p>
+                  <p className="text-gray-800 bg-canine-cream/50 rounded-lg p-4 border border-canine-gold/20">{dog.play_style}</p>
                 </div>
               )}
             </motion.div>
@@ -600,43 +703,44 @@ export default function DogProfilePage() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className="bg-white rounded-3xl shadow-xl p-8 border-t-4 border-blue-500"
+                className="bg-white rounded-3xl shadow-xl p-8 border-t-4 border-canine-light-gold"
               >
                 <h2 className="text-2xl font-display font-bold text-canine-navy mb-6 flex items-center gap-3">
-                  <div className="bg-blue-100 p-3 rounded-xl">
-                    <HomeIcon className="h-7 w-7 text-blue-600" />
+                  <div className="bg-canine-gold/10 p-3 rounded-xl">
+                    <HomeIcon className="h-7 w-7 text-canine-gold" />
                   </div>
                   Care Instructions
                 </h2>
 
                 {dog.feeding_schedule && (
                   <div className="mb-6">
-                    <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <p className="text-sm font-bold text-canine-navy mb-3 flex items-center gap-2">
                       🍽️ Feeding Schedule
                     </p>
-                    <p className="text-gray-800 bg-orange-50 rounded-lg p-4 border border-orange-200 leading-relaxed">{dog.feeding_schedule}</p>
+                    <p className="text-gray-800 bg-canine-cream/50 rounded-lg p-4 border border-canine-gold/20 leading-relaxed">{dog.feeding_schedule}</p>
                   </div>
                 )}
 
                 {dog.favorite_activities && (
                   <div className="mb-6">
-                    <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <p className="text-sm font-bold text-canine-navy mb-3 flex items-center gap-2">
                       ⚽ Favorite Activities
                     </p>
-                    <p className="text-gray-800 bg-green-50 rounded-lg p-4 border border-green-200 leading-relaxed">{dog.favorite_activities}</p>
+                    <p className="text-gray-800 bg-canine-sky/30 rounded-lg p-4 border border-canine-gold/20 leading-relaxed">{dog.favorite_activities}</p>
                   </div>
                 )}
 
                 {dog.special_requirements && (
                   <div>
-                    <p className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <p className="text-sm font-bold text-canine-navy mb-3 flex items-center gap-2">
                       ⭐ Special Requirements
                     </p>
-                    <p className="text-gray-800 bg-purple-50 rounded-lg p-4 border border-purple-200 leading-relaxed">{dog.special_requirements}</p>
+                    <p className="text-gray-800 bg-canine-cream/50 rounded-lg p-4 border border-canine-gold/20 leading-relaxed">{dog.special_requirements}</p>
                   </div>
                 )}
               </motion.div>
             )}
+
           </div>
 
           {/* Right Column - Emergency & Quick Info */}
@@ -647,37 +751,37 @@ export default function DogProfilePage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-gradient-to-br from-red-500 to-red-600 rounded-3xl shadow-2xl p-8 text-white"
+              className="bg-gradient-to-br from-canine-navy to-canine-navy/90 rounded-3xl shadow-2xl p-8 text-white"
             >
               <h2 className="text-2xl font-display font-bold mb-6 flex items-center gap-3">
-                <div className="bg-white/20 p-3 rounded-xl">
-                  <PhoneIcon className="h-7 w-7" />
+                <div className="bg-canine-gold/20 p-3 rounded-xl">
+                  <PhoneIcon className="h-7 w-7 text-canine-gold" />
                 </div>
                 Emergency Contacts
               </h2>
 
               <div className="space-y-6">
                 <div className="bg-white/10 backdrop-blur rounded-xl p-5">
-                  <p className="text-sm font-bold text-red-100 mb-2">🏥 Veterinary Clinic</p>
+                  <p className="text-sm font-bold text-canine-gold mb-2">🏥 Veterinary Clinic</p>
                   <p className="text-white font-bold text-lg mb-1">{dog.vet_name || 'Not provided'}</p>
-                  {dog.vet_phone && <p className="text-red-100 font-semibold mb-1">📞 {dog.vet_phone}</p>}
-                  {dog.vet_address && <p className="text-sm text-red-100">📍 {dog.vet_address}</p>}
+                  {dog.vet_phone && <p className="text-gray-300 font-semibold mb-1">📞 {dog.vet_phone}</p>}
+                  {dog.vet_address && <p className="text-sm text-gray-300">📍 {dog.vet_address}</p>}
                 </div>
 
                 <div className="bg-white/10 backdrop-blur rounded-xl p-5">
-                  <p className="text-sm font-bold text-red-100 mb-2">👤 Owner Contact</p>
+                  <p className="text-sm font-bold text-canine-gold mb-2">👤 Owner Contact</p>
                   <p className="text-white font-bold mb-1">{owner?.first_name} {owner?.last_name}</p>
-                  <p className="text-red-100">📞 {owner?.phone}</p>
+                  <p className="text-gray-300">📞 {owner?.phone}</p>
                 </div>
 
                 <div className="bg-white/10 backdrop-blur rounded-xl p-5">
-                  <p className="text-sm font-bold text-red-100 mb-2">🚨 Emergency Contact</p>
+                  <p className="text-sm font-bold text-canine-gold mb-2">🚨 Emergency Contact</p>
                   <p className="text-white font-bold mb-1">{owner?.emergency_contact_name || 'Not provided'}</p>
-                  <p className="text-red-100">📞 {owner?.emergency_contact_phone}</p>
+                  <p className="text-gray-300">📞 {owner?.emergency_contact_phone}</p>
                 </div>
 
                 {dog.emergency_medical_consent && (
-                  <div className="bg-green-500 rounded-xl p-5">
+                  <div className="bg-green-600 rounded-xl p-5">
                     <p className="text-white font-bold flex items-center gap-2 mb-2">
                       <CheckCircleIcon className="h-5 w-5" />
                       Medical Consent Granted
@@ -692,6 +796,77 @@ export default function DogProfilePage() {
               </div>
             </motion.div>
 
+            {/* Pickup & Dropoff Authorization */}
+            {(dog.authorized_dropoff_people?.length > 0 || dog.authorized_pickup_people?.length > 0 || dog.checkout_password) && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.12 }}
+                className="bg-white rounded-3xl shadow-xl p-6"
+              >
+                <h3 className="text-lg font-display font-bold text-canine-navy mb-4 flex items-center gap-2">
+                  <UserGroupIcon className="h-5 w-5 text-canine-gold" />
+                  Pickup & Dropoff
+                </h3>
+
+                <div className="space-y-4">
+                  {dog.authorized_dropoff_people?.length > 0 && (
+                    <div className="bg-canine-cream/50 rounded-xl p-4 border border-canine-gold/20">
+                      <p className="text-xs font-bold text-canine-navy mb-2">Authorized to Drop Off</p>
+                      <div className="flex flex-wrap gap-2">
+                        {dog.authorized_dropoff_people.map((person: string, index: number) => (
+                          <span key={index} className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                            {person}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {dog.authorized_pickup_people?.length > 0 && (
+                    <div className="bg-canine-cream/50 rounded-xl p-4 border border-canine-gold/20">
+                      <p className="text-xs font-bold text-canine-navy mb-2">Authorized to Pick Up</p>
+                      <div className="flex flex-wrap gap-2">
+                        {dog.authorized_pickup_people.map((person: string, index: number) => (
+                          <span key={index} className="bg-canine-sky text-canine-navy px-2 py-1 rounded-full text-xs font-medium">
+                            {person}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {dog.checkout_password && (
+                    <div className="bg-amber-50 rounded-xl p-4 border border-amber-200">
+                      <p className="text-xs font-bold text-amber-900 mb-1 flex items-center gap-1">
+                        <LockClosedIcon className="h-4 w-4" />
+                        Checkout Password Set
+                      </p>
+                      <p className="text-amber-700 text-xs">Password required for non-authorized pickup.</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Microchip Information */}
+            {dog.microchip_number && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.15 }}
+                className="bg-white rounded-3xl shadow-xl p-6"
+              >
+                <h3 className="text-lg font-display font-bold text-canine-navy mb-3 flex items-center gap-2">
+                  <LockClosedIcon className="h-5 w-5 text-canine-gold" />
+                  Microchip Number
+                </h3>
+                <p className="font-mono text-lg text-canine-navy bg-canine-cream/50 rounded-lg p-3 border border-canine-gold/20">
+                  {dog.microchip_number}
+                </p>
+              </motion.div>
+            )}
+
             {/* Documents */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
@@ -700,24 +875,38 @@ export default function DogProfilePage() {
               className="bg-white rounded-3xl shadow-xl p-8"
             >
               <h2 className="text-2xl font-display font-bold text-canine-navy mb-6 flex items-center gap-3">
-                <div className="bg-blue-100 p-3 rounded-xl">
-                  <DocumentIcon className="h-7 w-7 text-blue-600" />
+                <div className="bg-canine-gold/10 p-3 rounded-xl">
+                  <DocumentIcon className="h-7 w-7 text-canine-gold" />
                 </div>
                 Documents
               </h2>
 
               {documents.length > 0 ? (
                 <div className="space-y-3">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                      <p className="font-bold text-gray-900 mb-1">{doc.name}</p>
-                      <p className="text-xs text-gray-600 mb-1 uppercase tracking-wide">{doc.type}</p>
-                      {doc.expiry_date && (
-                        <p className="text-xs text-amber-600 font-semibold">
-                          Expires: {new Date(doc.expiry_date).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
+                  {documents.map((doc, index) => (
+                    <a
+                      key={index}
+                      href={doc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-gradient-to-r from-canine-cream to-canine-sky/30 rounded-xl p-4 border border-canine-gold/20 hover:border-canine-gold hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-bold text-canine-navy mb-1">{doc.name}</p>
+                          <p className="text-xs text-canine-gold uppercase tracking-wide font-semibold">{doc.type}</p>
+                          {doc.created_at && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Uploaded: {new Date(doc.created_at).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-canine-gold">
+                          <EyeIcon className="h-5 w-5" />
+                          <span className="text-sm font-medium">View</span>
+                        </div>
+                      </div>
+                    </a>
                   ))}
                 </div>
               ) : (
@@ -743,16 +932,16 @@ export default function DogProfilePage() {
                 className="bg-white rounded-3xl shadow-xl p-8"
               >
                 <h2 className="text-2xl font-display font-bold text-canine-navy mb-6 flex items-center gap-3">
-                  <div className="bg-green-100 p-3 rounded-xl">
-                    <CalendarIcon className="h-7 w-7 text-green-600" />
+                  <div className="bg-canine-gold/10 p-3 rounded-xl">
+                    <CalendarIcon className="h-7 w-7 text-canine-gold" />
                   </div>
                   Recent Visits
                 </h2>
 
                 <div className="space-y-3">
                   {visits.map((visit) => (
-                    <div key={visit.id} className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
-                      <p className="font-bold text-gray-900">
+                    <div key={visit.id} className="bg-gradient-to-r from-canine-cream to-canine-sky/30 rounded-xl p-4 border border-canine-gold/20">
+                      <p className="font-bold text-canine-navy">
                         {new Date(visit.booking_date).toLocaleDateString('en-GB', {
                           weekday: 'long',
                           day: 'numeric',
@@ -760,8 +949,8 @@ export default function DogProfilePage() {
                           year: 'numeric'
                         })}
                       </p>
-                      <p className="text-sm text-green-700 font-semibold capitalize mt-1">
-                        {visit.status === 'completed' ? '✓ Attended' : visit.status}
+                      <p className="text-sm text-canine-gold font-semibold capitalize mt-1">
+                        {visit.status === 'completed' ? '✓ Attended' : visit.status === 'checked_in' ? '✓ Checked In' : visit.status}
                       </p>
                     </div>
                   ))}

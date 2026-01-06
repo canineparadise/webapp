@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   HeartIcon,
   CameraIcon,
@@ -875,9 +875,13 @@ export default function AddDogPage() {
 
       // Send dog registration confirmation email
       try {
+        const { data: { session } } = await supabase.auth.getSession()
         const emailResponse = await fetch('/api/send-dog-registration-email', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token}`
+          },
           body: JSON.stringify({
             userId: user.id,
             dogName: formData.name,
@@ -948,18 +952,10 @@ export default function AddDogPage() {
         >
           {/* Header */}
           <div className="mb-8">
-            <BackButton href="/dashboard" />
-            <div className="flex items-center justify-between mt-4">
-              <div>
-                <h1 className="text-3xl font-display font-bold text-canine-navy flex items-center gap-3">
-                  <HeartSolid className="h-10 w-10 text-red-500" />
-                  Complete Dog Profile
-                </h1>
-                <p className="text-gray-600 mt-2">
-                  Provide comprehensive information about your dog ({dogCount}/4 dogs registered)
-                </p>
-              </div>
-            </div>
+            <DashboardHeader
+              title="Add New Dog"
+              subtitle={`Provide comprehensive information about your dog (${dogCount}/4 dogs registered)`}
+            />
           </div>
 
           {/* Progress Steps */}

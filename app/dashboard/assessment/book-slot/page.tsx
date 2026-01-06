@@ -6,19 +6,19 @@ import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   CalendarDaysIcon,
   ClockIcon,
   ArrowLeftIcon,
+  ArrowRightIcon,
   CheckCircleIcon,
-  XCircleIcon,
   SparklesIcon,
   CurrencyPoundIcon,
   TicketIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline'
+import { CheckIcon } from '@heroicons/react/24/solid'
 
 interface AssessmentSlot {
   id: string
@@ -48,7 +48,10 @@ export default function BookAssessmentSlot() {
   const [selectedDogs, setSelectedDogs] = useState<string[]>([])
   const [existingBooking, setExistingBooking] = useState<any>(null)
   const [assessmentFee, setAssessmentFee] = useState<number>(40)
-  const [currentMonth, setCurrentMonth] = useState(new Date())
+
+  // Step wizard state
+  const [currentStep, setCurrentStep] = useState(1)
+  const totalSteps = 3
 
   // Discount code state
   const [discountCode, setDiscountCode] = useState('')
@@ -69,8 +72,6 @@ export default function BookAssessmentSlot() {
 
       if (error) throw error
 
-      // Only show slots that are available (is_available = true means no user has booked it yet)
-      // Each slot is for ONE user only (regardless of how many dogs they have)
       setSlots(data || [])
     } catch (error) {
       console.error('Error fetching slots:', error)
@@ -93,13 +94,11 @@ export default function BookAssessmentSlot() {
         },
         (payload) => {
           console.log('Assessment slots changed:', payload)
-          // Refresh available slots when any change occurs
           fetchAvailableSlots()
         }
       )
       .subscribe()
 
-    // Cleanup subscription on unmount
     return () => {
       slotsSubscription.unsubscribe()
     }
@@ -107,7 +106,6 @@ export default function BookAssessmentSlot() {
 
   const init = async () => {
     try {
-      // Check auth
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (userError || !user) {
         router.push('/login')
@@ -126,17 +124,30 @@ export default function BookAssessmentSlot() {
         setAssessmentFee(parseFloat(feeData.setting_value))
       }
 
-      // Get user's dogs
+      // Get user's dogs that haven't been approved yet (still need assessment)
       const { data: dogsData } = await supabase
         .from('dogs')
         .select('*')
         .eq('owner_id', user.id)
+        .eq('is_approved', false)
 
       setDogs(dogsData || [])
 
       if (!dogsData || dogsData.length === 0) {
-        toast.error('Please add at least one dog before booking an assessment')
-        setTimeout(() => router.push('/dashboard/add-dog'), 2000)
+        // Check if user has any dogs at all
+        const { data: allDogs } = await supabase
+          .from('dogs')
+          .select('id')
+          .eq('owner_id', user.id)
+
+        if (!allDogs || allDogs.length === 0) {
+          toast.error('Please add at least one dog before booking an assessment')
+          setTimeout(() => router.push('/dashboard/add-dog'), 2000)
+        } else {
+          // User has dogs but they're all already approved
+          toast.success('All your dogs have already been assessed and approved!')
+          setTimeout(() => router.push('/dashboard'), 2000)
+        }
         return
       }
 
@@ -155,11 +166,15 @@ export default function BookAssessmentSlot() {
       }
 
       // Check if user has signed legal agreements
-      const { data: agreements } = await supabase
+      const { data: agreements, error: agreementsError } = await supabase
         .from('legal_agreements')
         .select('*')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
+
+      if (agreementsError) {
+        console.error('Error fetching agreements:', agreementsError)
+      }
 
       if (!agreements) {
         toast.error('Please sign all required legal agreements before booking an assessment')
@@ -167,10 +182,11 @@ export default function BookAssessmentSlot() {
         return
       }
 
-      // Verify all required waivers are signed
-      if (!agreements.liability_waiver_signed ||
-          !agreements.photo_consent_signed ||
-          !agreements.terms_accepted) {
+      const allWaiversSigned = agreements.terms_accepted &&
+          agreements.injury_waiver_agreed &&
+          agreements.photo_permission_granted
+
+      if (!allWaiversSigned) {
         toast.error('Please sign all required waivers before booking an assessment')
         setTimeout(() => router.push('/dashboard/legal-agreements'), 2000)
         return
@@ -191,36 +207,12 @@ export default function BookAssessmentSlot() {
         setExistingBooking(existingData)
       }
 
-      // Fetch available slots
       await fetchAvailableSlots()
     } catch (error) {
       console.error('Init error:', error)
     } finally {
       setLoading(false)
     }
-  }
-
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDayOfWeek = firstDay.getDay()
-
-    return { daysInMonth, startingDayOfWeek, year, month }
-  }
-
-  const getSlotsForDate = (dateString: string) => {
-    return slots.filter(slot => slot.assessment_date === dateString)
-  }
-
-  const previousMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
-  }
-
-  const nextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
   }
 
   const handleDogToggle = (dogId: string) => {
@@ -258,7 +250,6 @@ export default function BookAssessmentSlot() {
         return
       }
 
-      // Calculate discount amount
       const { data: discountData } = await supabase
         .rpc('calculate_discount_amount', {
           p_original_amount: totalAmount,
@@ -274,7 +265,7 @@ export default function BookAssessmentSlot() {
         discountAmount: discountData,
       })
 
-      toast.success(`Discount code applied! -£${discountData.toFixed(2)}`)
+      toast.success(`Discount applied! You save £${discountData.toFixed(2)}`)
     } catch (error: any) {
       console.error('Error validating discount code:', error)
       toast.error(error.message || 'Failed to validate discount code')
@@ -306,7 +297,6 @@ export default function BookAssessmentSlot() {
     setBooking(true)
 
     try {
-      // Get current auth session for the API call
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         toast.error('Please log in again')
@@ -314,8 +304,6 @@ export default function BookAssessmentSlot() {
         return
       }
 
-      // Create Stripe checkout session for assessment payment
-      // The API will verify slot availability and reserve it atomically
       const totalAmount = assessmentFee * selectedDogs.length
       const finalAmount = calculateTotalPrice()
 
@@ -340,10 +328,10 @@ export default function BookAssessmentSlot() {
       const data = await response.json()
 
       if (!response.ok) {
-        // Handle specific error for slot no longer available
         if (response.status === 409) {
           toast.error(data.error || 'This slot is no longer available. Please select another time.')
           setSelectedSlot('')
+          setCurrentStep(2)
           await fetchAvailableSlots()
         } else {
           throw new Error(data.error || 'Failed to create checkout session')
@@ -364,81 +352,55 @@ export default function BookAssessmentSlot() {
     }
   }
 
-  // Render calendar
-  const renderCalendar = () => {
-    const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(currentMonth)
-    const days = []
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // Add empty cells for days before the first day of the month
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(<div key={`empty-${i}`} className="p-2"></div>)
-    }
-
-    // Add cells for each day of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      const date = new Date(year, month, day)
-      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-      const dateSlots = getSlotsForDate(dateString)
-      const isPast = date < today
-      const dayOfWeek = date.getDay()
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
-
-      days.push(
-        <motion.div
-          key={day}
-          whileHover={!isPast && dateSlots.length > 0 ? { scale: 1.05 } : {}}
-          className={`p-3 border rounded-lg min-h-[100px] transition-all ${
-            isPast
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-              : isWeekend
-              ? 'bg-gray-50 text-gray-400'
-              : dateSlots.length > 0
-              ? 'bg-green-50 border-green-300 cursor-pointer hover:bg-green-100'
-              : 'bg-white border-gray-200'
-          }`}
-        >
-          <div className="font-bold mb-1">{day}</div>
-          {!isPast && dateSlots.length > 0 && (
-            <div className="space-y-1">
-              {dateSlots.map(slot => (
-                <button
-                  key={slot.id}
-                  onClick={() => setSelectedSlot(slot.id)}
-                  className={`w-full text-xs p-2 rounded transition-all ${
-                    selectedSlot === slot.id
-                      ? 'bg-canine-gold text-white font-bold'
-                      : 'bg-white border border-green-400 text-green-700 hover:bg-green-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    <ClockIcon className="h-3 w-3" />
-                    <span>{slot.start_time.slice(0, 5)}</span>
-                  </div>
-                  <div className="text-[10px] mt-0.5">
-                    Available
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-          {!isPast && isWeekend && (
-            <div className="text-xs text-gray-400 mt-1">Closed</div>
-          )}
-        </motion.div>
-      )
-    }
-
-    return days
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
   }
+
+  // Format time for display
+  const formatTime = (time: string) => time.slice(0, 5)
+
+  // Group slots by date for easier display
+  const slotsByDate = slots.reduce((acc, slot) => {
+    if (!acc[slot.assessment_date]) {
+      acc[slot.assessment_date] = []
+    }
+    acc[slot.assessment_date].push(slot)
+    return acc
+  }, {} as Record<string, AssessmentSlot[]>)
+
+  // Get selected slot details
+  const getSelectedSlotDetails = () => {
+    return slots.find(s => s.id === selectedSlot)
+  }
+
+  // Navigation functions
+  const goToNextStep = () => {
+    if (currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1)
+    }
+  }
+
+  const goToPreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1)
+    }
+  }
+
+  const canProceedToStep2 = selectedDogs.length > 0
+  const canProceedToStep3 = selectedSlot !== ''
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-canine-gold mx-auto"></div>
-          <p className="mt-4 text-gray-600 font-semibold">Loading assessment slots...</p>
+          <p className="mt-4 text-gray-600 font-semibold text-lg">Loading...</p>
         </div>
       </div>
     )
@@ -446,37 +408,37 @@ export default function BookAssessmentSlot() {
 
   if (existingBooking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-12 px-4">
-        <div className="max-w-3xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-8 px-4">
+        <div className="max-w-2xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-2xl p-8"
+            className="bg-white rounded-2xl shadow-xl p-8"
           >
             <div className="text-center">
-              <CheckCircleIcon className="h-20 w-20 text-green-500 mx-auto mb-6" />
-              <h1 className="text-3xl font-display font-bold text-canine-navy mb-4">
-                Assessment Already Scheduled
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircleIcon className="h-12 w-12 text-green-600" />
+              </div>
+              <h1 className="text-2xl md:text-3xl font-display font-bold text-canine-navy mb-4">
+                Assessment Already Booked
               </h1>
-              <p className="text-gray-600 mb-2">
-                You have an assessment booked for:
+              <p className="text-gray-600 mb-6 text-lg">
+                You already have an assessment scheduled:
               </p>
-              <p className="text-2xl font-bold text-canine-gold mb-6">
-                {new Date(existingBooking.slot.assessment_date).toLocaleDateString('en-GB', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-                <br />
-                {existingBooking.slot.start_time.slice(0, 5)} - {existingBooking.slot.end_time.slice(0, 5)}
-              </p>
+              <div className="bg-canine-cream rounded-xl p-6 mb-8">
+                <p className="text-xl font-bold text-canine-navy">
+                  {formatDate(existingBooking.slot.assessment_date)}
+                </p>
+                <p className="text-lg text-canine-gold font-semibold mt-2">
+                  {formatTime(existingBooking.slot.start_time)} - {formatTime(existingBooking.slot.end_time)}
+                </p>
+              </div>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center px-6 py-3 bg-canine-gold text-white rounded-xl hover:bg-canine-light-gold transition-colors font-semibold"
+                className="inline-flex items-center justify-center w-full sm:w-auto px-8 py-4 bg-canine-gold text-white rounded-xl hover:bg-canine-light-gold transition-colors font-bold text-lg"
               >
                 <ArrowLeftIcon className="h-5 w-5 mr-2" />
-                Return to Dashboard
+                Back to Dashboard
               </Link>
             </div>
           </motion.div>
@@ -486,243 +448,403 @@ export default function BookAssessmentSlot() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-12 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <BackButton href="/dashboard" />
+    <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-6 px-4">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <DashboardHeader
+            title="Book an Assessment"
+            subtitle="Follow the simple steps below"
+            backButtonHref="/dashboard"
+            backButtonLabel="Back to Dashboard"
+          />
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-2xl p-8 mb-8"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">
-                Book Assessment Slot
-              </h1>
-              <p className="text-gray-600">
-                Select a time slot for your dog's assessment (typically Fridays)
-              </p>
-            </div>
-            <div className="bg-canine-gold text-white px-6 py-3 rounded-xl">
-              <div className="flex items-center space-x-2">
-                <CurrencyPoundIcon className="h-6 w-6" />
-                <span className="text-2xl font-bold">£{assessmentFee}</span>
-              </div>
-              <p className="text-xs opacity-90">Per dog</p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Select Dogs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-2xl shadow-2xl p-8 mb-8"
-        >
-          <h2 className="text-2xl font-display font-bold text-canine-navy mb-4">
-            Select Dogs for Assessment
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {dogs.map(dog => (
-              <div
-                key={dog.id}
-                onClick={() => handleDogToggle(dog.id)}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                  selectedDogs.includes(dog.id)
-                    ? 'border-canine-gold bg-canine-gold/10'
-                    : 'border-gray-300 hover:border-canine-gold/50'
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  {dog.photo_url && (
-                    <img
-                      src={dog.photo_url}
-                      alt={dog.name}
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <p className="font-bold text-gray-900">{dog.name}</p>
+        {/* Progress Steps */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+          <div className="flex items-center justify-between">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-all ${
+                      currentStep >= step
+                        ? 'bg-canine-gold text-white'
+                        : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {currentStep > step ? (
+                      <CheckIcon className="h-6 w-6" />
+                    ) : (
+                      step
+                    )}
                   </div>
-                  {selectedDogs.includes(dog.id) && (
-                    <CheckCircleIcon className="h-6 w-6 text-canine-gold" />
-                  )}
+                  <span className={`mt-2 text-sm font-medium ${
+                    currentStep >= step ? 'text-canine-navy' : 'text-gray-400'
+                  }`}>
+                    {step === 1 && 'Select Dogs'}
+                    {step === 2 && 'Choose Date'}
+                    {step === 3 && 'Confirm'}
+                  </span>
                 </div>
+                {step < 3 && (
+                  <div className={`w-12 sm:w-20 h-1 mx-2 rounded ${
+                    currentStep > step ? 'bg-canine-gold' : 'bg-gray-200'
+                  }`} />
+                )}
               </div>
             ))}
           </div>
-        </motion.div>
+        </div>
 
-        {/* Discount Code Section */}
-        {selectedDogs.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl shadow-2xl p-8 mb-8"
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <TicketIcon className="h-6 w-6 text-canine-gold" />
-              <h2 className="text-2xl font-display font-bold text-canine-navy">
-                Discount Code
-              </h2>
-            </div>
+        {/* Step Content */}
+        <AnimatePresence mode="wait">
+          {/* STEP 1: Select Dogs */}
+          {currentStep === 1 && (
+            <motion.div
+              key="step1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="bg-white rounded-2xl shadow-lg p-6 md:p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-canine-gold/10 rounded-full flex items-center justify-center">
+                  <UserGroupIcon className="h-6 w-6 text-canine-gold" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-canine-navy">
+                    Which dogs need an assessment?
+                  </h2>
+                  <p className="text-gray-600">Tap to select your dog(s)</p>
+                </div>
+              </div>
 
-            <div className="flex gap-4">
-              <input
-                type="text"
-                value={discountCode}
-                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                placeholder="Enter discount code"
-                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-canine-gold focus:outline-none"
-              />
-              <button
-                onClick={handleValidateDiscountCode}
-                disabled={validatingCode || !discountCode.trim()}
-                className="px-6 py-3 bg-canine-gold text-white rounded-xl hover:bg-canine-light-gold transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {validatingCode ? 'Validating...' : 'Apply'}
-              </button>
-            </div>
+              <div className="space-y-3 mb-8">
+                {dogs.map(dog => (
+                  <button
+                    key={dog.id}
+                    onClick={() => handleDogToggle(dog.id)}
+                    className={`w-full p-4 rounded-xl border-2 transition-all text-left flex items-center gap-4 ${
+                      selectedDogs.includes(dog.id)
+                        ? 'border-canine-gold bg-canine-gold/10'
+                        : 'border-gray-200 hover:border-canine-gold/50'
+                    }`}
+                  >
+                    {dog.photo_url ? (
+                      <img
+                        src={dog.photo_url}
+                        alt={dog.name}
+                        className="w-14 h-14 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center">
+                        <span className="text-2xl">🐕</span>
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="font-bold text-lg text-gray-900">{dog.name}</p>
+                      <p className="text-gray-500">£{assessmentFee} assessment fee</p>
+                    </div>
+                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                      selectedDogs.includes(dog.id)
+                        ? 'border-canine-gold bg-canine-gold'
+                        : 'border-gray-300'
+                    }`}>
+                      {selectedDogs.includes(dog.id) && (
+                        <CheckIcon className="h-5 w-5 text-white" />
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
 
-            {appliedDiscount && (
-              <div className="mt-4 p-4 bg-green-50 border-2 border-green-300 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
-                  <div>
-                    <p className="font-bold text-green-900">Code Applied: {appliedDiscount.code}</p>
-                    <p className="text-sm text-green-700">
-                      {appliedDiscount.type === 'percentage'
-                        ? `${appliedDiscount.value}% off`
-                        : `£${appliedDiscount.value} off`}
-                    </p>
+              {selectedDogs.length > 0 && (
+                <div className="bg-canine-cream rounded-xl p-4 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-700">
+                      {selectedDogs.length} dog{selectedDogs.length > 1 ? 's' : ''} selected
+                    </span>
+                    <span className="font-bold text-canine-navy text-lg">
+                      £{(assessmentFee * selectedDogs.length).toFixed(2)}
+                    </span>
                   </div>
                 </div>
+              )}
+
+              <button
+                onClick={goToNextStep}
+                disabled={!canProceedToStep2}
+                className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
+                  canProceedToStep2
+                    ? 'bg-canine-gold text-white hover:bg-canine-light-gold'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Continue
+                <ArrowRightIcon className="h-5 w-5" />
+              </button>
+            </motion.div>
+          )}
+
+          {/* STEP 2: Choose Date & Time */}
+          {currentStep === 2 && (
+            <motion.div
+              key="step2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="bg-white rounded-2xl shadow-lg p-6 md:p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-canine-gold/10 rounded-full flex items-center justify-center">
+                  <CalendarDaysIcon className="h-6 w-6 text-canine-gold" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-canine-navy">
+                    Choose a date and time
+                  </h2>
+                  <p className="text-gray-600">Tap to select an available slot</p>
+                </div>
+              </div>
+
+              {Object.keys(slotsByDate).length === 0 ? (
+                <div className="text-center py-12">
+                  <CalendarDaysIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">No Available Slots</h3>
+                  <p className="text-gray-600">
+                    There are no assessment slots available right now.<br />
+                    Please check back later or contact us.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 mb-8 max-h-[400px] overflow-y-auto">
+                  {Object.entries(slotsByDate).map(([date, dateSlots]) => (
+                    <div key={date} className="border-b border-gray-100 pb-4 last:border-0">
+                      <h3 className="font-semibold text-canine-navy mb-3 sticky top-0 bg-white py-2">
+                        {formatDate(date)}
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {dateSlots.map((slot) => (
+                          <button
+                            key={slot.id}
+                            onClick={() => setSelectedSlot(slot.id)}
+                            className={`p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${
+                              selectedSlot === slot.id
+                                ? 'border-canine-gold bg-canine-gold/10'
+                                : 'border-gray-200 hover:border-canine-gold/50'
+                            }`}
+                          >
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              selectedSlot === slot.id
+                                ? 'bg-canine-gold'
+                                : 'bg-gray-100'
+                            }`}>
+                              <ClockIcon className={`h-5 w-5 ${
+                                selectedSlot === slot.id ? 'text-white' : 'text-gray-500'
+                              }`} />
+                            </div>
+                            <div className="flex-1 text-left">
+                              <p className="font-bold text-gray-900">
+                                {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
+                              </p>
+                              <p className="text-sm text-green-600 font-medium">Available</p>
+                            </div>
+                            {selectedSlot === slot.id && (
+                              <CheckCircleIcon className="h-6 w-6 text-canine-gold" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    setAppliedDiscount(null)
-                    setDiscountCode('')
-                    toast.success('Discount code removed')
-                  }}
-                  className="text-red-600 hover:text-red-800 font-semibold"
+                  onClick={goToPreviousStep}
+                  className="flex-1 py-4 rounded-xl font-bold text-lg border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
                 >
-                  Remove
+                  <ArrowLeftIcon className="h-5 w-5" />
+                  Back
+                </button>
+                <button
+                  onClick={goToNextStep}
+                  disabled={!canProceedToStep3}
+                  className={`flex-1 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
+                    canProceedToStep3
+                      ? 'bg-canine-gold text-white hover:bg-canine-light-gold'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  Continue
+                  <ArrowRightIcon className="h-5 w-5" />
                 </button>
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {/* Price Breakdown */}
-            {selectedDogs.length > 0 && (
-              <div className="mt-6 pt-6 border-t-2 border-gray-100">
-                <div className="space-y-2">
+          {/* STEP 3: Confirm & Pay */}
+          {currentStep === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="bg-white rounded-2xl shadow-lg p-6 md:p-8"
+            >
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-canine-gold/10 rounded-full flex items-center justify-center">
+                  <CheckCircleIcon className="h-6 w-6 text-canine-gold" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-canine-navy">
+                    Review and confirm
+                  </h2>
+                  <p className="text-gray-600">Check everything looks correct</p>
+                </div>
+              </div>
+
+              {/* Summary */}
+              <div className="bg-canine-cream rounded-xl p-5 mb-6">
+                <h3 className="font-semibold text-canine-navy mb-4">Your Assessment</h3>
+
+                {/* Dogs */}
+                <div className="mb-4">
+                  <p className="text-sm text-gray-500 mb-2">Dogs</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDogs.map(dogId => {
+                      const dog = dogs.find(d => d.id === dogId)
+                      return dog ? (
+                        <span key={dog.id} className="bg-white px-3 py-2 rounded-lg font-medium text-gray-900">
+                          {dog.name}
+                        </span>
+                      ) : null
+                    })}
+                  </div>
+                </div>
+
+                {/* Date & Time */}
+                {getSelectedSlotDetails() && (
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-500 mb-2">Date & Time</p>
+                    <div className="bg-white px-4 py-3 rounded-lg">
+                      <p className="font-bold text-canine-navy">
+                        {formatDate(getSelectedSlotDetails()!.assessment_date)}
+                      </p>
+                      <p className="text-canine-gold font-semibold">
+                        {formatTime(getSelectedSlotDetails()!.start_time)} - {formatTime(getSelectedSlotDetails()!.end_time)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Discount Code */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <TicketIcon className="h-5 w-5 text-gray-500" />
+                  <span className="font-medium text-gray-700">Have a discount code?</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={discountCode}
+                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                    placeholder="Enter code"
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-canine-gold focus:outline-none text-lg"
+                    disabled={!!appliedDiscount}
+                  />
+                  {appliedDiscount ? (
+                    <button
+                      onClick={() => {
+                        setAppliedDiscount(null)
+                        setDiscountCode('')
+                      }}
+                      className="px-4 py-3 bg-red-100 text-red-600 rounded-xl font-semibold hover:bg-red-200 transition-all"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleValidateDiscountCode}
+                      disabled={validatingCode || !discountCode.trim()}
+                      className="px-6 py-3 bg-canine-gold text-white rounded-xl font-semibold hover:bg-canine-light-gold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {validatingCode ? '...' : 'Apply'}
+                    </button>
+                  )}
+                </div>
+
+                {appliedDiscount && (
+                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2">
+                    <CheckCircleIcon className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-green-800 font-medium">
+                      Code "{appliedDiscount.code}" applied - saving £{appliedDiscount.discountAmount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Price Breakdown */}
+              <div className="bg-gray-50 rounded-xl p-5 mb-6">
+                <div className="space-y-3">
                   <div className="flex justify-between text-gray-700">
-                    <span>Assessment Fee ({selectedDogs.length} dog{selectedDogs.length > 1 ? 's' : ''})</span>
+                    <span>Assessment fee ({selectedDogs.length} dog{selectedDogs.length > 1 ? 's' : ''})</span>
                     <span>£{(assessmentFee * selectedDogs.length).toFixed(2)}</span>
                   </div>
                   {appliedDiscount && (
-                    <div className="flex justify-between text-green-600 font-semibold">
+                    <div className="flex justify-between text-green-600 font-medium">
                       <span>Discount</span>
                       <span>-£{appliedDiscount.discountAmount.toFixed(2)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-xl font-bold text-canine-navy pt-2 border-t-2 border-gray-200">
-                    <span>Total</span>
-                    <span>£{calculateTotalPrice().toFixed(2)}</span>
+                  <div className="pt-3 border-t border-gray-200">
+                    <div className="flex justify-between text-xl font-bold text-canine-navy">
+                      <span>Total to pay</span>
+                      <span>£{calculateTotalPrice().toFixed(2)}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
-          </motion.div>
-        )}
 
-        {/* Calendar View */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-2xl shadow-2xl p-8"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-display font-bold text-canine-navy">
-              Available Assessment Dates
-            </h2>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={previousMonth}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <ChevronLeftIcon className="h-6 w-6 text-canine-navy" />
-              </button>
-              <span className="text-lg font-semibold text-canine-navy min-w-[200px] text-center">
-                {currentMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
-              </span>
-              <button
-                onClick={nextMonth}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <ChevronRightIcon className="h-6 w-6 text-canine-navy" />
-              </button>
-            </div>
-          </div>
-
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-2 mb-4">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="text-center font-semibold text-gray-600 p-2">
-                {day}
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={goToPreviousStep}
+                  className="flex-1 py-4 rounded-xl font-bold text-lg border-2 border-gray-200 text-gray-700 hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
+                >
+                  <ArrowLeftIcon className="h-5 w-5" />
+                  Back
+                </button>
+                <button
+                  onClick={handleBookSlot}
+                  disabled={booking}
+                  className="flex-1 py-4 rounded-xl font-bold text-lg bg-canine-gold text-white hover:bg-canine-light-gold transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {booking ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <SparklesIcon className="h-5 w-5" />
+                      Pay Now
+                    </>
+                  )}
+                </button>
               </div>
-            ))}
-          </div>
 
-          <div className="grid grid-cols-7 gap-2">
-            {renderCalendar()}
-          </div>
-
-          {/* Legend */}
-          <div className="mt-6 flex flex-wrap gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-green-50 border border-green-300 rounded"></div>
-              <span>Available slots</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-50 border border-gray-200 rounded"></div>
-              <span>Weekend (Closed)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-gray-100 border border-gray-200 rounded"></div>
-              <span>Past date</span>
-            </div>
-          </div>
-
-          {/* Book Button */}
-          {selectedSlot && selectedDogs.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <button
-                onClick={handleBookSlot}
-                disabled={booking}
-                className="w-full px-8 py-4 bg-canine-gold text-white rounded-xl hover:bg-canine-light-gold transition-all font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-              >
-                {booking ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <SparklesIcon className="h-6 w-6" />
-                    <span>Proceed to Payment (£{calculateTotalPrice().toFixed(2)})</span>
-                  </>
-                )}
-              </button>
-            </div>
+              <p className="text-center text-sm text-gray-500 mt-4">
+                You will be redirected to our secure payment page
+              </p>
+            </motion.div>
           )}
-        </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   )
 }
-// Force Vercel cache clear - Thu Nov 27 11:15:00 SAST 2025

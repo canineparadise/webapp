@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   DocumentTextIcon,
   ShieldCheckIcon,
@@ -218,10 +218,10 @@ export default function LegalAgreementsPage() {
             transition={{ duration: 0.5 }}
           >
             <div className="mb-8">
-              <BackButton href="/dashboard" />
-              <h1 className="text-3xl font-display font-bold text-canine-navy mt-4">
-                Legal Agreements
-              </h1>
+              <DashboardHeader
+                title="Legal Agreements"
+                subtitle="Your signed legal agreements and waivers"
+              />
             </div>
 
             <div className="bg-white rounded-2xl shadow-lg p-8">
@@ -265,14 +265,10 @@ export default function LegalAgreementsPage() {
         >
           {/* Header */}
           <div className="mb-8">
-            <BackButton href="/dashboard" />
-            <h1 className="text-3xl font-display font-bold text-canine-navy flex items-center gap-3 mt-4">
-              <DocumentTextIcon className="h-10 w-10 text-canine-gold" />
-              Legal Agreements & Waivers
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Please review and accept all agreements before your dog can attend daycare
-            </p>
+            <DashboardHeader
+              title="Legal Agreements & Waivers"
+              subtitle="Please review and accept all agreements before your dog can attend daycare"
+            />
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">

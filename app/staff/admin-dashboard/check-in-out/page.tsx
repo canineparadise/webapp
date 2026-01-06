@@ -89,6 +89,7 @@ export default function AdminCheckInOut() {
         .from('bookings')
         .select(`
           id,
+          dog_id,
           dog_ids,
           checked_in,
           checked_out,
@@ -113,7 +114,11 @@ export default function AdminCheckInOut() {
         return
       }
 
-      const todayDogIds = bookingsData?.flatMap(b => b.dog_ids || []).filter(id => id) || []
+      // Handle both dog_id (single) and dog_ids (array) fields
+      const todayDogIds = bookingsData?.flatMap(b => {
+        const ids = b.dog_ids && b.dog_ids.length > 0 ? b.dog_ids : (b.dog_id ? [b.dog_id] : [])
+        return ids
+      }).filter(id => id) || []
 
       if (todayDogIds.length > 0) {
         const { data: dogsData } = await supabase
@@ -145,7 +150,9 @@ export default function AdminCheckInOut() {
 
         // Attach booking info to each dog
         const dogsWithBookingInfo = (dogsData || []).map(dog => {
-          const booking = bookingsData?.find(b => b.dog_ids?.includes(dog.id))
+          const booking = bookingsData?.find(b =>
+            (b.dog_ids && b.dog_ids.includes(dog.id)) || b.dog_id === dog.id
+          )
           return {
             ...dog,
             booking_id: booking?.id,

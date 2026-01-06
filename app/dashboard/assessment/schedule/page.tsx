@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   CalendarDaysIcon,
   ClockIcon,
@@ -108,12 +108,13 @@ export default function ScheduleAssessment() {
         setAssessmentFee(parseFloat(feeData.setting_value))
       }
 
-      // Get user's dogs that are ready for assessment (not drafts)
+      // Get user's dogs that need assessment (not drafts AND not already approved)
       const { data: dogsData } = await supabase
         .from('dogs')
         .select('*')
         .eq('owner_id', user.id)
         .eq('is_draft', false)
+        .eq('is_approved', false)
 
       setDogs(dogsData || [])
 
@@ -520,7 +521,10 @@ export default function ScheduleAssessment() {
         >
           {/* Header */}
           <div className="mb-8">
-            <BackButton href="/dashboard" />
+            <DashboardHeader
+              title="Schedule Assessment"
+              subtitle="Book your exclusive assessment slot"
+            />
 
             {/* Hero Header */}
             <motion.div
@@ -919,7 +923,10 @@ export default function ScheduleAssessment() {
                           )}
                           {isVipMember && (
                             <div className="flex justify-between text-amber-600 font-semibold">
-                              <span>🏆 Golden Paw VIP (10%)</span>
+                              <div className="flex items-center gap-2">
+                                <img src="/VIP.png" alt="VIP" className="h-5 w-5 object-contain" />
+                                <span>Golden Paw VIP (10%)</span>
+                              </div>
                               <span>-£{((assessmentFee * selectedDogIds.length) * 0.10).toFixed(2)}</span>
                             </div>
                           )}

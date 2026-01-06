@@ -69,6 +69,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // IMPORTANT: Check that none of the dogs already have an active subscription
+    const dogIds = dogSubscriptions.map((sub: any) => sub.dogId)
+    const { data: existingSubscriptions, error: existingSubsError } = await supabase
+      .from('subscriptions')
+      .select('dog_id, dogs:dog_id(name)')
+      .in('dog_id', dogIds)
+      .eq('is_active', true)
+
+    if (existingSubsError) {
+      console.error('Error checking existing subscriptions:', existingSubsError)
+      return NextResponse.json(
+        { error: 'Failed to verify subscription eligibility' },
+        { status: 500 }
+      )
+    }
+
+    if (existingSubscriptions && existingSubscriptions.length > 0) {
+      const dogNames = existingSubscriptions
+        .map((sub: any) => sub.dogs?.name || 'Unknown')
+        .join(', ')
+      return NextResponse.json(
+        { error: `The following dog(s) already have an active subscription: ${dogNames}. Please cancel the existing subscription first.` },
+        { status: 400 }
+      )
+    }
+
     // Create subscriptions for each dog
     const subscriptions = dogSubscriptions.map((dogSub: any) => ({
       user_id: userId,

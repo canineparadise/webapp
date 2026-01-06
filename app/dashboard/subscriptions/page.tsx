@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   CreditCardIcon,
   CheckCircleIcon,
@@ -18,6 +18,7 @@ import {
   HeartIcon,
   TicketIcon,
   ClockIcon,
+  ArrowUpCircleIcon,
 } from '@heroicons/react/24/outline'
 import { loadStripe } from '@stripe/stripe-js'
 
@@ -72,6 +73,14 @@ export default function SubscribeDogsPage() {
   const [pauseReason, setPauseReason] = useState('')
   const [pausing, setPausing] = useState(false)
   const [resuming, setResuming] = useState(false)
+
+  // Upgrade modal state
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [subscriptionToUpgrade, setSubscriptionToUpgrade] = useState<any>(null)
+  const [selectedUpgradeTier, setSelectedUpgradeTier] = useState<any>(null)
+  const [upgrading, setUpgrading] = useState(false)
+  const [proRataAmount, setProRataAmount] = useState(0)
+  const [isEndOfBillingPeriod, setIsEndOfBillingPeriod] = useState(false)
 
   useEffect(() => {
     init()
@@ -358,23 +367,30 @@ export default function SubscribeDogsPage() {
 
     setCancelling(true)
     try {
-      // Update subscription in database
-      // Keep is_active: true during notice period, just disable auto_renew
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          auto_renew: false,
-          cancelled_at: new Date().toISOString(),
-          cancellation_reason: cancelReason.trim() || null,
-        })
-        .eq('id', subscriptionToCancel.id)
-
-      if (error) {
-        console.error('Database error cancelling subscription:', error)
-        throw error
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Please log in to continue')
       }
 
-      toast.success('Subscription cancelled. Auto-renewal disabled. Your subscription will remain active until the end of the current billing period.')
+      const response = await fetch('/api/cancel-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: subscriptionToCancel.id,
+          cancellationReason: cancelReason.trim() || null,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to cancel subscription')
+      }
+
+      toast.success(data.message || 'Subscription cancelled. Your remaining days are still available until the billing period ends.')
 
       // Refresh subscriptions list
       await init()
@@ -475,6 +491,131 @@ export default function SubscribeDogsPage() {
     }
   }
 
+  // Calculate pro-rata amount for upgrade
+  const calculateProRataUpgrade = (subscription: any, newTier: any) => {
+    const currentTier = subscription.subscription_tiers
+    const nextBillingDate = new Date(subscription.next_billing_date)
+    const today = new Date()
+
+    // Calculate days remaining in current billing period
+    const billingPeriodDays = 30 // Assume 30-day billing cycle
+    const msPerDay = 24 * 60 * 60 * 1000
+    const daysUntilBilling = Math.max(0, Math.ceil((nextBillingDate.getTime() - today.getTime()) / msPerDay))
+
+    // If 3 days or less until billing, consider it end of billing period - no pro-rata needed
+    const isEndOfPeriod = daysUntilBilling <= 3
+    setIsEndOfBillingPeriod(isEndOfPeriod)
+
+    if (isEndOfPeriod) {
+      setProRataAmount(0)
+      return 0
+    }
+
+    // Calculate the price difference per day
+    const currentMonthlyPrice = currentTier.price_per_day * currentTier.days_included
+    const newMonthlyPrice = newTier.price_per_day * newTier.days_included
+    const priceDifferencePerMonth = newMonthlyPrice - currentMonthlyPrice
+
+    // Pro-rata for remaining days
+    const proRataFraction = daysUntilBilling / billingPeriodDays
+    const proRataCharge = Math.max(0, priceDifferencePerMonth * proRataFraction)
+
+    setProRataAmount(proRataCharge)
+    return proRataCharge
+  }
+
+  // Open upgrade modal
+  const openUpgradeModal = (subscription: any) => {
+    setSubscriptionToUpgrade(subscription)
+    setSelectedUpgradeTier(null)
+    setProRataAmount(0)
+    setIsEndOfBillingPeriod(false)
+    setShowUpgradeModal(true)
+  }
+
+  // Handle tier selection in upgrade modal
+  const handleUpgradeTierSelect = (tier: any) => {
+    setSelectedUpgradeTier(tier)
+    if (subscriptionToUpgrade) {
+      calculateProRataUpgrade(subscriptionToUpgrade, tier)
+    }
+  }
+
+  // Handle upgrade subscription
+  const handleUpgradeSubscription = async () => {
+    if (!subscriptionToUpgrade || !selectedUpgradeTier) return
+
+    setUpgrading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Please log in to continue')
+      }
+
+      // If end of billing period, just update the tier for next billing cycle
+      if (isEndOfBillingPeriod) {
+        const response = await fetch('/api/upgrade-subscription', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            subscriptionId: subscriptionToUpgrade.id,
+            newTierId: selectedUpgradeTier.id,
+            proRataAmount: 0,
+            isEndOfBillingPeriod: true,
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to upgrade subscription')
+        }
+
+        toast.success('Subscription will upgrade on your next billing date!')
+        setShowUpgradeModal(false)
+        setSubscriptionToUpgrade(null)
+        setSelectedUpgradeTier(null)
+        await init()
+        return
+      }
+
+      // Mid-month upgrade - need to pay pro-rata via Stripe
+      const response = await fetch('/api/upgrade-subscription-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          subscriptionId: subscriptionToUpgrade.id,
+          newTierId: selectedUpgradeTier.id,
+          proRataAmount: proRataAmount,
+          userId: user.id,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create upgrade checkout')
+      }
+
+      const data = await response.json()
+
+      // Redirect to Stripe checkout
+      const stripe = await stripePromise
+      if (stripe) {
+        await stripe.redirectToCheckout({ sessionId: data.sessionId })
+      }
+    } catch (error: any) {
+      console.error('Upgrade error:', error)
+      toast.error(error.message || 'Failed to upgrade subscription')
+      setUpgrading(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-canine-cream to-white flex items-center justify-center">
@@ -491,51 +632,34 @@ export default function SubscribeDogsPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <BackButton href="/dashboard" />
+    <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky">
+      {/* Header with dropdown */}
+      <DashboardHeader
+        title="Manage Subscriptions"
+        subtitle="Choose a subscription plan for each of your dogs"
+      />
 
-          <motion.div
-            className="mt-4 bg-white rounded-2xl shadow-xl p-8"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-canine-gold rounded-2xl p-3">
-                <CreditCardIcon className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-display font-bold text-canine-navy">
-                  Subscribe Your Dogs
-                </h1>
-                <p className="text-gray-600 mt-1">
-                  Choose a subscription plan for each of your dogs
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Existing Subscriptions */}
         {existingSubscriptions.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-green-50 border-2 border-green-200 rounded-2xl p-6 mb-8"
+            className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-gray-100"
           >
-            <h2 className="text-xl font-bold text-green-900 mb-4 flex items-center gap-2">
-              <CheckCircleIcon className="h-6 w-6" />
+            <h2 className="text-xl font-display font-bold text-canine-navy mb-4 flex items-center gap-2">
+              <CheckCircleIcon className="h-6 w-6 text-canine-gold" />
               Active Subscriptions
             </h2>
 
             {/* Cancellation Policy Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div className="bg-canine-cream/50 border border-canine-gold/20 rounded-xl p-4 mb-4">
               <div className="flex items-start gap-2">
-                <ExclamationTriangleIcon className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-900">
+                <ExclamationTriangleIcon className="h-5 w-5 text-canine-gold flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-canine-navy">
                   <p className="font-semibold mb-1">Cancellation Policy</p>
-                  <p>Cancelled subscriptions will remain active until the end of the current billing period. No refunds are provided for partial months.</p>
+                  <p className="text-gray-600">Cancelled subscriptions will remain active until the end of the current billing period. No refunds are provided for partial months.</p>
                 </div>
               </div>
             </div>
@@ -546,87 +670,128 @@ export default function SubscribeDogsPage() {
                 const isCancelled = sub.cancelled_at !== null
                 const isPaused = sub.is_paused === true
                 return (
-                  <div key={sub.id} className={`bg-white rounded-xl p-4 border-2 ${
-                    isCancelled ? 'border-red-300' :
-                    isPaused ? 'border-yellow-300' :
-                    'border-green-300'
+                  <div key={sub.id} className={`bg-gradient-to-br rounded-xl p-5 border-2 ${
+                    isCancelled ? 'from-red-50 to-white border-red-200' :
+                    isPaused ? 'from-amber-50 to-white border-amber-200' :
+                    'from-canine-cream to-canine-sky/30 border-canine-gold/30'
                   }`}>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <HeartIcon className={`h-5 w-5 ${
-                          isCancelled ? 'text-red-600' :
-                          isPaused ? 'text-yellow-600' :
-                          'text-green-600'
-                        }`} />
-                        <span className="font-bold text-gray-900">{dog?.name}</span>
+                        {dog?.photo_url ? (
+                          <img src={dog.photo_url} alt={dog.name} className="w-12 h-12 rounded-full object-cover border-2 border-canine-gold" />
+                        ) : (
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                            isCancelled ? 'bg-red-100' :
+                            isPaused ? 'bg-amber-100' :
+                            'bg-canine-gold/20'
+                          }`}>
+                            <HeartIcon className={`h-6 w-6 ${
+                              isCancelled ? 'text-red-600' :
+                              isPaused ? 'text-amber-600' :
+                              'text-canine-gold'
+                            }`} />
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-bold text-canine-navy text-lg">{dog?.name}</span>
+                          <p className="text-sm text-gray-500">{dog?.breed}</p>
+                        </div>
                       </div>
                       {isCancelled && (
-                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
+                        <span className="px-3 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">
                           CANCELLED
                         </span>
                       )}
                       {isPaused && !isCancelled && (
-                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">
+                        <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">
                           PAUSED
                         </span>
                       )}
+                      {!isCancelled && !isPaused && (
+                        <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full">
+                          ACTIVE
+                        </span>
+                      )}
                     </div>
-                    <p className="text-sm text-gray-600">
-                      {sub.subscription_tiers.name} - {sub.subscription_tiers.days_included} days/month
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Days remaining: {sub.days_remaining} / {sub.subscription_tiers.days_included}
-                    </p>
+
+                    <div className="bg-white/60 rounded-lg p-3 mb-3">
+                      <p className="text-sm font-semibold text-canine-navy">
+                        {sub.subscription_tiers.name}
+                      </p>
+                      <p className="text-xs text-gray-500">{sub.subscription_tiers.days_included} days/month</p>
+                    </div>
+
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-xs text-gray-500">Days Remaining</p>
+                        <p className="text-2xl font-bold text-canine-gold">{sub.days_remaining}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">of</p>
+                        <p className="text-lg font-semibold text-canine-navy">{sub.subscription_tiers.days_included}</p>
+                      </div>
+                    </div>
 
                     {isPaused && sub.pause_end_date && (
-                      <p className="text-sm text-yellow-600 font-semibold mt-2">
+                      <p className="text-sm text-amber-600 font-semibold mb-3 bg-amber-50 rounded-lg p-2 text-center">
                         Paused until: {new Date(sub.pause_end_date).toLocaleDateString()}
                       </p>
                     )}
 
                     {isCancelled ? (
-                      <p className="text-sm text-red-600 font-semibold mt-2">
+                      <p className="text-sm text-red-600 font-semibold mb-3 bg-red-50 rounded-lg p-2 text-center">
                         Ends on: {new Date(sub.next_billing_date).toLocaleDateString()}
                       </p>
                     ) : !isPaused && (
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-gray-500 mb-3 text-center">
                         Next billing: {new Date(sub.next_billing_date).toLocaleDateString()}
                       </p>
                     )}
 
                     {!isCancelled && (
-                      <div className="mt-3 space-y-2">
+                      <div className="space-y-2">
                         {isPaused ? (
                           <button
                             onClick={() => handleResumeSubscription(sub)}
                             disabled={resuming}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors disabled:opacity-50"
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-canine-gold text-white rounded-xl text-sm font-semibold hover:bg-canine-light-gold transition-colors disabled:opacity-50"
                           >
                             <CheckCircleIcon className="h-4 w-4" />
-                            {resuming ? 'Resuming...' : 'Resume'}
+                            {resuming ? 'Resuming...' : 'Resume Subscription'}
                           </button>
                         ) : (
-                          <button
-                            onClick={() => {
-                              setSubscriptionToPause(sub)
-                              setShowPauseModal(true)
-                            }}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-yellow-500 text-white rounded-lg text-sm font-semibold hover:bg-yellow-600 transition-colors"
-                          >
-                            <ClockIcon className="h-4 w-4" />
-                            Pause
-                          </button>
+                          <>
+                            <button
+                              onClick={() => openUpgradeModal(sub)}
+                              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-canine-navy text-white rounded-xl text-sm font-semibold hover:bg-canine-navy/90 transition-colors"
+                            >
+                              <ArrowUpCircleIcon className="h-4 w-4" />
+                              Upgrade Plan
+                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setSubscriptionToPause(sub)
+                                  setShowPauseModal(true)
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 transition-colors"
+                              >
+                                <ClockIcon className="h-4 w-4" />
+                                Pause
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSubscriptionToCancel(sub)
+                                  setShowCancelModal(true)
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-300 transition-colors"
+                              >
+                                <XCircleIcon className="h-4 w-4" />
+                                Cancel
+                              </button>
+                            </div>
+                          </>
                         )}
-                        <button
-                          onClick={() => {
-                            setSubscriptionToCancel(sub)
-                            setShowCancelModal(true)
-                          }}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors"
-                        >
-                          <XCircleIcon className="h-4 w-4" />
-                          Cancel
-                        </button>
                       </div>
                     )}
                   </div>
@@ -637,17 +802,27 @@ export default function SubscribeDogsPage() {
         )}
 
         {/* No Dogs to Subscribe */}
-        {dogsWithoutSubs.length === 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-            <CheckCircleIcon className="h-16 w-16 mx-auto text-green-500 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">All Dogs Subscribed!</h2>
-            <p className="text-gray-600">All your dogs have active subscriptions.</p>
+        {dogsWithoutSubs.length === 0 && existingSubscriptions.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl p-12 text-center border border-gray-100">
+            <div className="bg-canine-gold/10 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircleIcon className="h-10 w-10 text-canine-gold" />
+            </div>
+            <h2 className="text-2xl font-display font-bold text-canine-navy mb-2">All Dogs Subscribed!</h2>
+            <p className="text-gray-600">All your dogs have active subscriptions. Manage them above.</p>
           </div>
         )}
 
         {/* Subscribe New Dogs */}
         {dogsWithoutSubs.length > 0 && (
           <>
+            {/* Section Header */}
+            {existingSubscriptions.length > 0 && (
+              <h2 className="text-xl font-display font-bold text-canine-navy mb-4 flex items-center gap-2">
+                <SparklesIcon className="h-6 w-6 text-canine-gold" />
+                Add New Subscription
+              </h2>
+            )}
+
             {/* Dog Cards with Tier Selection */}
             <div className="grid gap-8 mb-8">
               {dogsWithoutSubs.map((dog, index) => (
@@ -656,30 +831,30 @@ export default function SubscribeDogsPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-2xl shadow-xl p-8"
+                  className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
                 >
                   {/* Dog Header */}
-                  <div className="flex items-center gap-4 mb-6 pb-6 border-b-2 border-gray-100">
+                  <div className="flex items-center gap-4 mb-6 pb-6 border-b-2 border-canine-gold/20">
                     {dog.photo_url ? (
                       <img
                         src={dog.photo_url}
                         alt={dog.name}
-                        className="w-20 h-20 rounded-full object-cover border-4 border-canine-gold"
+                        className="w-20 h-20 rounded-full object-cover border-4 border-canine-gold shadow-lg"
                       />
                     ) : (
-                      <div className="w-20 h-20 rounded-full bg-canine-gold flex items-center justify-center">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-canine-gold to-canine-light-gold flex items-center justify-center shadow-lg">
                         <HeartIcon className="h-10 w-10 text-white" />
                       </div>
                     )}
                     <div>
-                      <h3 className="text-2xl font-bold text-gray-900">{dog.name}</h3>
+                      <h3 className="text-2xl font-display font-bold text-canine-navy">{dog.name}</h3>
                       <p className="text-gray-600">{dog.breed}</p>
                     </div>
                   </div>
 
                   {/* Session Type Selection */}
                   <div className="mb-6">
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <label className="block text-sm font-semibold text-canine-navy mb-3">
                       Session Type
                     </label>
                     <div className="grid grid-cols-2 gap-4">
@@ -732,7 +907,7 @@ export default function SubscribeDogsPage() {
 
                   {/* Tier Selection */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <label className="block text-sm font-semibold text-canine-navy mb-3">
                       Select Subscription Tier
                     </label>
                     <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -796,11 +971,13 @@ export default function SubscribeDogsPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-2xl shadow-xl p-6 mb-8"
+              className="bg-white rounded-2xl shadow-xl p-6 mb-8 border border-gray-100"
             >
               <div className="flex items-center gap-3 mb-4">
-                <TicketIcon className="h-6 w-6 text-canine-gold" />
-                <h3 className="text-xl font-bold text-gray-900">Discount Code</h3>
+                <div className="bg-canine-gold/10 p-2 rounded-xl">
+                  <TicketIcon className="h-6 w-6 text-canine-gold" />
+                </div>
+                <h3 className="text-xl font-display font-bold text-canine-navy">Discount Code</h3>
               </div>
               <div className="flex gap-3">
                 <input
@@ -874,7 +1051,12 @@ export default function SubscribeDogsPage() {
                   </div>
                   {appliedDiscount && (
                     <div className="flex justify-between items-center text-green-300">
-                      <span>Discount:</span>
+                      <div className="flex items-center gap-2">
+                        {appliedDiscount.code === 'FIRST50' && (
+                          <img src="/VIP.png" alt="VIP" className="h-6 w-6 object-contain" />
+                        )}
+                        <span>Discount ({appliedDiscount.code}):</span>
+                      </div>
                       <span className="font-bold">-£{appliedDiscount.discountAmount.toFixed(2)}</span>
                     </div>
                   )}
@@ -927,15 +1109,15 @@ export default function SubscribeDogsPage() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8"
+                className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 border border-gray-100"
               >
                 {/* Warning Header */}
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="bg-red-100 rounded-full p-3">
+                  <div className="bg-red-100 rounded-xl p-3">
                     <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900">Cancel Subscription?</h3>
+                    <h3 className="text-2xl font-display font-bold text-canine-navy">Cancel Subscription?</h3>
                     <p className="text-sm text-gray-600">This action cannot be undone</p>
                   </div>
                 </div>
@@ -1048,14 +1230,14 @@ export default function SubscribeDogsPage() {
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8"
+                className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 border border-gray-100"
               >
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="bg-yellow-100 rounded-full p-3">
-                    <ClockIcon className="h-8 w-8 text-yellow-600" />
+                  <div className="bg-amber-100 rounded-xl p-3">
+                    <ClockIcon className="h-8 w-8 text-amber-600" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900">Pause Subscription</h3>
+                    <h3 className="text-2xl font-display font-bold text-canine-navy">Pause Subscription</h3>
                     <p className="text-sm text-gray-600">Temporarily pause billing and days</p>
                   </div>
                 </div>
@@ -1133,6 +1315,185 @@ export default function SubscribeDogsPage() {
                       <>
                         <ClockIcon className="h-5 w-5" />
                         Pause for {pauseWeeks} Week{pauseWeeks > 1 ? 's' : ''}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Upgrade Modal */}
+        <AnimatePresence>
+          {showUpgradeModal && subscriptionToUpgrade && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={() => {
+                if (!upgrading) {
+                  setShowUpgradeModal(false)
+                  setSubscriptionToUpgrade(null)
+                  setSelectedUpgradeTier(null)
+                }
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto border border-gray-100"
+              >
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="bg-canine-gold/20 rounded-xl p-3">
+                    <ArrowUpCircleIcon className="h-8 w-8 text-canine-gold" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-display font-bold text-canine-navy">Upgrade Subscription</h3>
+                    <p className="text-sm text-gray-600">
+                      {dogs.find(d => d.id === subscriptionToUpgrade.dog_id)?.name} - Currently on {subscriptionToUpgrade.subscription_tiers.name}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Current Plan Info */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Current Plan:</span>{' '}
+                    {subscriptionToUpgrade.subscription_tiers.name} - {subscriptionToUpgrade.subscription_tiers.days_included} days/month
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Monthly Price:</span>{' '}
+                    £{(subscriptionToUpgrade.subscription_tiers.price_per_day * subscriptionToUpgrade.subscription_tiers.days_included).toFixed(2)}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    <span className="font-semibold">Next Billing:</span>{' '}
+                    {new Date(subscriptionToUpgrade.next_billing_date).toLocaleDateString()}
+                  </p>
+                </div>
+
+                {/* Select New Tier */}
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    Select New Plan
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {tiers
+                      .filter(tier => {
+                        // Only show tiers that are higher than current
+                        const currentTier = subscriptionToUpgrade.subscription_tiers
+                        return tier.session_type === currentTier.session_type &&
+                               tier.days_included > currentTier.days_included
+                      })
+                      .map((tier) => {
+                        const isSelected = selectedUpgradeTier?.id === tier.id
+                        const monthlyPrice = tier.price_per_day * tier.days_included
+                        return (
+                          <button
+                            key={tier.id}
+                            onClick={() => handleUpgradeTierSelect(tier)}
+                            className={`p-4 rounded-xl border-2 transition-all text-left ${
+                              isSelected
+                                ? 'border-canine-gold bg-canine-gold/10 shadow-lg'
+                                : 'border-gray-200 hover:border-canine-gold/50 hover:shadow'
+                            }`}
+                          >
+                            <div className="mb-2">
+                              <span className="font-bold text-2xl text-gray-900">
+                                {tier.days_included}
+                              </span>
+                              <span className="text-sm text-gray-600 ml-1">days</span>
+                            </div>
+                            <p className="text-xs text-gray-600 mb-2">
+                              £{tier.price_per_day.toFixed(2)}/day
+                            </p>
+                            <p className="font-bold text-lg text-canine-navy">
+                              £{monthlyPrice.toFixed(0)}
+                            </p>
+                            <p className="text-xs text-gray-500">per month</p>
+                            {isSelected && (
+                              <CheckCircleIcon className="h-5 w-5 text-canine-gold mt-2" />
+                            )}
+                          </button>
+                        )
+                      })}
+                  </div>
+                  {tiers.filter(tier => {
+                    const currentTier = subscriptionToUpgrade.subscription_tiers
+                    return tier.session_type === currentTier.session_type &&
+                           tier.days_included > currentTier.days_included
+                  }).length === 0 && (
+                    <p className="text-center text-gray-500 py-4">
+                      You're already on the highest tier for this session type.
+                    </p>
+                  )}
+                </div>
+
+                {/* Pro-rata Payment Info */}
+                {selectedUpgradeTier && (
+                  <div className={`rounded-xl p-4 mb-6 ${isEndOfBillingPeriod ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+                    <div className="flex gap-2">
+                      <ExclamationTriangleIcon className={`h-5 w-5 flex-shrink-0 mt-0.5 ${isEndOfBillingPeriod ? 'text-green-600' : 'text-blue-600'}`} />
+                      <div className={`text-sm ${isEndOfBillingPeriod ? 'text-green-900' : 'text-blue-900'}`}>
+                        {isEndOfBillingPeriod ? (
+                          <>
+                            <p className="font-semibold mb-1">No Pro-rata Charge!</p>
+                            <p>Your billing date is within 3 days. The upgrade will take effect on your next billing cycle.</p>
+                            <p className="mt-2 font-semibold">
+                              New monthly price: £{(selectedUpgradeTier.price_per_day * selectedUpgradeTier.days_included).toFixed(2)}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-semibold mb-1">Pro-rata Payment Required</p>
+                            <p>Since you're upgrading mid-billing cycle, you'll pay a pro-rated amount for the remaining days.</p>
+                            <div className="mt-3 space-y-1">
+                              <p>
+                                <span className="font-medium">Pro-rata charge today:</span>{' '}
+                                <span className="font-bold text-canine-gold">£{proRataAmount.toFixed(2)}</span>
+                              </p>
+                              <p>
+                                <span className="font-medium">New monthly price (from next billing):</span>{' '}
+                                <span className="font-bold">£{(selectedUpgradeTier.price_per_day * selectedUpgradeTier.days_included).toFixed(2)}</span>
+                              </p>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowUpgradeModal(false)
+                      setSubscriptionToUpgrade(null)
+                      setSelectedUpgradeTier(null)
+                    }}
+                    disabled={upgrading}
+                    className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUpgradeSubscription}
+                    disabled={upgrading || !selectedUpgradeTier}
+                    className="flex-1 px-6 py-3 bg-canine-gold text-white rounded-xl font-semibold hover:bg-canine-light-gold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {upgrading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowUpCircleIcon className="h-5 w-5" />
+                        {isEndOfBillingPeriod ? 'Schedule Upgrade' : `Pay £${proRataAmount.toFixed(2)} & Upgrade`}
                       </>
                     )}
                   </button>

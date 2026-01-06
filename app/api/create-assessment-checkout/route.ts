@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
         })
 
       // If reservation function doesn't exist yet, fall back to direct check
-      if (reserveError && reserveError.message.includes('does not exist')) {
+      if (reserveError && (reserveError.message.includes('does not exist') || reserveError.message.includes('Could not find the function') || reserveError.code === 'PGRST202')) {
         console.log('[Assessment Checkout] Reservation function not found, using direct check')
         // Check if slot is available
         const { data: slot } = await supabase

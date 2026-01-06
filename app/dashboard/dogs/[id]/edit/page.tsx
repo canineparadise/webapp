@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   ArrowLeftIcon,
   CheckCircleIcon,
@@ -353,9 +353,12 @@ export default function EditDogPage() {
       <div className="max-w-4xl mx-auto px-4">
 
         {/* Header */}
-        <div className="mb-8">
-          <BackButton href={`/dashboard/dogs/${params.id}`} label="Back to Profile" />
-        </div>
+        <DashboardHeader
+          title={`Edit ${formData.name || 'Dog'}`}
+          subtitle="Update your dog's information"
+          backButtonHref={`/dashboard/dogs/${params.id}`}
+          backButtonLabel="Back to Profile"
+        />
 
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
           {/* Header */}

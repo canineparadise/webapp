@@ -93,20 +93,20 @@ function SuccessContent() {
   const isExtraDays = type === 'extra_days'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center"
+        className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center border border-gray-100"
       >
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-          className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
+          className="w-20 h-20 bg-canine-gold/20 rounded-full flex items-center justify-center mx-auto mb-6"
         >
-          <CheckCircleIcon className="h-12 w-12 text-green-600" />
+          <CheckCircleIcon className="h-12 w-12 text-canine-gold" />
         </motion.div>
 
         <h1 className="text-3xl font-display font-bold text-canine-navy mb-4">
@@ -147,7 +147,7 @@ function SuccessContent() {
 export default function SubscriptionSuccess() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-canine-gold"></div>
       </div>
     }>

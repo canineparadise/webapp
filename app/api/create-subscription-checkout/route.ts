@@ -56,6 +56,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // IMPORTANT: Check that none of the dogs already have an active subscription
+    const dogIds = dogSubscriptions.map((sub: any) => sub.dogId)
+    const { data: existingSubscriptions, error: existingSubsError } = await supabase
+      .from('subscriptions')
+      .select('dog_id, dogs:dog_id(name)')
+      .in('dog_id', dogIds)
+      .eq('is_active', true)
+
+    if (existingSubsError) {
+      console.error('Error checking existing subscriptions:', existingSubsError)
+      return NextResponse.json(
+        { error: 'Failed to verify subscription eligibility' },
+        { status: 500 }
+      )
+    }
+
+    if (existingSubscriptions && existingSubscriptions.length > 0) {
+      const dogNames = existingSubscriptions
+        .map((sub: any) => sub.dogs?.name || 'Unknown')
+        .join(', ')
+      return NextResponse.json(
+        { error: `The following dog(s) already have an active subscription: ${dogNames}. Please cancel the existing subscription first.` },
+        { status: 400 }
+      )
+    }
+
     // Create Stripe checkout session
     const lineItems = dogSubscriptions.map((sub: any) => ({
       price_data: {
@@ -106,7 +132,7 @@ export async function POST(request: NextRequest) {
     // Note: Discount code usage and VIP membership are now handled by the webhook
     // after payment is confirmed to prevent granting benefits before payment completes
 
-    return NextResponse.json({ sessionId: session.id })
+    return NextResponse.json({ sessionId: session.id, url: session.url })
   } catch (error: any) {
     console.error('Error creating subscription checkout:', error)
     return NextResponse.json(

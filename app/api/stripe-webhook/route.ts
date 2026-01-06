@@ -228,6 +228,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       endDate.setDate(endDate.getDate() + 30)
 
       for (const dogSub of dogSubscriptions) {
+        // IMPORTANT: Check if dog already has an active subscription (prevent duplicates)
+        const { data: existingSub } = await supabase
+          .from('subscriptions')
+          .select('id')
+          .eq('dog_id', dogSub.dogId)
+          .eq('is_active', true)
+          .single()
+
+        if (existingSub) {
+          console.log('[Stripe Webhook] Dog already has active subscription, skipping:', dogSub.dogId)
+          continue // Skip this dog - they already have an active subscription
+        }
+
         const { error, data: newSub } = await supabase
           .from('subscriptions')
           .insert({
@@ -336,31 +349,71 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   } else if (metadata.type === 'extra_days') {
     // Handle extra days purchase
-    const { subscriptionId, numDays } = metadata
+    console.log('[Stripe Webhook] Processing extra_days purchase')
     const amount = session.amount_total ? session.amount_total / 100 : 0
 
-    // Add days to existing subscription
-    const { error } = await supabase.rpc('add_subscription_days', {
-      p_subscription_id: subscriptionId,
-      p_days_to_add: parseInt(numDays)
-    })
-
-    if (error) {
-      // Fallback: manual update
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('days_remaining')
-        .eq('id', subscriptionId)
-        .single()
-
-      if (sub) {
-        await supabase
-          .from('subscriptions')
-          .update({
-            days_remaining: sub.days_remaining + parseInt(numDays)
-          })
-          .eq('id', subscriptionId)
+    // Parse extraDaysPurchases from metadata (sent as JSON string)
+    let extraDaysPurchases: any[] = []
+    if (metadata.extraDaysPurchases) {
+      try {
+        extraDaysPurchases = JSON.parse(metadata.extraDaysPurchases)
+        console.log('[Stripe Webhook] Extra days purchases:', extraDaysPurchases)
+      } catch (e) {
+        console.error('[Stripe Webhook] Error parsing extraDaysPurchases:', e)
       }
+    }
+
+    // Process each extra days purchase
+    let totalDaysAdded = 0
+    for (const purchase of extraDaysPurchases) {
+      const { subscriptionId, quantity } = purchase
+      const numDays = parseInt(quantity)
+      totalDaysAdded += numDays
+
+      console.log('[Stripe Webhook] Adding', numDays, 'days to subscription:', subscriptionId)
+
+      // Add days to existing subscription
+      const { error } = await supabase.rpc('add_subscription_days', {
+        p_subscription_id: subscriptionId,
+        p_days_to_add: numDays
+      })
+
+      if (error) {
+        console.log('[Stripe Webhook] RPC failed, using fallback:', error.message)
+        // Fallback: manual update
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('days_remaining')
+          .eq('id', subscriptionId)
+          .single()
+
+        if (sub) {
+          const newDaysRemaining = sub.days_remaining + numDays
+          console.log('[Stripe Webhook] Updating days_remaining from', sub.days_remaining, 'to', newDaysRemaining)
+
+          const { error: updateError } = await supabase
+            .from('subscriptions')
+            .update({
+              days_remaining: newDaysRemaining
+            })
+            .eq('id', subscriptionId)
+
+          if (updateError) {
+            console.error('[Stripe Webhook] Error updating subscription:', updateError.message)
+          } else {
+            console.log('[Stripe Webhook] Successfully updated subscription days')
+          }
+        }
+      } else {
+        console.log('[Stripe Webhook] Successfully added days via RPC')
+      }
+
+      // Update extra_days_purchases payment status to paid
+      await supabase
+        .from('extra_days_purchases')
+        .update({ payment_status: 'paid' })
+        .eq('subscription_id', subscriptionId)
+        .eq('payment_status', 'pending')
     }
 
     // Record financial transaction for extra days
@@ -371,9 +424,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       stripePaymentIntentId: session.payment_intent as string,
       stripeCustomerId: session.customer as string,
       paymentMethod: 'card',
-      subscriptionId,
+      subscriptionId: extraDaysPurchases[0]?.subscriptionId || null,
       status: 'completed',
-      description: `Extra days purchase - ${numDays} days`,
+      description: `Extra days purchase - ${totalDaysAdded} days`,
     })
 
     // Process discount code usage if applicable
@@ -388,6 +441,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         finalAmount: parseFloat(metadata.finalAmount || '0'),
       })
     }
+
+    console.log('[Stripe Webhook] Extra days processing complete')
 
   } else if (metadata.type === 'individual_days') {
     // Handle individual day bookings
@@ -595,6 +650,73 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         })
       }
     }
+  } else if (metadata.type === 'subscription_upgrade') {
+    // Handle subscription upgrade payment
+    console.log('[Stripe Webhook] Processing subscription_upgrade')
+    const { subscriptionId, currentTierId, newTierId, extraDaysFromUpgrade, dogName } = metadata
+    const amount = session.amount_total ? session.amount_total / 100 : 0
+
+    // Get the new tier details
+    const { data: newTier } = await supabase
+      .from('subscription_tiers')
+      .select('*')
+      .eq('id', newTierId)
+      .single()
+
+    if (!newTier) {
+      console.error('[Stripe Webhook] New tier not found:', newTierId)
+      return
+    }
+
+    // Get current subscription
+    const { data: currentSub } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('id', subscriptionId)
+      .single()
+
+    if (!currentSub) {
+      console.error('[Stripe Webhook] Subscription not found:', subscriptionId)
+      return
+    }
+
+    // Calculate new days remaining: current days + pro-rated extra days
+    const extraDays = parseInt(extraDaysFromUpgrade) || 0
+    const newDaysRemaining = currentSub.days_remaining + extraDays
+
+    // Update the subscription to the new tier
+    const { error: updateError } = await supabase
+      .from('subscriptions')
+      .update({
+        tier_id: newTierId,
+        days_included: newTier.days_included,
+        days_remaining: newDaysRemaining,
+        monthly_price: newTier.price_per_day * newTier.days_included,
+        price_per_day: newTier.price_per_day,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', subscriptionId)
+
+    if (updateError) {
+      console.error('[Stripe Webhook] Error upgrading subscription:', updateError.message)
+    } else {
+      console.log('[Stripe Webhook] Successfully upgraded subscription:', subscriptionId, 'to tier:', newTier.name)
+      console.log('[Stripe Webhook] Added', extraDays, 'extra days, new total:', newDaysRemaining)
+
+      // Record financial transaction
+      await recordFinancialTransaction({
+        userId,
+        transactionType: 'subscription',
+        amount,
+        stripePaymentIntentId: session.payment_intent as string,
+        stripeCustomerId: session.customer as string,
+        paymentMethod: 'card',
+        subscriptionId,
+        status: 'completed',
+        description: `Subscription upgrade to ${newTier.name} (${dogName || 'Dog'})`,
+      })
+    }
+
   } else if (metadata.type === 'assessment') {
     // Handle assessment payment
     console.log('[Stripe Webhook] Processing assessment booking')
@@ -775,7 +897,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   // This is a renewal payment - reset days for all subscriptions with this stripe_subscription_id
   const { data: subscriptions, error: fetchError } = await supabase
     .from('subscriptions')
-    .select('id, days_included, days_remaining, user_id, dog_id, monthly_price')
+    .select('id, days_included, days_remaining, user_id, dog_id, monthly_price, pending_upgrade_tier_id')
     .eq('stripe_subscription_id', stripeSubscriptionId)
 
   if (fetchError) {
@@ -796,37 +918,79 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   nextBillingDate.setDate(nextBillingDate.getDate() + 30)
 
   for (const sub of subscriptions) {
-    console.log('[Stripe Webhook] Renewing subscription:', sub.id, '- resetting days from', sub.days_remaining, 'to', sub.days_included)
+    // Check if there's a pending upgrade scheduled
+    let daysToSet = sub.days_included
+    let newTierId: string | undefined = undefined
+    let newMonthlyPrice = sub.monthly_price
+    let newPricePerDay: number | undefined = undefined
+    let tierName = ''
+
+    if (sub.pending_upgrade_tier_id) {
+      console.log('[Stripe Webhook] Processing scheduled upgrade for subscription:', sub.id)
+
+      // Get the pending upgrade tier details
+      const { data: upgradeTier } = await supabase
+        .from('subscription_tiers')
+        .select('*')
+        .eq('id', sub.pending_upgrade_tier_id)
+        .single()
+
+      if (upgradeTier) {
+        console.log('[Stripe Webhook] Applying scheduled upgrade to tier:', upgradeTier.name)
+        daysToSet = upgradeTier.days_included
+        newTierId = upgradeTier.id
+        newMonthlyPrice = upgradeTier.price_per_day * upgradeTier.days_included
+        newPricePerDay = upgradeTier.price_per_day
+        tierName = upgradeTier.name
+      }
+    }
+
+    console.log('[Stripe Webhook] Renewing subscription:', sub.id, '- setting days to', daysToSet)
+
+    const updateData: any = {
+      days_remaining: daysToSet,
+      days_used: 0,
+      payment_status: 'paid',
+      next_billing_date: nextBillingDate.toISOString().split('T')[0],
+      current_period_start: today.toISOString(),
+      current_period_end: nextBillingDate.toISOString(),
+      updated_at: new Date().toISOString(),
+      pending_upgrade_tier_id: null, // Clear the pending upgrade
+    }
+
+    // If upgrading, update tier info
+    if (newTierId) {
+      updateData.tier_id = newTierId
+      updateData.days_included = daysToSet
+      updateData.monthly_price = newMonthlyPrice
+      updateData.price_per_day = newPricePerDay
+    }
 
     const { error: updateError } = await supabase
       .from('subscriptions')
-      .update({
-        days_remaining: sub.days_included,
-        days_used: 0,
-        payment_status: 'paid',
-        next_billing_date: nextBillingDate.toISOString().split('T')[0],
-        current_period_start: today.toISOString(),
-        current_period_end: nextBillingDate.toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', sub.id)
 
     if (updateError) {
       console.error('[Stripe Webhook] Error updating subscription:', sub.id, updateError.message)
     } else {
       console.log('[Stripe Webhook] Successfully renewed subscription:', sub.id)
+      if (newTierId) {
+        console.log('[Stripe Webhook] Subscription upgraded to tier:', tierName)
+      }
 
       // Record financial transaction for the renewal
+      const invoiceAny = invoice as any
       await recordFinancialTransaction({
         userId: sub.user_id,
         transactionType: 'subscription',
-        amount: sub.monthly_price,
-        stripePaymentIntentId: invoice.payment_intent as string,
-        stripeCustomerId: invoice.customer as string,
+        amount: newMonthlyPrice,
+        stripePaymentIntentId: (typeof invoiceAny.payment_intent === 'string' ? invoiceAny.payment_intent : invoiceAny.payment_intent?.id) || '',
+        stripeCustomerId: (typeof invoiceAny.customer === 'string' ? invoiceAny.customer : invoiceAny.customer?.id) || '',
         paymentMethod: 'card',
         subscriptionId: sub.id,
         status: 'completed',
-        description: `Subscription renewal - ${sub.days_included} days`,
+        description: newTierId ? `Subscription renewal with upgrade to ${tierName} - ${daysToSet} days` : `Subscription renewal - ${sub.days_included} days`,
       })
     }
   }

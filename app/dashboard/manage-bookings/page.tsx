@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   CalendarIcon,
   ClockIcon,
@@ -310,18 +310,14 @@ export default function ManageBookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Back Button */}
-        <div className="mb-8">
-          <BackButton href="/dashboard" />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-canine-cream via-white to-canine-sky">
+      {/* Header with dropdown */}
+      <DashboardHeader
+        title="Manage Bookings"
+        subtitle="Cancel, reschedule, and manage your daycare bookings"
+      />
 
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">Manage Bookings</h1>
-          <p className="text-gray-600">Cancel, reschedule, and manage your daycare bookings</p>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Credits Banner */}
         {totalCredits > 0 && (
           <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">

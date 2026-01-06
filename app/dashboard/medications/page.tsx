@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { PlusIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 
 interface Dog {
   id: string
@@ -27,6 +27,7 @@ interface Medication {
 
 export default function MedicationsPage() {
   const router = useRouter()
+  const [user, setUser] = useState<any>(null)
   const [dogs, setDogs] = useState<Dog[]>([])
   const [selectedDogId, setSelectedDogId] = useState<string>('')
   const [medications, setMedications] = useState<Medication[]>([])
@@ -45,8 +46,7 @@ export default function MedicationsPage() {
   })
 
   useEffect(() => {
-    checkAuth()
-    fetchDogs()
+    init()
   }, [])
 
   useEffect(() => {
@@ -55,25 +55,27 @@ export default function MedicationsPage() {
     }
   }, [selectedDogId, showHistory])
 
-  const checkAuth = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/login')
-    }
-  }
-
-  const fetchDogs = async () => {
+  const init = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) {
+        router.push('/login')
+        return
+      }
+      setUser(user)
+
+      // Fetch dogs for this user
+      const { data: dogsData, error: dogsError } = await supabase
         .from('dogs')
         .select('id, name')
+        .eq('owner_id', user.id)
         .order('name')
 
-      if (error) throw error
+      if (dogsError) throw dogsError
 
-      setDogs(data || [])
-      if (data && data.length > 0) {
-        setSelectedDogId(data[0].id)
+      setDogs(dogsData || [])
+      if (dogsData && dogsData.length > 0) {
+        setSelectedDogId(dogsData[0].id)
       }
     } catch (error: any) {
       toast.error('Error loading dogs: ' + error.message)
@@ -232,17 +234,10 @@ export default function MedicationsPage() {
   return (
     <div className="min-h-screen bg-canine-cream py-12">
       <div className="max-w-4xl mx-auto px-4">
-        <div className="mb-4">
-          <BackButton href="/dashboard" />
-        </div>
-        <div className="mb-8">
-          <h1 className="text-4xl font-display font-bold text-canine-navy mb-2">
-            Medication Management
-          </h1>
-          <p className="text-gray-600">
-            Track current and historical medications for your dogs
-          </p>
-        </div>
+        <DashboardHeader
+          title="Medication Management"
+          subtitle="Track current and historical medications for your dogs"
+        />
 
         {dogs.length === 0 ? (
           <div className="bg-white rounded-lg shadow-lg p-8 text-center">

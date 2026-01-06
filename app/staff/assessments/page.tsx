@@ -123,7 +123,7 @@ export default function StaffAssessmentsPage() {
           id,
           user_id,
           slot_id,
-          dog_ids,
+          dog_id,
           booking_date,
           start_time,
           end_time,
@@ -150,19 +150,19 @@ export default function StaffAssessmentsPage() {
         return
       }
 
-      // Fetch dogs for each booking
+      // Fetch dogs for each booking (assessment_bookings has dog_id singular, one booking per dog)
       const bookingsWithDogs = await Promise.all(
         (data || []).map(async (booking: any) => {
-          if (!booking.dog_ids || booking.dog_ids.length === 0) {
-            return { ...booking, dogs: [] }
+          if (!booking.dog_id) {
+            return { ...booking, dogs: [], dog_ids: [] }
           }
 
           const { data: dogs } = await supabase
             .from('dogs')
             .select('*')
-            .in('id', booking.dog_ids)
+            .eq('id', booking.dog_id)
 
-          return { ...booking, dogs: dogs || [] }
+          return { ...booking, dogs: dogs || [], dog_ids: booking.dog_id ? [booking.dog_id] : [] }
         })
       )
 

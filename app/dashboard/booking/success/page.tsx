@@ -40,9 +40,9 @@ function BookingSuccessContent() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className="inline-flex items-center justify-center w-24 h-24 bg-green-100 rounded-full mb-6"
+            className="inline-flex items-center justify-center w-24 h-24 bg-canine-gold/20 rounded-full mb-6"
           >
-            <CheckCircleIcon className="h-16 w-16 text-green-600" />
+            <CheckCircleIcon className="h-16 w-16 text-canine-gold" />
           </motion.div>
 
           <h1 className="text-4xl font-display font-bold text-canine-navy mb-4">

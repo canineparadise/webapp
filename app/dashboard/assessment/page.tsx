@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import BackButton from '@/components/BackButton'
+import DashboardHeader from '@/components/DashboardHeader'
 import {
   ClipboardDocumentListIcon,
   UserIcon,
@@ -906,13 +906,10 @@ export default function AssessmentForm() {
         >
           {/* Header */}
           <div className="mb-8">
-            <BackButton href="/dashboard" />
-            <h1 className="text-3xl font-display font-bold text-canine-navy mt-4">
-              Assessment Form
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Please complete this form to schedule your dog's assessment day
-            </p>
+            <DashboardHeader
+              title="Assessment Form"
+              subtitle="Please complete this form to schedule your dog's assessment day"
+            />
           </div>
 
           {/* Progress Steps */}
