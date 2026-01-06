@@ -912,10 +912,25 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
 
   console.log('[Stripe Webhook] Found', subscriptions.length, 'subscriptions to renew')
 
-  // Calculate new billing dates
-  const today = new Date()
-  const nextBillingDate = new Date(today)
-  nextBillingDate.setDate(nextBillingDate.getDate() + 30)
+  // Get Stripe's billing period from the invoice lines (this is the source of truth)
+  const invoiceAny = invoice as any
+  let periodStart = new Date()
+  let periodEnd = new Date()
+  periodEnd.setMonth(periodEnd.getMonth() + 1) // Default to 1 calendar month
+
+  // Try to get the actual period from Stripe's invoice
+  if (invoiceAny.lines?.data?.[0]?.period) {
+    const stripePeriod = invoiceAny.lines.data[0].period
+    if (stripePeriod.start) {
+      periodStart = new Date(stripePeriod.start * 1000) // Stripe uses Unix timestamps
+    }
+    if (stripePeriod.end) {
+      periodEnd = new Date(stripePeriod.end * 1000)
+    }
+    console.log('[Stripe Webhook] Using Stripe billing period:', periodStart.toISOString(), 'to', periodEnd.toISOString())
+  } else {
+    console.log('[Stripe Webhook] No Stripe period found, using calendar month default')
+  }
 
   for (const sub of subscriptions) {
     // Check if there's a pending upgrade scheduled
@@ -951,9 +966,9 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       days_remaining: daysToSet,
       days_used: 0,
       payment_status: 'paid',
-      next_billing_date: nextBillingDate.toISOString().split('T')[0],
-      current_period_start: today.toISOString(),
-      current_period_end: nextBillingDate.toISOString(),
+      next_billing_date: periodEnd.toISOString().split('T')[0],
+      current_period_start: periodStart.toISOString(),
+      current_period_end: periodEnd.toISOString(),
       updated_at: new Date().toISOString(),
       pending_upgrade_tier_id: null, // Clear the pending upgrade
     }
@@ -980,7 +995,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       }
 
       // Record financial transaction for the renewal
-      const invoiceAny = invoice as any
       await recordFinancialTransaction({
         userId: sub.user_id,
         transactionType: 'subscription',
