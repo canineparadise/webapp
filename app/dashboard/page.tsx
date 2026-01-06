@@ -780,42 +780,46 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Subscription Summary - Simplified */}
-              {subscription && (
-                <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-100">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 bg-canine-gold rounded-xl flex items-center justify-center">
-                        <CreditCardIcon className="h-6 w-6 text-white" />
+              {/* Subscription Summary - Show each dog's subscription */}
+              {subscriptions.length > 0 && (
+                <div className="space-y-4">
+                  {subscriptions.map((sub: any) => (
+                    <div key={sub.id} className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-gray-100">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 bg-canine-gold rounded-xl flex items-center justify-center">
+                            <CreditCardIcon className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-canine-navy text-lg">{sub.subscription_tiers?.name || 'Subscription'}</h3>
+                            <p className="text-gray-500 text-sm">For {sub.dogs?.name || 'your dog'}</p>
+                          </div>
+                        </div>
+                        {sub.is_paused ? (
+                          <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-3 py-1.5 rounded-full">Paused</span>
+                        ) : (
+                          <span className="text-xs font-semibold text-green-600 bg-green-100 px-3 py-1.5 rounded-full">Active</span>
+                        )}
                       </div>
-                      <div>
-                        <h3 className="font-bold text-canine-navy text-lg">{subscription.subscription_tiers?.name || 'Subscription'}</h3>
-                        <p className="text-gray-500 text-sm">For {subscription.dogs?.name || 'your dog'}</p>
-                      </div>
-                    </div>
-                    {subscription.is_paused ? (
-                      <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-3 py-1.5 rounded-full">Paused</span>
-                    ) : (
-                      <span className="text-xs font-semibold text-green-600 bg-green-100 px-3 py-1.5 rounded-full">Active</span>
-                    )}
-                  </div>
 
-                  <div className="flex items-center justify-between bg-canine-gold/10 rounded-xl p-4">
-                    <div className="text-center flex-1">
-                      <p className="text-3xl font-bold text-canine-gold">{subscription.days_remaining || 0}</p>
-                      <p className="text-gray-600 text-xs">days left</p>
+                      <div className="flex items-center justify-between bg-canine-gold/10 rounded-xl p-4">
+                        <div className="text-center flex-1">
+                          <p className="text-3xl font-bold text-canine-gold">{sub.days_remaining || 0}</p>
+                          <p className="text-gray-600 text-xs">days left</p>
+                        </div>
+                        <div className="h-10 w-px bg-canine-gold/20"></div>
+                        <div className="text-center flex-1">
+                          <p className="text-3xl font-bold text-canine-navy">{sub.days_included || 0}</p>
+                          <p className="text-gray-600 text-xs">per month</p>
+                        </div>
+                        <div className="h-10 w-px bg-canine-gold/20"></div>
+                        <div className="text-center flex-1">
+                          <p className="text-3xl font-bold text-canine-navy">£{sub.monthly_price || 0}</p>
+                          <p className="text-gray-600 text-xs">monthly</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="h-10 w-px bg-canine-gold/20"></div>
-                    <div className="text-center flex-1">
-                      <p className="text-3xl font-bold text-canine-navy">{subscription.days_included || 0}</p>
-                      <p className="text-gray-600 text-xs">per month</p>
-                    </div>
-                    <div className="h-10 w-px bg-canine-gold/20"></div>
-                    <div className="text-center flex-1">
-                      <p className="text-3xl font-bold text-canine-navy">£{subscription.monthly_price || 0}</p>
-                      <p className="text-gray-600 text-xs">monthly</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               )}
 
