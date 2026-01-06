@@ -834,6 +834,25 @@ export default function Dashboard() {
                           <p className="text-gray-600 text-xs">monthly</p>
                         </div>
                       </div>
+
+                      {/* Next Billing Info */}
+                      {sub.next_billing_date && !sub.cancelled_at && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 text-gray-600">
+                            <CalendarDaysIcon className="h-4 w-4 text-canine-gold" />
+                            <span>Next billing:</span>
+                            <span className="font-semibold text-canine-navy">
+                              {new Date(sub.next_billing_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </div>
+                          <span className="font-bold text-canine-navy">£{sub.monthly_price || 0}</span>
+                        </div>
+                      )}
+                      {sub.cancelled_at && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 text-sm text-red-600">
+                          <span>Cancelled - ends {new Date(sub.next_billing_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
