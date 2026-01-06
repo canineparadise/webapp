@@ -90,13 +90,13 @@ export default function BookingPage() {
       })) : []
       setSubscriptions(mappedSubs)
 
-      // Load existing bookings PER DOG
+      // Load existing bookings PER DOG (include all non-cancelled statuses)
       const { data: bookingsData } = await supabase
         .from('bookings')
         .select('booking_date, dog_id')
         .eq('user_id', user.id)
         .gte('booking_date', new Date().toISOString().split('T')[0])
-        .in('status', ['confirmed', 'pending'])
+        .not('status', 'eq', 'cancelled')
 
       // Group booked dates by dog
       const bookedByDog: Record<string, string[]> = {}
