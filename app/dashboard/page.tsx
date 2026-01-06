@@ -830,8 +830,18 @@ export default function Dashboard() {
                         </div>
                         <div className="h-10 w-px bg-canine-gold/20"></div>
                         <div className="text-center flex-1">
-                          <p className="text-3xl font-bold text-canine-navy">£{sub.monthly_price || 0}</p>
-                          <p className="text-gray-600 text-xs">monthly</p>
+                          {profile?.is_vip_member ? (
+                            <>
+                              <p className="text-3xl font-bold text-green-600">£{((sub.monthly_price || 0) * 0.9).toFixed(2)}</p>
+                              <p className="text-gray-400 text-xs line-through">£{sub.monthly_price || 0}</p>
+                              <p className="text-green-600 text-xs font-medium">VIP 10% off</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-3xl font-bold text-canine-navy">£{sub.monthly_price || 0}</p>
+                              <p className="text-gray-600 text-xs">monthly</p>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -845,7 +855,16 @@ export default function Dashboard() {
                               {new Date(sub.next_billing_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </span>
                           </div>
-                          <span className="font-bold text-canine-navy">£{sub.monthly_price || 0}</span>
+                          <div className="text-right">
+                            {profile?.is_vip_member ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-400 line-through text-xs">£{sub.monthly_price || 0}</span>
+                                <span className="font-bold text-green-600">£{((sub.monthly_price || 0) * 0.9).toFixed(2)}</span>
+                              </div>
+                            ) : (
+                              <span className="font-bold text-canine-navy">£{sub.monthly_price || 0}</span>
+                            )}
+                          </div>
                         </div>
                       )}
                       {sub.cancelled_at && (

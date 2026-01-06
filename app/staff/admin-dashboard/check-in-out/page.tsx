@@ -107,7 +107,7 @@ export default function AdminCheckInOut() {
           dinner_completed
         `)
         .eq('booking_date', currentDate)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'checked_in'])
 
       if (bookingsError) {
         console.error('Error fetching bookings:', bookingsError)
