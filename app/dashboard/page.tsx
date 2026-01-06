@@ -595,14 +595,22 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    {/* Days Remaining */}
-                    <div className="flex items-center gap-3 px-8 lg:px-10 group cursor-default" title={subscription?.current_period_end ? `Resets on ${new Date(subscription.current_period_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : 'No active subscription'}>
+                    {/* Days Remaining - Per Dog */}
+                    <div className="flex items-center gap-3 px-8 lg:px-10 group cursor-default" title={subscriptions.length > 0 ? subscriptions.map(s => `${s.dogs?.name}: ${s.days_remaining || 0} days`).join(', ') : 'No active subscription'}>
                       <TicketIcon className="h-5 w-5 text-canine-gold" />
                       <div>
                         <p className="text-xs uppercase tracking-wider text-gray-400 font-medium mb-0.5">Days Left</p>
-                        <p className="text-base font-semibold text-canine-navy">
-                          {subscription ? `${subscription.days_remaining || 0} this month` : '—'}
-                        </p>
+                        {subscriptions.length > 0 ? (
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                            {subscriptions.map((sub: any) => (
+                              <p key={sub.id} className="text-sm font-semibold text-canine-navy">
+                                {sub.dogs?.name}: <span className="text-canine-gold">{sub.days_remaining || 0}</span>
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-base font-semibold text-canine-navy">—</p>
+                        )}
                       </div>
                     </div>
 
@@ -655,14 +663,22 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    {/* Days Remaining */}
+                    {/* Days Remaining - Per Dog */}
                     <div className="flex items-center gap-3">
                       <TicketIcon className="h-5 w-5 text-canine-gold flex-shrink-0" />
                       <div>
                         <p className="text-xs uppercase tracking-wider text-gray-400 font-medium mb-0.5">Days Left</p>
-                        <p className="text-sm font-semibold text-canine-navy">
-                          {subscription ? `${subscription.days_remaining || 0}` : '—'}
-                        </p>
+                        {subscriptions.length > 0 ? (
+                          <div className="flex flex-col gap-0.5">
+                            {subscriptions.map((sub: any) => (
+                              <p key={sub.id} className="text-xs font-semibold text-canine-navy">
+                                {sub.dogs?.name}: <span className="text-canine-gold">{sub.days_remaining || 0}</span>
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm font-semibold text-canine-navy">—</p>
+                        )}
                       </div>
                     </div>
 
