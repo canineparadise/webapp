@@ -25,6 +25,7 @@ import {
   BellIcon,
   ChevronDownIcon,
   TicketIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import { HeartIcon as HeartSolid, StarIcon as StarSolid, StarIcon } from '@heroicons/react/24/solid'
 
@@ -399,6 +400,21 @@ export default function Dashboard() {
                             <div>
                               <p className="text-sm font-semibold text-gray-800">Use Subscription Days</p>
                               <p className="text-xs text-canine-gold font-medium">{subscription.days_remaining || 0} days remaining</p>
+                            </div>
+                          </div>
+                        </Link>
+                      )}
+
+                      {/* Buy Extra Days - only if they have a subscription */}
+                      {subscription && (
+                        <Link href="/dashboard/extra-days" onClick={() => setBookMenuOpen(false)}>
+                          <div className="flex items-start gap-3 px-4 py-3 hover:bg-orange-50 cursor-pointer border-b border-gray-50">
+                            <div className="h-10 w-10 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <SparklesIcon className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">Buy Extra Days</p>
+                              <p className="text-xs text-gray-500">Add more days at your subscription rate</p>
                             </div>
                           </div>
                         </Link>

@@ -49,6 +49,8 @@ export default function BookingPage() {
   const [activeDogId, setActiveDogId] = useState<string | null>(null)
   const [showMealAgreement, setShowMealAgreement] = useState(false)
   const [pendingMealDogId, setPendingMealDogId] = useState<string | null>(null)
+  const [showNoDaysModal, setShowNoDaysModal] = useState(false)
+  const [noDaysDogName, setNoDaysDogName] = useState('')
 
   useEffect(() => {
     checkAuthAndLoadData()
@@ -402,6 +404,13 @@ export default function BookingPage() {
     const daysNeeded = selectedDates.length
     const includedDays = Math.min(daysNeeded, daysRemaining)
     const extraDays = Math.max(0, daysNeeded - daysRemaining)
+
+    // If user has NO days remaining at all, show modal directing to extra days page
+    if (daysRemaining === 0) {
+      setNoDaysDogName(dogState.dogName)
+      setShowNoDaysModal(true)
+      return
+    }
 
     // If there are extra days, we'll need to charge at subscription rate
     if (extraDays > 0) {
@@ -946,8 +955,60 @@ export default function BookingPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* No Days Remaining Modal */}
+        <AnimatePresence>
+          {showNoDaysModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              onClick={() => setShowNoDaysModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-center mb-6">
+                  <div className="h-16 w-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="h-8 w-8 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    No Days Remaining
+                  </h3>
+                  <p className="text-gray-600">
+                    {noDaysDogName} has <strong className="text-orange-500">0 days remaining</strong> in their subscription this month.
+                  </p>
+                  <p className="text-gray-600 mt-2">
+                    You need to purchase extra days to book more daycare.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => router.push('/dashboard/extra-days')}
+                    className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white py-3 rounded-xl font-semibold transition-all shadow-lg"
+                  >
+                    Buy Extra Days
+                  </button>
+                  <button
+                    onClick={() => setShowNoDaysModal(false)}
+                    className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
 }
-// Force cache clear - Jan 7 2026 v3 - VIP debug
+// Force cache clear - Jan 7 2026 v4 - No days modal
