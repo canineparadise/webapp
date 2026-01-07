@@ -79,8 +79,8 @@ export default function Dashboard() {
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('legal_agreements').select('*').eq('user_id', user.id).maybeSingle(),
         supabase.from('subscriptions').select('*, subscription_tiers:tier_id(name), dogs(name)').eq('user_id', user.id).eq('is_active', true),
-        supabase.from('bookings').select('*').eq('user_id', user.id).neq('status', 'cancelled').order('booking_date', { ascending: false }).limit(100),
-        supabase.from('individual_day_bookings').select('*').eq('user_id', user.id).neq('status', 'cancelled').order('booking_date', { ascending: false }).limit(100),
+        supabase.from('bookings').select('*, dogs(id, name)').eq('user_id', user.id).neq('status', 'cancelled').order('booking_date', { ascending: false }).limit(100),
+        supabase.from('individual_day_bookings').select('*, dogs(id, name)').eq('user_id', user.id).neq('status', 'cancelled').order('booking_date', { ascending: false }).limit(100),
         supabase.from('assessment_bookings').select(`
           *,
           assessment_slots (
@@ -193,7 +193,9 @@ export default function Dashboard() {
     : 'U'
 
   const today = new Date().toISOString().split('T')[0]
-  const upcomingBookingsList = allBookings.filter(b => b.booking_date >= today)
+  const upcomingBookingsList = allBookings
+    .filter(b => b.booking_date >= today)
+    .sort((a, b) => new Date(a.booking_date).getTime() - new Date(b.booking_date).getTime())
 
   const hasFilledProfile = profile?.first_name && profile?.last_name && profile?.phone && profile?.address
   const hasAddedDogs = dogs.length > 0
@@ -888,8 +890,11 @@ export default function Dashboard() {
                   </div>
 
                   <div className="space-y-2 sm:space-y-3">
-                    {upcomingBookingsList.slice(0, 3).map((booking) => {
+                    {upcomingBookingsList.slice(0, 5).map((booking) => {
                       const bookingDate = new Date(booking.booking_date)
+                      // Get dog name - from dogs relation or from the dogs array by dog_id
+                      const dogName = booking.dogs?.name || dogs.find(d => d.id === booking.dog_id)?.name || 'Your dog'
+                      const isIndividualDay = !booking.subscription_id
                       return (
                         <div key={booking.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-green-50 border border-green-100 rounded-xl">
                           <div className="h-12 w-12 sm:h-14 sm:w-14 bg-white rounded-xl flex flex-col items-center justify-center shadow-sm flex-shrink-0">
@@ -897,8 +902,11 @@ export default function Dashboard() {
                             <p className="text-xs text-gray-500 uppercase">{bookingDate.toLocaleDateString('en-GB', { month: 'short' })}</p>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-gray-800 text-sm sm:text-base truncate">{bookingDate.toLocaleDateString('en-GB', { weekday: 'long' })}</p>
-                            <p className="text-xs sm:text-sm text-gray-500">{booking.total_dogs || 1} dog{(booking.total_dogs || 1) > 1 ? 's' : ''}</p>
+                            <p className="font-bold text-gray-800 text-sm sm:text-base truncate">{dogName}</p>
+                            <p className="text-xs sm:text-sm text-gray-500">
+                              {bookingDate.toLocaleDateString('en-GB', { weekday: 'long' })}
+                              {isIndividualDay && <span className="ml-1 text-purple-600">(Extra Day)</span>}
+                            </p>
                           </div>
                           <span className="bg-green-500 text-white text-xs font-bold px-2 sm:px-3 py-1 rounded-full flex-shrink-0">Confirmed</span>
                         </div>
