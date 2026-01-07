@@ -64,13 +64,16 @@ export default function BookingPage() {
       setUser(user)
 
       // Check VIP membership status
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('is_vip_member')
         .eq('id', user.id)
         .single()
 
-      if (profileData?.is_vip_member) {
+      console.log('VIP Check - Profile Data:', profileData, 'Error:', profileError)
+
+      if (profileData?.is_vip_member === true) {
+        console.log('Setting VIP member to TRUE')
         setIsVipMember(true)
       }
 
@@ -945,4 +948,4 @@ export default function BookingPage() {
     </div>
   )
 }
-// Force cache clear - Jan 6 2026
+// Force cache clear - Jan 7 2026 v2 - VIP discount fix
