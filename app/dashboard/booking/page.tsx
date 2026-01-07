@@ -409,9 +409,11 @@ export default function BookingPage() {
       const totalExtraCost = extraDays * extraDayCost
 
       // Calculate VIP discount (10% for Golden Paw members)
+      console.log('EXTRA DAYS BOOKING - isVipMember:', isVipMember)
       const vipDiscountPercent = isVipMember ? 0.10 : 0
       const vipDiscountAmount = totalExtraCost * vipDiscountPercent
       const finalCost = totalExtraCost - vipDiscountAmount
+      console.log('VIP Discount Calculation:', { totalExtraCost, vipDiscountPercent, vipDiscountAmount, finalCost })
 
       let confirmMessage = `${dogState.dogName} has ${daysRemaining} days remaining.\n\n` +
         `• ${includedDays} day${includedDays !== 1 ? 's' : ''} will use included days (FREE)\n` +
@@ -948,4 +950,4 @@ export default function BookingPage() {
     </div>
   )
 }
-// Force cache clear - Jan 7 2026 v2 - VIP discount fix
+// Force cache clear - Jan 7 2026 v3 - VIP debug
