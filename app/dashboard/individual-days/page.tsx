@@ -146,17 +146,19 @@ function IndividualDaysContent() {
           console.log('User is a Golden Paw VIP member - 10% discount applies')
         }
 
-        // Check for active subscription
-        const { data: subData } = await supabase
+        // Check for active subscription (user may have multiple - just need to know if ANY exist)
+        const { data: subData, error: subError } = await supabase
           .from('subscriptions')
           .select('*, subscription_tiers(name)')
           .eq('user_id', user.id)
           .eq('is_active', true)
-          .maybeSingle()
+          .limit(1)
 
-        if (subData) {
-          setActiveSubscription(subData)
-          console.log('Active subscription found:', subData)
+        console.log('Subscription check:', { subData, subError })
+
+        if (subData && subData.length > 0) {
+          setActiveSubscription(subData[0])
+          console.log('Active subscription found:', subData[0])
         }
 
         // Load user's dogs (only approved dogs)
