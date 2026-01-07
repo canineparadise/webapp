@@ -36,7 +36,11 @@ export async function POST(req: NextRequest) {
       selectedDogs,
       mealOptions,
       specialNotes,
-      includedDays
+      includedDays,
+      isVipMember,
+      vipDiscountAmount,
+      totalAmount,
+      finalAmount
     } = await req.json()
 
     // Security: Users can only create checkouts for themselves
@@ -57,7 +61,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Calculate total cost (extra days only, included days are FREE)
-    const totalCost = numExtraDays * pricePerDay
+    const calculatedTotal = numExtraDays * pricePerDay
+    // Use provided finalAmount if VIP discount applied, otherwise calculate
+    const amountToCharge = finalAmount || calculatedTotal
+
+    // Build description with VIP discount info
+    let description = `Additional days at your subscription rate of £${pricePerDay}/day`
+    if (isVipMember && vipDiscountAmount > 0) {
+      description = `${description} (Golden Paw VIP 10% Discount Applied)`
+    }
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
@@ -68,11 +80,11 @@ export async function POST(req: NextRequest) {
             currency: 'gbp',
             product_data: {
               name: `Extra Daycare Days (${numExtraDays} day${numExtraDays > 1 ? 's' : ''})`,
-              description: `Additional days at your subscription rate of £${pricePerDay}/day`,
+              description,
             },
-            unit_amount: Math.round(pricePerDay * 100), // Convert to pence
+            unit_amount: Math.round(amountToCharge * 100), // Convert to pence - includes VIP discount
           },
-          quantity: numExtraDays,
+          quantity: 1, // Single line item with total discounted amount
         },
       ],
       mode: 'payment',
@@ -91,6 +103,10 @@ export async function POST(req: NextRequest) {
         mealDinner: mealOptions.dinner ? 'true' : 'false',
         specialNotes: specialNotes || '',
         includedDays: includedDays.toString(),
+        isVipMember: isVipMember ? 'true' : 'false',
+        vipDiscountAmount: (vipDiscountAmount || 0).toString(),
+        totalAmount: (totalAmount || calculatedTotal).toString(),
+        finalAmount: (finalAmount || calculatedTotal).toString(),
       },
     })
 

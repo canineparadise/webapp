@@ -572,18 +572,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const extraDates = datesArray.slice(includedDaysCount)
 
     // Create bookings for included days (FREE - use subscription)
+    // Note: For extra days, we book for ONE dog at a time (selectedDogs[0])
+    const dogId = dogsArray[0]
+
     if (includedDates.length > 0) {
       const includedBookings = includedDates.map((date: string) => ({
         user_id: userId,
+        dog_id: dogId,
         dog_ids: dogsArray,
         booking_date: date,
         total_dogs: dogsArray.length,
-        daily_rate: parseFloat(pricePerDay),
-        total_amount: parseFloat(pricePerDay) * dogsArray.length,
+        amount: parseFloat(pricePerDay) * dogsArray.length,
         status: 'confirmed',
-        payment_status: 'paid',
         subscription_id: subscriptionId,
-        is_subscription_booking: true,
         special_instructions: fullInstructions.trim() || null,
         needs_breakfast: mealBreakfast === 'true',
         needs_lunch: mealLunch === 'true',
@@ -612,16 +613,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     if (extraDates.length > 0) {
       const extraBookings = extraDates.map((date: string) => ({
         user_id: userId,
+        dog_id: dogId,
         dog_ids: dogsArray,
         booking_date: date,
         total_dogs: dogsArray.length,
-        daily_rate: parseFloat(pricePerDay),
-        total_amount: parseFloat(pricePerDay) * dogsArray.length,
+        amount: parseFloat(pricePerDay) * dogsArray.length,
         status: 'confirmed',
-        payment_status: 'paid',
         subscription_id: subscriptionId,
-        is_subscription_booking: false, // Extra days, not subscription days
-        stripe_session_id: session.id,
         special_instructions: fullInstructions.trim() || null,
         needs_breakfast: mealBreakfast === 'true',
         needs_lunch: mealLunch === 'true',

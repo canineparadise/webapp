@@ -42,6 +42,7 @@ export default function BookingPage() {
   const [maxDogsPerDay, setMaxDogsPerDay] = useState(20)
   const [dateCapacity, setDateCapacity] = useState<Record<string, number>>({})
   const [closedDates, setClosedDates] = useState<string[]>([])
+  const [isVipMember, setIsVipMember] = useState(false)
 
   // NEW: Per-dog booking state
   const [dogBookingStates, setDogBookingStates] = useState<Record<string, DogBookingState>>({})
@@ -61,6 +62,17 @@ export default function BookingPage() {
         return
       }
       setUser(user)
+
+      // Check VIP membership status
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_vip_member')
+        .eq('id', user.id)
+        .single()
+
+      if (profileData?.is_vip_member) {
+        setIsVipMember(true)
+      }
 
       // Load dogs (all dogs, not just approved)
       const { data: dogsData } = await supabase
@@ -393,10 +405,21 @@ export default function BookingPage() {
       const extraDayCost = subscription.price_per_day || 40.00
       const totalExtraCost = extraDays * extraDayCost
 
-      const confirmMessage = `${dogState.dogName} has ${daysRemaining} days remaining.\n\n` +
+      // Calculate VIP discount (10% for Golden Paw members)
+      const vipDiscountPercent = isVipMember ? 0.10 : 0
+      const vipDiscountAmount = totalExtraCost * vipDiscountPercent
+      const finalCost = totalExtraCost - vipDiscountAmount
+
+      let confirmMessage = `${dogState.dogName} has ${daysRemaining} days remaining.\n\n` +
         `• ${includedDays} day${includedDays !== 1 ? 's' : ''} will use included days (FREE)\n` +
-        `• ${extraDays} extra day${extraDays !== 1 ? 's' : ''} at £${extraDayCost}/day = £${totalExtraCost.toFixed(2)}\n\n` +
-        `Continue to payment?`
+        `• ${extraDays} extra day${extraDays !== 1 ? 's' : ''} at £${extraDayCost}/day = £${totalExtraCost.toFixed(2)}`
+
+      if (isVipMember && vipDiscountAmount > 0) {
+        confirmMessage += `\n• Golden Paw VIP 10% discount: -£${vipDiscountAmount.toFixed(2)}\n` +
+          `• Total: £${finalCost.toFixed(2)}`
+      }
+
+      confirmMessage += `\n\nContinue to payment?`
 
       if (!window.confirm(confirmMessage)) {
         return
@@ -426,7 +449,11 @@ export default function BookingPage() {
             selectedDogs: [dogId],
             mealOptions: mealOptions,
             specialNotes: specialNotes,
-            includedDays: includedDays
+            includedDays: includedDays,
+            isVipMember: isVipMember,
+            vipDiscountAmount: vipDiscountAmount,
+            totalAmount: totalExtraCost,
+            finalAmount: finalCost
           })
         })
 
