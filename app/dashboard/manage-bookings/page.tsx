@@ -57,7 +57,7 @@ export default function ManageBookingsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
-  const [subscription, setSubscription] = useState<any>(null)
+  const [subscriptions, setSubscriptions] = useState<any[]>([])
   const [upcomingBookings, setUpcomingBookings] = useState<Booking[]>([])
   const [pastBookings, setPastBookings] = useState<Booking[]>([])
   const [credits, setCredits] = useState<Credit[]>([])
@@ -82,15 +82,14 @@ export default function ManageBookingsPage() {
       }
       setUser(user)
 
-      // Fetch subscription
+      // Fetch ALL subscriptions (user may have multiple dogs with subscriptions)
       const { data: subData } = await supabase
         .from('subscriptions')
-        .select('*, subscription_tiers:tier_id(name, price_per_day)')
+        .select('*, subscription_tiers:tier_id(name, price_per_day), dogs(id, name, photo_url)')
         .eq('user_id', user.id)
         .eq('is_active', true)
-        .maybeSingle()
 
-      setSubscription(subData)
+      setSubscriptions(subData || [])
 
       // Fetch all bookings
       const today = new Date().toISOString().split('T')[0]
@@ -505,47 +504,65 @@ export default function ManageBookingsPage() {
         {/* Subscription Tab */}
         {activeTab === 'subscription' && (
           <div className="space-y-6">
-            {subscription ? (
+            {subscriptions.length > 0 ? (
               <>
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">Current Subscription</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Days Remaining</p>
-                      <p className="text-3xl font-bold text-canine-navy">{subscription.days_remaining}</p>
-                      <p className="text-xs text-gray-500">out of {subscription.days_included} days/month</p>
+                {subscriptions.map((subscription) => (
+                  <div key={subscription.id} className="bg-white rounded-xl border border-gray-200 p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      {subscription.dogs?.photo_url ? (
+                        <img
+                          src={subscription.dogs.photo_url}
+                          alt={subscription.dogs.name}
+                          className="w-14 h-14 rounded-full object-cover border-2 border-canine-gold"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-canine-gold/20 flex items-center justify-center">
+                          <span className="text-xl font-bold text-canine-gold">
+                            {subscription.dogs?.name?.[0] || '?'}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900">
+                          {subscription.dogs?.name || 'Unknown Dog'}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {subscription.subscription_tiers?.name || 'Subscription'}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Monthly Price</p>
-                      <p className="text-3xl font-bold text-canine-navy">{formatCurrency(subscription.monthly_price)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Next Billing</p>
-                      <p className="text-lg font-semibold text-gray-900">
-                        {new Date(subscription.next_billing_date).toLocaleDateString('en-GB')}
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Days Remaining</p>
+                        <p className="text-3xl font-bold text-canine-navy">{subscription.days_remaining}</p>
+                        <p className="text-xs text-gray-500">out of {subscription.days_included} days/month</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Monthly Price</p>
+                        <p className="text-3xl font-bold text-canine-navy">{formatCurrency(subscription.monthly_price)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 mb-1">Next Billing</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {subscription.next_billing_date ? new Date(subscription.next_billing_date).toLocaleDateString('en-GB') : 'N/A'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-6 flex gap-4">
-                    <Link
-                      href="/dashboard/subscriptions"
-                      className="px-6 py-2 bg-canine-navy text-white rounded-lg hover:bg-opacity-90 transition-colors"
-                    >
-                      Upgrade Subscription
-                    </Link>
-                    <Link
-                      href="/dashboard/subscriptions"
-                      className="px-6 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                    >
-                      Cancel Subscription
-                    </Link>
-                  </div>
+                ))}
+                <div className="flex gap-4">
+                  <Link
+                    href="/dashboard/subscriptions"
+                    className="px-6 py-2 bg-canine-navy text-white rounded-lg hover:bg-opacity-90 transition-colors"
+                  >
+                    Manage Subscriptions
+                  </Link>
                 </div>
               </>
             ) : (
               <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                 <CreditCardIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Subscription</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Subscriptions</h3>
                 <p className="text-gray-600 mb-4">Subscribe to get regular daycare days at a discounted rate</p>
                 <Link
                   href="/dashboard/subscriptions"
