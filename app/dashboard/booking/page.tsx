@@ -610,6 +610,30 @@ export default function BookingPage() {
           </div>
         </div>
 
+        {/* Zero Days Warning Banner */}
+        {daysRemaining === 0 && (
+          <div className="mx-6 mt-4 p-4 bg-orange-100 border border-orange-300 rounded-xl">
+            <div className="flex items-start gap-3">
+              <svg className="h-6 w-6 text-orange-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-orange-800">No subscription days remaining!</p>
+                <p className="text-sm text-orange-700 mt-1">
+                  All days you book will be charged as extra days.
+                  {isVipMember && <span className="text-green-700"> Your Golden Paw VIP 10% discount will apply.</span>}
+                </p>
+                <button
+                  onClick={() => router.push('/dashboard/extra-days')}
+                  className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-orange-600 hover:text-orange-800"
+                >
+                  Or use the Buy Extra Days page for easier booking →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="p-6">
           {/* Month Navigation */}
           <div className="flex items-center justify-between mb-4 bg-canine-cream rounded-xl p-3">
@@ -754,14 +778,27 @@ export default function BookingPage() {
           )}
 
           {/* Extra Days Warning */}
-          {selectedDates.length > daysRemaining && (
-            <div className="mb-4 p-3 bg-amber-100 border border-amber-300 rounded-xl">
-              <p className="text-sm text-amber-800">
-                <strong>Note:</strong> {selectedDates.length - daysRemaining} extra day{selectedDates.length - daysRemaining !== 1 ? 's' : ''} will be charged at £{subscription?.price_per_day || 40}/day
-                = <strong>£{((selectedDates.length - daysRemaining) * (subscription?.price_per_day || 40)).toFixed(2)}</strong>
-              </p>
-            </div>
-          )}
+          {selectedDates.length > daysRemaining && (() => {
+            const extraDays = selectedDates.length - daysRemaining
+            const pricePerDay = subscription?.price_per_day || 40
+            const extraCost = extraDays * pricePerDay
+            const vipDiscount = isVipMember ? extraCost * 0.10 : 0
+            const finalCost = extraCost - vipDiscount
+
+            return (
+              <div className="mb-4 p-3 bg-amber-100 border border-amber-300 rounded-xl">
+                <p className="text-sm text-amber-800">
+                  <strong>Note:</strong> {extraDays} extra day{extraDays !== 1 ? 's' : ''} will be charged at £{pricePerDay}/day = £{extraCost.toFixed(2)}
+                </p>
+                {isVipMember && (
+                  <p className="text-sm text-green-700 mt-1">
+                    <img src="/VIP.png" alt="VIP" className="h-4 w-4 inline mr-1" />
+                    <strong>Golden Paw VIP 10% discount:</strong> -£{vipDiscount.toFixed(2)} = <strong>£{finalCost.toFixed(2)}</strong>
+                  </p>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Book Button */}
           <button
