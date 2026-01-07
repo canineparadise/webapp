@@ -578,3 +578,4 @@ export default function BuyExtraDaysPage() {
     </div>
   )
 }
+// Force cache clear - Jan 7 2026 v1 - VIP discount check
